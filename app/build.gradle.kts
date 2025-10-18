@@ -1,9 +1,21 @@
+import java.util.Properties
+import java.io.FileReader
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "2.2.20"
 }
+
+// 🔹 Leer variables de entorno desde local.properties
+val localProperties = rootProject.file("local.properties").takeIf { it.exists() }?.let {
+    Properties().apply { load(FileReader(it)) }
+} ?: Properties()
+
+val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: "DEFAULT_URL"
+val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: "DEFAULT_KEY"
 
 android {
     namespace = "com.dev.point_of_sale_sistem_with_kotlin_pos"
@@ -17,6 +29,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 🔹 BuildConfig con variables de entorno
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
 
     buildTypes {
@@ -37,6 +53,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
