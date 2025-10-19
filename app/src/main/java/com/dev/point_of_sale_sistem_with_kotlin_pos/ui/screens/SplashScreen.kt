@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
@@ -18,19 +19,31 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
 import kotlinx.coroutines.delay
 
-
 @Composable
-fun Splash(navController: NavHostController) {
-    LaunchedEffect(key1 = true) {
-        delay(2000)
-        navController.popBackStack()
-        navController.navigate("home")
+fun Splash(navController: NavHostController, authViewModel: AuthViewModel) {
+    val state = authViewModel.authState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        authViewModel.checkSession()
+        delay(1500)
+
+        if (state.value.isAuthenticated) {
+            navController.navigate("home") {
+                popUpTo("splash") { inclusive = true }
+            }
+        } else {
+            navController.navigate("login") {
+                popUpTo("splash") { inclusive = true }
+            }
+        }
     }
 
     SplashScreen()
 }
+
 
 @Preview(showBackground = true)
 @Composable
