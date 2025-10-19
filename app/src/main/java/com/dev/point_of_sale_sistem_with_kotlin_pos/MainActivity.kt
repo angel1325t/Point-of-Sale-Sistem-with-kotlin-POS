@@ -3,45 +3,43 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.PointofSaleSistemwithkotlinPOSTheme
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            PointofSaleSistemwithkotlinPOSTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+            AppTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AppNavigation()
                 }
             }
         }
     }
 }
-
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun AppNavigation() {
+    val navController: NavHostController = rememberNavController()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    PointofSaleSistemwithkotlinPOSTheme {
-        Greeting("Android")
+    NavHost(
+        navController = navController,
+        startDestination = "splash"
+    ) {
+        composable("splash") { Splash(navController = navController) }
+        composable("home") { HomeScreen() }
     }
 }
