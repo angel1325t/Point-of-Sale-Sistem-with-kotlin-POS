@@ -5,8 +5,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
 
@@ -50,7 +52,7 @@ fun HomeScreen(
                 },
                 enabled = !state.isLoading
             ) {
-                Text("Cerrar sesión")
+                Text(stringResource(R.string.cerrar_sesion))
             }
 
             // 🔹 Mostrar indicador de carga si está procesando logout

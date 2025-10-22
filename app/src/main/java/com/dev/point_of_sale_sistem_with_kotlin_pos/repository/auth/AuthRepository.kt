@@ -3,9 +3,6 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
-import io.github.jan.supabase.postgrest.from
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 class AuthRepository(private val supabase: SupabaseClient) {
 
@@ -18,7 +15,7 @@ class AuthRepository(private val supabase: SupabaseClient) {
             }
 
             val user = supabase.auth.currentUserOrNull()
-            Result.success(user!!.id) // ✅ !! porque login exitoso = usuario existe
+            Result.success(user!!.id)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -33,9 +30,7 @@ class AuthRepository(private val supabase: SupabaseClient) {
             Result.failure(e)
         }
     }
-
-    // 🔹 Obtener usuario actual
-    suspend fun getCurrentUser(): Result<String?> {
+    fun getCurrentUser(): Result<String?> {
         return try {
             val user = supabase.auth.currentUserOrNull()
             Result.success(user?.id)

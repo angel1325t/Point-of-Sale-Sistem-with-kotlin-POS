@@ -2,6 +2,7 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.AuthRepository
 import io.github.jan.supabase.SupabaseClient
@@ -49,7 +50,7 @@ class AuthViewModel(private val supabase: SupabaseClient) : ViewModel() {
     }
 
     private suspend fun handleLogin(intent: AuthIntent.Login) {
-        _state.value = _state.value.copy(isLoading = true, errorMessage = null)
+        _state.value = _state.value.copy(isLoading = true, error = null)
         val result = repository.login(intent.email, intent.password)
 
         result.onSuccess { userId ->
@@ -63,13 +64,18 @@ class AuthViewModel(private val supabase: SupabaseClient) : ViewModel() {
         }.onFailure { e ->
             _state.value = _state.value.copy(
                 isLoading = false,
-                errorMessage = e.message ?: "Email o contraseña incorrectos"
+                error = if (e.message?.contains("invalid") == true) {
+                    AuthError.InvalidCredentials
+                } else {
+                    AuthError.Other(e.message ?: "Error desconocido")
+                }
             )
         }
     }
 
+
     private suspend fun handleLogout() {
-        _state.value = _state.value.copy(isLoading = true)
+        _state.value = _state.value.copy(isLoading = true, error = null)
         val result = repository.logout()
 
         result.onSuccess {
@@ -77,13 +83,15 @@ class AuthViewModel(private val supabase: SupabaseClient) : ViewModel() {
         }.onFailure { e ->
             _state.value = _state.value.copy(
                 isLoading = false,
-                errorMessage = e.message ?: "Error al cerrar sesión"
+                error = AuthError.Other(e.message ?: "Error al cerrar sesión")
             )
         }
     }
 
+
     private suspend fun handleCheckSession() {
         val result = repository.getCurrentUser()
+
         result.onSuccess { userId ->
             if (userId != null) {
                 _state.value = _state.value.copy(
@@ -92,6 +100,11 @@ class AuthViewModel(private val supabase: SupabaseClient) : ViewModel() {
                     email = supabase.auth.currentUserOrNull()?.email
                 )
             }
+        }.onFailure { e ->
+            _state.value = _state.value.copy(
+                error = AuthError.Other(e.message ?: "Error al verificar sesión")
+            )
         }
     }
+
 }
