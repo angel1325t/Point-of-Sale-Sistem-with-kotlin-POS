@@ -9,20 +9,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
-import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun LoginScreen(
     navController: NavHostController,
     authViewModel: AuthViewModel
 ) {
-    val state by authViewModel.authState.collectAsState()
+    val state by authViewModel.state.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // Observa cambios en authState y navega automáticamente si se loguea
+    // 🔹 MVI: ESCUCHAR STATE Y NAVEGAR
     LaunchedEffect(state.isAuthenticated) {
         if (state.isAuthenticated) {
             navController.navigate("home") {
@@ -48,7 +48,8 @@ fun LoginScreen(
                 onValueChange = { email = it },
                 label = { Text("Email") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isLoading
             )
 
             OutlinedTextField(
@@ -57,25 +58,38 @@ fun LoginScreen(
                 label = { Text("Contraseña") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isLoading
             )
 
+            // 🔹 MVI: ENVIAR INTENT EN LUGAR DE LLAMAR FUNCIÓN
             Button(
-                onClick = { authViewModel.login(email, password) },
-                modifier = Modifier.fillMaxWidth()
+                onClick = {
+                    authViewModel.sendIntent(AuthIntent.Login(email, password))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isLoading
             ) {
                 Text("Entrar")
             }
 
-            state.isLoading.let { isLoading ->
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                }
+            // 🔹 MVI: MOSTRAR LOADING DEL STATE
+            if (state.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
             }
 
+            // 🔹 MVI: MOSTRAR ERROR DEL STATE
             state.errorMessage?.let {
                 Text(text = it, color = Color.Red)
+            }
+
+            // 🔹 BONUS: Limpiar mensajes después de 3s
+            LaunchedEffect(state.successMessage, state.errorMessage) {
+                state.successMessage?.let { _ ->
+                    kotlinx.coroutines.delay(3000)
+                }
             }
         }
     }
 }
+

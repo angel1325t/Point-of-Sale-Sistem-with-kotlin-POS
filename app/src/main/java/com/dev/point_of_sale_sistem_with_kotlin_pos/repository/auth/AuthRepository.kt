@@ -9,31 +9,6 @@ import kotlinx.serialization.json.put
 
 class AuthRepository(private val supabase: SupabaseClient) {
 
-    // 🔹 Registro de usuario
-    suspend fun register(email: String, password: String, username: String): Result<String> {
-        return try {
-            val result = supabase.auth.signUpWith(Email) {
-                this.email = email
-                this.password = password
-                data = buildJsonObject {
-                    put("username", username)
-                }
-            }
-            // Insertar en la tabla users
-            supabase.from("users").insert(
-                mapOf(
-                    "auth_id" to result!!.id,
-                    "email" to email,
-                    "username" to username,
-                    "created_at" to System.currentTimeMillis()
-                )
-            )
-            Result.success(result.id)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
     // 🔹 Login
     suspend fun login(email: String, password: String): Result<String> {
         return try {
@@ -64,20 +39,6 @@ class AuthRepository(private val supabase: SupabaseClient) {
         return try {
             val user = supabase.auth.currentUserOrNull()
             Result.success(user?.id)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    // 🔹 BONUS: Obtener sesión actual (para tu SessionManager)
-    suspend fun getCurrentSession(): Result<Pair<String, String>?> {
-        return try {
-            val session = supabase.auth.currentSessionOrNull()
-            if (session != null) {
-                Result.success(session.accessToken to session.refreshToken)
-            } else {
-                Result.success(null)
-            }
         } catch (e: Exception) {
             Result.failure(e)
         }
