@@ -26,8 +26,21 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    navController: NavHostController,
+    authViewModel: AuthViewModel
+) {
+    val state by authViewModel.state.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
+
+    // 🔹 Si el usuario no está autenticado, lo manda al login
+    LaunchedEffect(state.isAuthenticated) {
+        if (!state.isAuthenticated) {
+            navController.navigate("login") {
+                popUpTo("home") { inclusive = true }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -44,7 +57,7 @@ fun HomeScreen() {
         ) {
             Box {
                 AsyncImage(
-                    model = "https://uhtlmanoxrfdefelpybs.supabase.co/storage/v1/object/public/avatars/default-image.webp ",
+                    model = "https://uhtlmanoxrfdefelpybs.supabase.co/storage/v1/object/public/avatars/default-image.webp",
                     contentDescription = "User Image",
                     modifier = Modifier
                         .size(40.dp)
@@ -66,7 +79,11 @@ fun HomeScreen() {
                     )
                     DropdownMenuItem(
                         text = { Text("Cerrar sesión") },
-                        onClick = { menuExpanded = false }
+                        onClick = {
+                            menuExpanded = false
+                            // 🔹 Enviar intent de logout al ViewModel
+                            authViewModel.sendIntent(AuthIntent.Logout)
+                        }
                     )
                 }
             }
@@ -97,15 +114,38 @@ fun HomeScreen() {
             )
         }
 
-        // 🔹 Contenido central (vacío por ahora)
+        // 🔹 Contenido central
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(20.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text("Contenido del dashboard", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Contenido del dashboard",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                // 🔹 Mostrar indicador de carga si está procesando logout
+                if (state.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+
+                // 🔹 Mostrar errores o mensajes
+                state.error?.let { authError ->
+                    val message = (authError as? AuthError.Other)?.message ?: "Error desconocido"
+                    Text(text = message, color = MaterialTheme.colorScheme.error)
+                }
+
+                state.successMessage?.let {
+                    Text(text = it, color = MaterialTheme.colorScheme.primary)
+                }
+            }
         }
     }
 }
-
