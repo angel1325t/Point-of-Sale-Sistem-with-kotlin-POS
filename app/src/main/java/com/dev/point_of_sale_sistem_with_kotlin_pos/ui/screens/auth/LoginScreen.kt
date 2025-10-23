@@ -86,6 +86,21 @@ fun LoginScreen(
                 Text(text = message, color = Color.Red)
             }
 
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.no_tienes_cuenta),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                TextButton(
+                    onClick = { navController.navigate("register") }
+                ) {
+                    Text(stringResource(R.string.registrate))
+                }
+            }
 
             LaunchedEffect(state.successMessage, state.error) {
                 state.successMessage?.let { _ ->

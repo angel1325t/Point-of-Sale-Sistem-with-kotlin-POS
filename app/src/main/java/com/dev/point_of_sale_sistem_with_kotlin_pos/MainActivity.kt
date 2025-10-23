@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
@@ -50,6 +51,7 @@ fun AppNavigation(authViewModel: AuthViewModel) {
     ) {
         composable("splash") { Splash(navController, authViewModel) }
         composable("login") { LoginScreen(navController, authViewModel) }
-        composable("home") { HomeScreen(navController, authViewModel ) }
+        composable("home") { HomeScreen() }
+        composable("register") { RegisterScreen(navController, authViewModel ) }
     }
 }

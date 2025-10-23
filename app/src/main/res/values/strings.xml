@@ -6,5 +6,6 @@
     <string name="email">Email</string>
     <string name="cerrar_sesion">Cerrar sesión</string>
     <string name="email_o_contrasena_incorrectos">email o contraseña incorrectos</string>
-
+    <string name="no_tienes_cuenta">¿No tienes cuenta?</string>
+    <string name="registrate">Regístrate</string>
 </resources>

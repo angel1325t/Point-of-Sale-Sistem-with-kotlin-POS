@@ -28,11 +28,9 @@ fun Splash(
     // 🔹 MVI: USA 'state' NO 'authState'
     val state = authViewModel.state.collectAsState()
 
-    // 🔹 MVI: NO LLAMES checkSession() - ES AUTOMÁTICO
     LaunchedEffect(Unit) {
-        delay(1500) // Solo espera 1.5s
+        delay(1500)
 
-        // 🔹 MVI: USA state.value.isAuthenticated
         if (state.value.isAuthenticated) {
             navController.navigate("home") {
                 popUpTo("splash") { inclusive = true }
