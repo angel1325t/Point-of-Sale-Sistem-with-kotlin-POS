@@ -10,4 +10,14 @@ sealed class AuthIntent {
 
     // 🔹 Verificar sesión
     object CheckSession : AuthIntent()
+
+    data class Register(
+        val userEmail: String,
+        val userPassword: String,
+        val userName: String,
+        val businessName: String,
+        val businessEmail: String,
+        val businessPhone: String?,
+        val businessAddress: String?
+    ) : AuthIntent()
 }

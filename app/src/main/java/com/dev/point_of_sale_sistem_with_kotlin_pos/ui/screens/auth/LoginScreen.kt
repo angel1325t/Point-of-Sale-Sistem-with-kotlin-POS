@@ -13,20 +13,23 @@ import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
 
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    authViewModel: AuthViewModel
+    loginViewModel: LoginViewModel,
+    authSessionViewModel: AuthSessionViewModel
 ) {
-    val state by authViewModel.state.collectAsState()
+    val state by loginViewModel.state.collectAsState()
+    val sessionState by authSessionViewModel.state.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    LaunchedEffect(state.isAuthenticated) {
-        if (state.isAuthenticated) {
+    LaunchedEffect(sessionState.isAuthenticated) {
+        if (sessionState.isAuthenticated) {
             navController.navigate("home") {
                 popUpTo("login") { inclusive = true }
             }
@@ -66,7 +69,7 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    authViewModel.sendIntent(AuthIntent.Login(email, password))
+                    loginViewModel.sendIntent(AuthIntent.Login(email, password))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isLoading

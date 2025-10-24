@@ -14,28 +14,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
-import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    authViewModel: AuthViewModel
+    sessionViewModel: AuthSessionViewModel
 ) {
-    val state by authViewModel.state.collectAsState()
+    val state by sessionViewModel.state.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
 
     // 🔹 Si el usuario no está autenticado, lo manda al login
     LaunchedEffect(state.isAuthenticated) {
-        if (!state.isAuthenticated) {
+        if (!state.isAuthenticated && !state.isLoading) {
             navController.navigate("login") {
                 popUpTo("home") { inclusive = true }
             }
@@ -81,15 +78,14 @@ fun HomeScreen(
                         text = { Text("Cerrar sesión") },
                         onClick = {
                             menuExpanded = false
-                            // 🔹 Enviar intent de logout al ViewModel
-                            authViewModel.sendIntent(AuthIntent.Logout)
+                            sessionViewModel.logout()
                         }
                     )
                 }
             }
         }
 
-        // 🔹 Menú inferior debajo del top bar
+        // 🔹 Menú inferior
         NavigationBar(
             containerColor = Color.White,
             tonalElevation = 4.dp
@@ -126,12 +122,11 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Contenido del dashboard",
+                    text = "Bienvenido, ${state.email ?: "usuario"} 👋",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium
                 )
 
-                // 🔹 Mostrar indicador de carga si está procesando logout
                 if (state.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 }
