@@ -70,6 +70,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.ktor:ktor-client-android:3.3.1")
+    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
     implementation(libs.androidx.ui.text)
 
     testImplementation(libs.junit)
