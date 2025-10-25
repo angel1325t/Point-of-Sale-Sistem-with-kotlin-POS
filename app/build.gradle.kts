@@ -56,23 +56,46 @@ android {
 }
 
 dependencies {
+    // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.ui.text)
+
+    // Navigation
+    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
     implementation("androidx.navigation:navigation-compose:2.9.5")
+
+    // Image Loading
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Supabase
     implementation(platform("io.github.jan-tennert.supabase:bom:3.2.4"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
-    implementation("io.ktor:ktor-client-android:3.3.1")
-    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
-    implementation(libs.androidx.ui.text)
 
+    // ✅ NUEVAS DEPENDENCIAS PARA PERSISTENCIA DE SESIÓN
+    implementation("io.github.jan-tennert.supabase:storage-kt") // Opcional pero recomendado
+    implementation("androidx.security:security-crypto:1.1.0-alpha06") // Para EncryptedSharedPreferences
+    implementation("androidx.datastore:datastore-preferences:1.1.1") // Alternativa moderna a SharedPreferences
+
+    // Ktor (necesario para Supabase)
+    implementation("io.ktor:ktor-client-android:3.3.1")
+    implementation("io.ktor:ktor-client-core:3.3.1")
+    implementation("io.ktor:ktor-client-cio:3.3.1") // Motor CIO recomendado para Android
+
+    // Serialization (ya tienes el plugin, pero asegúrate de tener la lib)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

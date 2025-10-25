@@ -9,7 +9,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,18 +17,16 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
+import com.example.compose.AppTheme // Import AppTheme from the correct package
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val authViewModel = AuthViewModel(supabase)
-
         setContent {
-            AppTheme {
+            AppTheme { // Use AppTheme from com.example.compose
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -41,6 +38,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 @Composable
 fun AppNavigation(authViewModel: AuthViewModel) {
     val navController: NavHostController = rememberNavController()
@@ -52,6 +50,6 @@ fun AppNavigation(authViewModel: AuthViewModel) {
         composable("splash") { Splash(navController, authViewModel) }
         composable("login") { LoginScreen(navController, authViewModel) }
         composable("home") { HomeScreen(navController, authViewModel) }
-        composable("register") { RegisterScreen(navController, authViewModel ) }
+        composable("register") { RegisterScreen(navController, authViewModel) }
     }
 }

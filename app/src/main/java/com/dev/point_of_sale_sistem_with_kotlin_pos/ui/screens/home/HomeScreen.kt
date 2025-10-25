@@ -57,7 +57,7 @@ fun HomeScreen(
                     fontSize = 20.sp
                 )
 
-                Divider()
+                HorizontalDivider()
 
                 DrawerItem("Ventas") {}
                 DrawerItem("Devoluciones") {}
