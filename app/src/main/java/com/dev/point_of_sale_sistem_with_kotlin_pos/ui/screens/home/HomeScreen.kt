@@ -22,23 +22,23 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
 import kotlinx.coroutines.launch
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    authViewModel: AuthViewModel
+    sessionViewModel: AuthSessionViewModel
 ) {
-    val state by authViewModel.state.collectAsState()
+    val state by sessionViewModel.state.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     // 🔹 Si el usuario no está autenticado, lo manda al login
     LaunchedEffect(state.isAuthenticated) {
-        if (!state.isAuthenticated) {
+        if (!state.isAuthenticated && !state.isLoading) {
             navController.navigate("login") {
                 popUpTo("home") { inclusive = true }
             }

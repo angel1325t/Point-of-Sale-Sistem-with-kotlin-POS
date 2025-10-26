@@ -17,9 +17,12 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
-import com.example.compose.AppTheme // Import AppTheme from the correct package
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,8 +34,14 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val authViewModel = remember { AuthViewModel(supabase) }
-                    AppNavigation(authViewModel)
+                    val navController = rememberNavController()
+
+                    // Create the AuthSessionViewModel first
+                    val authSessionViewModel = remember { AuthSessionViewModel(supabase) }
+                    // Pass authSessionViewModel to LoginViewModel
+                    val loginViewModel = remember { LoginViewModel(supabase, authSessionViewModel) }
+
+                    AppNavigation(navController, loginViewModel, authSessionViewModel)
                 }
             }
         }
@@ -40,16 +49,24 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNavigation(authViewModel: AuthViewModel) {
-    val navController: NavHostController = rememberNavController()
-
+fun AppNavigation(
+    navController: NavHostController,
+    loginViewModel: LoginViewModel,
+    authSessionViewModel: AuthSessionViewModel
+) {
     NavHost(
         navController = navController,
         startDestination = "splash"
     ) {
-        composable("splash") { Splash(navController, authViewModel) }
-        composable("login") { LoginScreen(navController, authViewModel) }
-        composable("home") { HomeScreen(navController, authViewModel) }
-        composable("register") { RegisterScreen(navController, authViewModel) }
+        composable("splash") { Splash(navController, authSessionViewModel) }
+        composable("login") { LoginScreen(navController, loginViewModel, authSessionViewModel) }
+        composable("home") { HomeScreen(navController, authSessionViewModel) }
+        composable("register") {
+            // Use viewModel to create RegisterViewModel with SavedStateHandle
+            val registerViewModel: RegisterViewModel = viewModel(
+                factory = RegisterViewModelFactory(supabase, authSessionViewModel)
+            )
+            RegisterScreen(navController, registerViewModel, authSessionViewModel)
+        }
     }
 }

@@ -2,151 +2,271 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
     navController: NavHostController,
-    authViewModel: AuthViewModel
+    loginViewModel: LoginViewModel,
+    authSessionViewModel: AuthSessionViewModel
 ) {
-    val state by authViewModel.state.collectAsState()
     val colorScheme = MaterialTheme.colorScheme  // <- ✅ acceso a los colores del tema
+    val state by loginViewModel.state.collectAsState()
+    val sessionState by authSessionViewModel.state.collectAsState()
 
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(state.isAuthenticated) {
-        if (state.isAuthenticated) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+
+    // Navegar si el usuario está autenticado
+    LaunchedEffect(sessionState.isAuthenticated) {
+        if (sessionState.isAuthenticated) {
             navController.navigate("home") {
                 popUpTo("login") { inclusive = true }
             }
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colorScheme.background) // ✅ color de fondo del tema
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = colorScheme.surfaceContainerLow // ✅ fondo del card según tema
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            modifier = Modifier.fillMaxWidth()
+    // Mostrar error como notificación flotante sin botón X
+    LaunchedEffect(state.error) {
+        state.error?.let { authError ->
+            val message = when (authError) {
+                is AuthError.InvalidCredentials -> authError.message
+                is AuthError.Other -> authError.message
+                else -> "Error desconocido" // Exhaustive fallback
+            }
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    withDismissAction = false, // sin X
+                    duration = SnackbarDuration.Short // se cierra sola
+                )
+            }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp)
+                    .wrapContentHeight(Alignment.Top)
+            ) { snackbarData ->
+                Snackbar(
+                    snackbarData = snackbarData,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                )
+            }
+        }
+    ) { paddingValues ->
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues)
         ) {
+            val isLandscape = maxWidth > maxHeight
+
             Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = if (isLandscape) 80.dp else 24.dp)
+                    .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.padding(24.dp)
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = stringResource(R.string.iniciar_sesion),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colorScheme.onSurface // ✅ texto según tema
-                )
+                // Espaciador flexible para centrar en vertical cuando hay espacio
+                Spacer(modifier = Modifier.weight(1f))
 
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text(stringResource(R.string.email)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colorScheme.primary,
-                        unfocusedBorderColor = colorScheme.outline,
-                        focusedLabelColor = colorScheme.primary,
-                        unfocusedLabelColor = colorScheme.onSurfaceVariant,
-                        cursorColor = colorScheme.primary
-                    )
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.contrasena)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colorScheme.primary,
-                        unfocusedBorderColor = colorScheme.outline,
-                        focusedLabelColor = colorScheme.primary,
-                        unfocusedLabelColor = colorScheme.onSurfaceVariant,
-                        cursorColor = colorScheme.primary
-                    )
-                )
-
-                Button(
-                    onClick = { authViewModel.sendIntent(AuthIntent.Login(email, password)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colorScheme.primary,        // ✅ botón principal
-                        contentColor = colorScheme.onPrimary
-                    )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.entrar))
-                }
-
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = colorScheme.primary
+                    // Logo
+                    Icon(
+                        painter = painterResource(id = R.drawable.same_line_logo),
+                        contentDescription = "App Logo",
+                        modifier = Modifier.size(if (isLandscape) 120.dp else 160.dp),
+                        tint = Color.Unspecified
                     )
-                }
 
-                state.error?.let { authError ->
-                    val message = when (authError) {
-                        AuthError.InvalidCredentials -> stringResource(R.string.email_o_contrasena_incorrectos)
-                        is AuthError.Other -> authError.message
-                    }
-                    Text(
-                        text = message,
-                        color = colorScheme.error, // ✅ usa el color de error del tema
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+                    Spacer(modifier = Modifier.height(if (isLandscape) 16.dp else 32.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.no_tienes_cuenta),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colorScheme.onSurfaceVariant
+                    // Campo Email
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.email),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isLoading,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        )
                     )
-                    TextButton(
-                        onClick = { navController.navigate("register") },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = colorScheme.primary // ✅ texto de botón según tema
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Campo Contraseña
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.contrasena),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isLoading,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Botón Login
+                    Button(
+                        onClick = {
+                            loginViewModel.sendIntent(AuthIntent.Login(email, password))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        enabled = !state.isLoading && email.isNotBlank() && password.isNotBlank(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
                     ) {
-                        Text(stringResource(R.string.registrate))
+                        if (state.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(R.string.entrar),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextButton(
+                        onClick = { /* TODO: Recuperar contraseña */ },
+                        enabled = !state.isLoading
+                    ) {
+                        Text(
+                            text = "¿Olvidaste tu contraseña?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
 
-                LaunchedEffect(state.successMessage, state.error) {
-                    state.successMessage?.let { _ ->
-                        kotlinx.coroutines.delay(5000)
+                // Espaciador flexible
+                Spacer(modifier = Modifier.weight(1f))
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedButton(
+                        onClick = { navController.navigate("register") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        enabled = !state.isLoading,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.registrate),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

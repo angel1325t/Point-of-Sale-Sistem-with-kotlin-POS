@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    kotlin("plugin.serialization") version "2.2.20"  // ✅ OK
+    kotlin("plugin.serialization") version "2.2.20"
 }
 
 val localProperties = rootProject.file("local.properties").takeIf { it.exists() }?.let {
@@ -41,12 +41,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17  // ✅ CAMBIADO
-        targetCompatibility = JavaVersion.VERSION_17  // ✅ CAMBIADO
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "17"  // ✅ CAMBIADO
+        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -73,6 +73,8 @@ dependencies {
     // Navigation
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
     implementation("androidx.navigation:navigation-compose:2.9.5")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
 
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.6.0")
