@@ -33,6 +33,7 @@ fun LoginScreen(
     loginViewModel: LoginViewModel,
     authSessionViewModel: AuthSessionViewModel
 ) {
+    val colorScheme = MaterialTheme.colorScheme  // <- ✅ acceso a los colores del tema
     val state by loginViewModel.state.collectAsState()
     val sessionState by authSessionViewModel.state.collectAsState()
 

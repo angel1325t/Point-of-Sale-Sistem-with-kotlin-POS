@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.ui.text)
 
     // Navigation
+    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
     implementation("androidx.navigation:navigation-compose:2.9.5")
     implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
