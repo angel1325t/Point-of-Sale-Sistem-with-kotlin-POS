@@ -119,7 +119,7 @@ fun HomeScreen(
                             text = { Text("Cerrar sesión") },
                             onClick = {
                                 menuExpanded = false
-                                authViewModel.sendIntent(AuthIntent.Logout)
+                                sessionViewModel.logout()
                             }
                         )
                     }
