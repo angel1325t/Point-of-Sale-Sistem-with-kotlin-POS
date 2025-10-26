@@ -56,35 +56,69 @@ class AuthRepository(private val supabase: SupabaseClient) {
         if (businessName.isBlank()) throw IllegalArgumentException("Business name cannot be empty")
         if (businessEmail.isBlank()) throw IllegalArgumentException("Business email cannot be empty")
 
-        // === 1. Crear usuario en Auth ===
+        // === 1. Verificar conflictos de unicidad ===
+        // Check for existing username
+        val existingUser = supabase.postgrest.from("users")
+            .select { filter { eq("username", userName) } }
+            .decodeList<UserCheck>().firstOrNull()
+        if (existingUser != null) {
+            throw IllegalArgumentException("Username '$userName' is already in use")
+        }
+
+        // Check for existing company name
+        val existingCompany = supabase.postgrest.from("companies")
+            .select { filter { eq("name", businessName) } }
+            .decodeList<CompanyCheck>().firstOrNull()
+        if (existingCompany != null) {
+            throw IllegalArgumentException("Company name '$businessName' is already in use")
+        }
+
+        // Check for existing company email
+        val existingCompanyEmail = supabase.postgrest.from("companies")
+            .select { filter { eq("email", businessEmail) } }
+            .decodeList<CompanyCheck>().firstOrNull()
+        if (existingCompanyEmail != null) {
+            throw IllegalArgumentException("Business email '$businessEmail' is already in use")
+        }
+
+        // Check for existing branch name
+        val branchName = "$businessName - Principal"
+        val existingBranch = supabase.postgrest.from("branches")
+            .select { filter { eq("name", branchName) } }
+            .decodeList<BranchCheck>().firstOrNull()
+        if (existingBranch != null) {
+            throw IllegalArgumentException("Branch name '$branchName' is already in use")
+        }
+
+        // === 2. Crear usuario en Auth ===
         val authUser = supabase.auth.signUpWith(Email) {
             email = userEmail
             password = userPassword
             data = buildJsonObject { put("username", userName) }
         }
-        val authId = authUser?.id.let { UUID.fromString(it) }
+        val authId = authUser?.id?.let { UUID.fromString(it) }
             ?: throw Exception("Auth ID not found after signup")
 
         Log.d(TAG, "Auth user created: authId=$authId")
 
-        // === 2. Generar UUIDs ===
+        // === 3. Generar UUIDs ===
         val companyId = UUID.randomUUID()
         val branchId = UUID.randomUUID()
         val userId = UUID.randomUUID()
 
-        // === 3. Insertar empresa ===
+        // === 4. Insertar empresa ===
         val companyData = CompanyInsert(companyId, businessName, businessEmail, businessPhone, businessAddress)
         Log.d(TAG, "Inserting company: $companyData")
         val companyResponse: PostgrestResult = supabase.postgrest.from("companies").insert(companyData)
         Log.d(TAG, "Company insert response: $companyResponse")
 
-        // === 4. Insertar sucursal ===
-        val branchData = BranchInsert(branchId, companyId, "$businessName - Principal", businessPhone, businessAddress)
+        // === 5. Insertar sucursal ===
+        val branchData = BranchInsert(branchId, companyId, branchName, businessPhone, businessAddress)
         Log.d(TAG, "Inserting branch: $branchData")
         val branchResponse: PostgrestResult = supabase.postgrest.from("branches").insert(branchData)
         Log.d(TAG, "Branch insert response: $branchResponse")
 
-        // === 5. Insertar usuario ===
+        // === 6. Insertar usuario ===
         val userData = UserInsert(
             user_id = userId,
             username = userName,
@@ -103,9 +137,8 @@ class AuthRepository(private val supabase: SupabaseClient) {
         Result.success(Unit)
     } catch (e: Exception) {
         Log.e(TAG, "Registration failed", e)
-        Result.failure(Exception("Registration failed: ${e.message}", e))
+        Result.failure(e)
     }
-
     suspend fun logout(): Result<Unit> = try {
         supabase.auth.signOut()
         Result.success(Unit)
@@ -148,5 +181,21 @@ class AuthRepository(private val supabase: SupabaseClient) {
         val active: Boolean,
         @Contextual val company_id: UUID,
         @Contextual val branch_id: UUID
+    )
+
+    // === Check DTOs ===
+    @Serializable
+    data class UserCheck(
+        val username: String
+    )
+
+    @Serializable
+    data class CompanyCheck(
+        val name: String
+    )
+
+    @Serializable
+    data class BranchCheck(
+        val name: String
     )
 }

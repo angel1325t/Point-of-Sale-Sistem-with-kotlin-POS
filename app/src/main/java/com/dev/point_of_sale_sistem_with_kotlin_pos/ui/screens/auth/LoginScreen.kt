@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -21,7 +22,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
@@ -57,8 +57,9 @@ fun LoginScreen(
     LaunchedEffect(state.error) {
         state.error?.let { authError ->
             val message = when (authError) {
-                AuthError.InvalidCredentials -> "Email o contraseña incorrectos"
+                is AuthError.InvalidCredentials -> authError.message
                 is AuthError.Other -> authError.message
+                else -> "Error desconocido" // Exhaustive fallback
             }
             coroutineScope.launch {
                 snackbarHostState.showSnackbar(

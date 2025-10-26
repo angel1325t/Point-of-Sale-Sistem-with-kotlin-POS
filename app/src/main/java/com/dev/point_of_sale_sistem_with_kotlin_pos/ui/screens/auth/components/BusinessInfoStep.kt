@@ -1,33 +1,54 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
-
 @Composable
 fun BusinessInfoStep(viewModel: RegisterViewModel) {
     val state by viewModel.state.collectAsState()
-    val canRegister = state.businessName.isNotBlank() && state.businessEmail.isNotBlank()
+
+    // Usamos rememberSaveable para mantener datos al rotar pantalla
+    var businessName by rememberSaveable { mutableStateOf(state.businessName) }
+    var businessEmail by rememberSaveable { mutableStateOf(state.businessEmail) }
+    var businessAddress by rememberSaveable { mutableStateOf(state.businessAddress) }
+    var businessPhone by rememberSaveable { mutableStateOf(state.businessPhone) }
+
+    // Sincronizar cambios locales con el ViewModel
+    LaunchedEffect(businessName) { viewModel.onBusinessNameChange(businessName) }
+    LaunchedEffect(businessEmail) { viewModel.onBusinessEmailChange(businessEmail) }
+    LaunchedEffect(businessAddress) { viewModel.onBusinessAddressChange(businessAddress) }
+    LaunchedEffect(businessPhone) { viewModel.onBusinessPhoneChange(businessPhone) }
+
+    val scrollState = rememberScrollState()
+
+    // Validaciones
+    val isBusinessNameValid = businessName.isNotBlank() && businessName.length >= 3
+    val isBusinessEmailValid = businessEmail.isNotBlank() &&
+            Patterns.EMAIL_ADDRESS.matcher(businessEmail).matches()
+    val canRegister = isBusinessNameValid && isBusinessEmailValid
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(horizontal = 24.dp)
     ) {
+        // Tarjeta informativa
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -51,62 +72,66 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
             }
         }
 
-        CustomTextField(
-            value = state.businessName,
-            onValueChange = viewModel::onBusinessNameChange,
-            label = "Nombre del negocio",
-            icon = Icons.Default.Store,
-            enabled = !state.isLoading
+        // Campo: Nombre del negocio
+        OutlinedTextField(
+            value = businessName,
+            onValueChange = { businessName = it },
+            label = { Text("Nombre del negocio") },
+            singleLine = true,
+            isError = businessName.isNotBlank() && !isBusinessNameValid,
+            supportingText = {
+                if (businessName.isNotBlank() && !isBusinessNameValid) {
+                    Text("El nombre del negocio debe tener al menos 3 caracteres")
+                }
+            },
+            leadingIcon = { Icon(Icons.Default.Store, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        CustomTextField(
-            value = state.businessEmail,
-            onValueChange = viewModel::onBusinessEmailChange,
-            label = "Email del negocio",
-            icon = Icons.Default.Email,
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
-            enabled = !state.isLoading
+        // Campo: Email del negocio
+        OutlinedTextField(
+            value = businessEmail,
+            onValueChange = { businessEmail = it },
+            label = { Text("Email del negocio") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true,
+            isError = businessEmail.isNotBlank() && !isBusinessEmailValid,
+            supportingText = {
+                if (businessEmail.isNotBlank() && !isBusinessEmailValid) {
+                    Text("Ingresa un correo electrónico válido")
+                }
+            },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        CustomTextField(
-            value = state.businessAddress,
-            onValueChange = viewModel::onBusinessAddressChange,
-            label = "Dirección (opcional)",
-            icon = Icons.Default.LocationOn,
-            enabled = !state.isLoading
+        // Campo: Dirección (opcional)
+        OutlinedTextField(
+            value = businessAddress,
+            onValueChange = { businessAddress = it },
+            label = { Text("Dirección (opcional)") },
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        CustomTextField(
-            value = state.businessPhone,
-            onValueChange = viewModel::onBusinessPhoneChange,
-            label = "Teléfono (opcional)",
-            icon = Icons.Default.Phone,
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
-            enabled = !state.isLoading
+        // Campo: Teléfono (opcional)
+        OutlinedTextField(
+            value = businessPhone,
+            onValueChange = { businessPhone = it },
+            label = { Text("Teléfono (opcional)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.weight(1f))
         Spacer(modifier = Modifier.height(24.dp))
 
-        state.error?.let {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Error al crear la cuenta. Intenta nuevamente.", color = MaterialTheme.colorScheme.onErrorContainer)
-                }
-            }
-        }
-
+        // Botón Crear Cuenta
         Button(
             onClick = {
                 viewModel.sendIntent(
@@ -114,17 +139,17 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
                         userEmail = state.userEmail,
                         userPassword = state.userPassword,
                         userName = state.userName,
-                        businessName = state.businessName,
-                        businessEmail = state.businessEmail,
-                        businessPhone = state.businessPhone.takeIf { it.isNotBlank() } ?: null,
-                        businessAddress = state.businessAddress.takeIf { it.isNotBlank() } ?: null
+                        businessName = businessName,
+                        businessEmail = businessEmail,
+                        businessPhone = businessPhone.takeIf { it.isNotBlank() },
+                        businessAddress = businessAddress.takeIf { it.isNotBlank() }
                     )
                 )
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            enabled = !state.isLoading && canRegister,
+            enabled = canRegister && !state.isLoading,
             shape = RoundedCornerShape(12.dp)
         ) {
             if (state.isLoading) {

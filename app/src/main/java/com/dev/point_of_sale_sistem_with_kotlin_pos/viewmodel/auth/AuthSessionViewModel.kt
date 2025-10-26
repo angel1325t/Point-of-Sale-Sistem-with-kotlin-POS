@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 class AuthSessionViewModel(private val supabase: SupabaseClient) : ViewModel() {
 
     private val repository = AuthRepository(supabase)
-
     private val _state = MutableStateFlow(AuthSessionState())
     val state: StateFlow<AuthSessionState> = _state.asStateFlow()
 
@@ -40,12 +39,18 @@ class AuthSessionViewModel(private val supabase: SupabaseClient) : ViewModel() {
                     isAuthenticated = true,
                     userId = user.id,
                     email = user.email,
-                    error = null
+                    error = null,
+                    successMessage = null
                 )
                 Log.d(TAG, "Session check: Authenticated userId=${user.id}, email=${user.email}")
             } else {
-                _state.value = AuthSessionState(
-                    successMessage = if (_state.value.isAuthenticated) "Sesión cerrada correctamente" else null
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    isAuthenticated = false,
+                    userId = null,
+                    email = null,
+                    error = null,
+                    successMessage = null
                 )
                 Log.d(TAG, "Session check: Not authenticated")
             }
@@ -57,10 +62,14 @@ class AuthSessionViewModel(private val supabase: SupabaseClient) : ViewModel() {
             Log.d(TAG, "Logging out")
             _state.value = _state.value.copy(isLoading = true)
             val result = repository.logout()
-
             result.onSuccess {
-                _state.value = AuthSessionState(
-                    successMessage = "Sesión cerrada correctamente"
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    isAuthenticated = false,
+                    userId = null,
+                    email = null,
+                    successMessage = "Sesión cerrada correctamente",
+                    error = null
                 )
                 Log.d(TAG, "Logout successful")
             }.onFailure { e ->

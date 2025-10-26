@@ -8,34 +8,58 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
-
 @Composable
 fun UserInfoStep(viewModel: RegisterViewModel) {
-
     val state by viewModel.state.collectAsState()
 
-    val passwordsMatch = state.userPassword == state.userConfirmPassword
-    val isPasswordValid = state.userPassword.length >= 6
-    val canProceed = state.userName.isNotBlank() &&
-            state.userEmail.isNotBlank() &&
+    // Campos locales que recuerdan su valor al rotar la pantalla
+    var userName by rememberSaveable { mutableStateOf(state.userName) }
+    var userEmail by rememberSaveable { mutableStateOf(state.userEmail) }
+    var userPassword by rememberSaveable { mutableStateOf(state.userPassword) }
+    var userConfirmPassword by rememberSaveable { mutableStateOf(state.userConfirmPassword) }
+    var showPassword by rememberSaveable { mutableStateOf(state.showPassword) }
+    var showConfirmPassword by rememberSaveable { mutableStateOf(state.showConfirmPassword) }
+
+    // Sincronizar cambios locales con el ViewModel
+    LaunchedEffect(userName) { viewModel.onUserNameChange(userName) }
+    LaunchedEffect(userEmail) { viewModel.onUserEmailChange(userEmail) }
+    LaunchedEffect(userPassword) { viewModel.onUserPasswordChange(userPassword) }
+    LaunchedEffect(userConfirmPassword) { viewModel.onUserConfirmPasswordChange(userConfirmPassword) }
+    LaunchedEffect(showPassword) { if (showPassword != state.showPassword) viewModel.toggleShowPassword() }
+    LaunchedEffect(showConfirmPassword) { if (showConfirmPassword != state.showConfirmPassword) viewModel.toggleShowConfirmPassword() }
+
+    val scrollState = rememberScrollState()
+
+    // Validaciones
+    val isUserNameValid = userName.length >= 3 &&
+            userName.all { it.isLetterOrDigit() || it.isWhitespace() || it == '_' }
+    val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(userEmail).matches()
+    val isPasswordValid = userPassword.length >= 6
+    val passwordsMatch = userPassword == userConfirmPassword
+
+    val canProceed = userName.isNotBlank() &&
+            userEmail.isNotBlank() &&
+            isUserNameValid &&
+            isEmailValid &&
             isPasswordValid &&
             passwordsMatch &&
-            state.userConfirmPassword.isNotBlank()
+            userConfirmPassword.isNotBlank()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(horizontal = 24.dp)
     ) {
+        // 🔹 Tarjeta superior informativa
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -59,56 +83,69 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             }
         }
 
+        // 🔹 Nombre completo
         CustomTextField(
-            value = state.userName,
-            onValueChange = viewModel::onUserNameChange,
+            value = userName,
+            onValueChange = { userName = it },
             label = "Nombre completo",
             icon = Icons.Default.Person,
-            enabled = !state.isLoading
+            enabled = !state.isLoading,
+            isError = userName.isNotBlank() && !isUserNameValid,
+            supportingText = if (userName.isNotBlank() && !isUserNameValid)
+                "El nombre debe tener al menos 3 caracteres y solo letras, números o _"
+            else null
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 🔹 Correo electrónico
         CustomTextField(
-            value = state.userEmail,
-            onValueChange = viewModel::onUserEmailChange,
+            value = userEmail,
+            onValueChange = { userEmail = it },
             label = "Correo electrónico",
             icon = Icons.Default.Email,
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
-            enabled = !state.isLoading
+            keyboardType = KeyboardType.Email,
+            enabled = !state.isLoading,
+            isError = userEmail.isNotBlank() && !isEmailValid,
+            supportingText = if (userEmail.isNotBlank() && !isEmailValid)
+                "Ingresa un correo electrónico válido"
+            else null
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 🔹 Contraseña
         CustomTextField(
-            value = state.userPassword,
-            onValueChange = viewModel::onUserPasswordChange,
+            value = userPassword,
+            onValueChange = { userPassword = it },
             label = "Contraseña",
             icon = Icons.Default.Lock,
             isPassword = true,
-            showPassword = state.showPassword,
-            onTogglePassword = viewModel::toggleShowPassword,
+            showPassword = showPassword,
+            onTogglePassword = { showPassword = !showPassword },
             enabled = !state.isLoading,
-            supportingText = if (state.userPassword.isNotBlank() && !isPasswordValid)
-                "Mínimo 6 caracteres" else null
+            showPasswordStrength = true
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 🔹 Confirmar contraseña
         CustomTextField(
-            value = state.userConfirmPassword,
-            onValueChange = viewModel::onUserConfirmPasswordChange,
+            value = userConfirmPassword,
+            onValueChange = { userConfirmPassword = it },
             label = "Confirmar contraseña",
             icon = Icons.Default.Lock,
             isPassword = true,
-            showPassword = state.showConfirmPassword,
-            onTogglePassword = viewModel::toggleShowConfirmPassword,
+            showPassword = showConfirmPassword,
+            onTogglePassword = { showConfirmPassword = !showConfirmPassword },
             enabled = !state.isLoading,
-            isError = state.userConfirmPassword.isNotBlank() && !passwordsMatch,
-            supportingText = if (state.userConfirmPassword.isNotBlank() && !passwordsMatch)
-                "Las contraseñas no coinciden" else null
+            isError = userConfirmPassword.isNotBlank() && !passwordsMatch,
+            supportingText = if (userConfirmPassword.isNotBlank() && !passwordsMatch)
+                "Las contraseñas no coinciden"
+            else null
         )
 
         Spacer(modifier = Modifier.weight(1f))
         Spacer(modifier = Modifier.height(24.dp))
 
+        // 🔹 Botón continuar
         Button(
             onClick = viewModel::goToNextStep,
             modifier = Modifier
