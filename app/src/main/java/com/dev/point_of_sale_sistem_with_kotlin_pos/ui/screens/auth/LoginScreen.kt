@@ -4,25 +4,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
+import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
 import kotlinx.coroutines.launch
@@ -33,7 +37,7 @@ fun LoginScreen(
     loginViewModel: LoginViewModel,
     authSessionViewModel: AuthSessionViewModel
 ) {
-    val colorScheme = MaterialTheme.colorScheme  // <- ✅ acceso a los colores del tema
+    val colorScheme = MaterialTheme.colorScheme
     val state by loginViewModel.state.collectAsState()
     val sessionState by authSessionViewModel.state.collectAsState()
 
@@ -44,6 +48,7 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current  // Para traducir errores
 
     // Navegar si el usuario está autenticado
     LaunchedEffect(sessionState.isAuthenticated) {
@@ -54,23 +59,29 @@ fun LoginScreen(
         }
     }
 
-    // Mostrar error como notificación flotante sin botón X
+    // Mostrar error traducido en Snackbar
     LaunchedEffect(state.error) {
-        state.error?.let { authError ->
-            val message = when (authError) {
-                is AuthError.InvalidCredentials -> authError.message
-                is AuthError.Other -> authError.message
-                else -> "Error desconocido" // Exhaustive fallback
+        state.error?.let { error ->
+            val message = when (error) {
+                is AuthError.InvalidCredentials ->
+                    context.getString(R.string.credenciales_invalidas)
+                is AuthError.Other ->
+                    error.customMessage
+                else -> null // Ignorar errores que no aplican al login
             }
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar(
-                    message = message,
-                    withDismissAction = false, // sin X
-                    duration = SnackbarDuration.Short // se cierra sola
-                )
+
+            message?.let {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = it,
+                        withDismissAction = false,
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         }
     }
+
 
     Scaffold(
         snackbarHost = {
@@ -83,13 +94,12 @@ fun LoginScreen(
             ) { snackbarData ->
                 Snackbar(
                     snackbarData = snackbarData,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    containerColor = colorScheme.errorContainer,
+                    contentColor = colorScheme.onErrorContainer,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth()
-                        .wrapContentHeight()
                 )
             }
         }
@@ -97,7 +107,7 @@ fun LoginScreen(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(colorScheme.background)
                 .padding(paddingValues)
         ) {
             val isLandscape = maxWidth > maxHeight
@@ -111,7 +121,6 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Espaciador flexible para centrar en vertical cuando hay espacio
                 Spacer(modifier = Modifier.weight(1f))
 
                 Column(
@@ -128,63 +137,55 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(if (isLandscape) 16.dp else 32.dp))
 
-                    // Campo Email
+                    // Email
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = {
-                            Text(
-                                text = stringResource(R.string.email),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        },
+                        label = { Text(stringResource(R.string.email)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.isLoading,
                         shape = RoundedCornerShape(8.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            focusedBorderColor = colorScheme.primary,
+                            unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.5f),
+                            focusedLabelColor = colorScheme.primary,
+                            cursorColor = colorScheme.primary,
+                            focusedContainerColor = colorScheme.surface,
+                            unfocusedContainerColor = colorScheme.surface
                         )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Campo Contraseña
+                    // Contraseña
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = {
-                            Text(
-                                text = stringResource(R.string.contrasena),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        },
+                        label = { Text(stringResource(R.string.contrasena)) },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña",
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    contentDescription = if (passwordVisible) "Ocultar" else "Mostrar",
+                                    tint = colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
                             }
                         },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.isLoading,
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            focusedBorderColor = colorScheme.primary,
+                            unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.5f),
+                            focusedLabelColor = colorScheme.primary,
+                            cursorColor = colorScheme.primary,
+                            focusedContainerColor = colorScheme.surface,
+                            unfocusedContainerColor = colorScheme.surface
                         )
                     )
 
@@ -201,8 +202,8 @@ fun LoginScreen(
                         enabled = !state.isLoading && email.isNotBlank() && password.isNotBlank(),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            containerColor = colorScheme.primary,
+                            disabledContainerColor = colorScheme.primary.copy(alpha = 0.5f)
                         )
                     ) {
                         if (state.isLoading) {
@@ -227,14 +228,12 @@ fun LoginScreen(
                         enabled = !state.isLoading
                     ) {
                         Text(
-                            text = "¿Olvidaste tu contraseña?",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            text = stringResource(R.string.olvidaste_tu_contrasena),
+                            color = colorScheme.primary
                         )
                     }
                 }
 
-                // Espaciador flexible
                 Spacer(modifier = Modifier.weight(1f))
 
                 Column(
@@ -243,7 +242,7 @@ fun LoginScreen(
                 ) {
                     HorizontalDivider(
                         modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        color = colorScheme.outline.copy(alpha = 0.3f)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -256,7 +255,7 @@ fun LoginScreen(
                         enabled = !state.isLoading,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
+                            contentColor = colorScheme.primary
                         )
                     ) {
                         Text(

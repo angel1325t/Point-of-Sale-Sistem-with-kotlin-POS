@@ -12,9 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
 @Composable
 fun UserInfoStep(viewModel: RegisterViewModel) {
@@ -76,7 +78,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = "Ingresa tus datos personales para comenzar",
+                    text = stringResource(R.string.datos_personales),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -92,7 +94,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             enabled = !state.isLoading,
             isError = userName.isNotBlank() && !isUserNameValid,
             supportingText = if (userName.isNotBlank() && !isUserNameValid)
-                "El nombre debe tener al menos 3 caracteres y solo letras, números o _"
+                stringResource(R.string.nombre_validacion)
             else null
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -101,13 +103,13 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
         CustomTextField(
             value = userEmail,
             onValueChange = { userEmail = it },
-            label = "Correo electrónico",
+            label = stringResource(R.string.email_label),
             icon = Icons.Default.Email,
             keyboardType = KeyboardType.Email,
             enabled = !state.isLoading,
             isError = userEmail.isNotBlank() && !isEmailValid,
             supportingText = if (userEmail.isNotBlank() && !isEmailValid)
-                "Ingresa un correo electrónico válido"
+                stringResource(R.string.email_validacion)
             else null
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -130,7 +132,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
         CustomTextField(
             value = userConfirmPassword,
             onValueChange = { userConfirmPassword = it },
-            label = "Confirmar contraseña",
+            label = stringResource(R.string.confirmar_contrasena_label),
             icon = Icons.Default.Lock,
             isPassword = true,
             showPassword = showConfirmPassword,
@@ -138,7 +140,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             enabled = !state.isLoading,
             isError = userConfirmPassword.isNotBlank() && !passwordsMatch,
             supportingText = if (userConfirmPassword.isNotBlank() && !passwordsMatch)
-                "Las contraseñas no coinciden"
+                stringResource(R.string.contrasena_validacion_6)
             else null
         )
 
@@ -155,7 +157,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             shape = RoundedCornerShape(12.dp)
         ) {
             Text(
-                "Continuar",
+                stringResource(R.string.continuar),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold
             )

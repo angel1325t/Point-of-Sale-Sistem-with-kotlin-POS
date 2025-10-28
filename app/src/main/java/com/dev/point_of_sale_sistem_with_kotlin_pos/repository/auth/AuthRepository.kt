@@ -146,11 +146,6 @@ class AuthRepository(private val supabase: SupabaseClient) {
         Result.failure(Exception("Logout failed: ${e.message}", e))
     }
 
-    fun getCurrentUser(): Result<String?> = try {
-        Result.success(supabase.auth.currentUserOrNull()?.id)
-    } catch (e: Exception) {
-        Result.failure(Exception("Failed to get current user: ${e.message}", e))
-    }
 
     // === DTOs ===
     @Serializable

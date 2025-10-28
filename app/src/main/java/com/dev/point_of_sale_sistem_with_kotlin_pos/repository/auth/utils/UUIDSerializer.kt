@@ -1,4 +1,4 @@
-package com.dev.point_of_sale_sistem_with_kotlin_pos.utils
+package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind

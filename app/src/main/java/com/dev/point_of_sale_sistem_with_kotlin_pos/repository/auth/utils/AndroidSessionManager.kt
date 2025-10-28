@@ -7,6 +7,7 @@ import androidx.security.crypto.MasterKey
 import io.github.jan.supabase.auth.SessionManager
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.serialization.json.Json
+import androidx.core.content.edit // <-- asegúrate de tener core-ktx en dependencias
 
 class AndroidSessionManager(context: Context) : SessionManager {
 
@@ -31,7 +32,7 @@ class AndroidSessionManager(context: Context) : SessionManager {
         return sessionJson?.let {
             try {
                 Json.decodeFromString<UserSession>(it)
-            } catch (e: Exception) {
+            } catch (_: Exception) { // <-- usamos "_" porque no necesitamos la excepción
                 null
             }
         }
@@ -40,10 +41,15 @@ class AndroidSessionManager(context: Context) : SessionManager {
     // ✅ Firma corregida sin SessionSource
     override suspend fun saveSession(session: UserSession) {
         val sessionJson = Json.encodeToString(UserSession.serializer(), session)
-        sharedPreferences.edit().putString(SESSION_KEY, sessionJson).apply()
+        // Usando la extensión KTX 'edit'
+        sharedPreferences.edit {
+            putString(SESSION_KEY, sessionJson)
+        }
     }
 
     override suspend fun deleteSession() {
-        sharedPreferences.edit().remove(SESSION_KEY).apply()
+        sharedPreferences.edit {
+            remove(SESSION_KEY)
+        }
     }
 }

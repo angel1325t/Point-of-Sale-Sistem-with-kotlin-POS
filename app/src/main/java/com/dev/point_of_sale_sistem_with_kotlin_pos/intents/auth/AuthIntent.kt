@@ -1,4 +1,4 @@
-package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth
+package com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth
 
 sealed class AuthIntent {
 

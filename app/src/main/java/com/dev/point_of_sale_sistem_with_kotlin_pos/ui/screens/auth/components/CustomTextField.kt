@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,11 +36,11 @@ fun CustomTextField(
     onPasswordValidationChange: ((Boolean) -> Unit)? = null
 ) {
     val passwordRequirements = listOf(
-        "Debe tener al menos 8 caracteres" to (value.length >= 8),
-        "Debe tener una letra mayúscula" to value.any { it.isUpperCase() },
-        "Debe tener una letra minúscula" to value.any { it.isLowerCase() },
-        "Debe tener un número" to value.any { it.isDigit() },
-        "Debe tener un símbolo (!@#\$%^&*)" to value.any { it in "!@#\$%^&*()-_=+<>?/{}[]~" }
+        stringResource(R.string.contrasena_validacion_1) to (value.length >= 8),
+        stringResource(R.string.contrasena_validacion_2) to value.any { it.isUpperCase() },
+        stringResource(R.string.contrasena_validacion_3) to value.any { it.isLowerCase() },
+        stringResource(R.string.contrasena_validacion_4) to value.any { it.isDigit() },
+        stringResource(R.string.contrasena_validacion_5) to value.any { it in "!@#$%^&*()-_=+<>?/{}[]~" }
     )
 
     val missingRequirements = passwordRequirements.filter { !it.second }
@@ -119,7 +121,7 @@ fun CustomTextField(
         if (showPasswordStrength && isPassword && value.isNotEmpty() && isPasswordStrong) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Contraseña fuerte 💪",
+                text = stringResource(R.string.contrasena_check),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.bodySmall
             )

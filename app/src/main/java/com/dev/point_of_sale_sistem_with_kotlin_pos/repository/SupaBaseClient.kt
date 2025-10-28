@@ -3,14 +3,13 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.repository
 import android.content.Context
 import com.dev.point_of_sale_sistem_with_kotlin_pos.BuildConfig
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils.AndroidSessionManager
-import com.dev.point_of_sale_sistem_with_kotlin_pos.utils.UUIDSerializer
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils.UUIDSerializer
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.serializer.KotlinXSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.contextual
 import java.util.UUID
 
 // Función para crear el cliente con contexto

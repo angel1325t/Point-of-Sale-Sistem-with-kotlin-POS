@@ -13,10 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthIntent
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
 @Composable
 fun BusinessInfoStep(viewModel: RegisterViewModel) {
@@ -65,7 +67,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = "Configura la información de tu negocio",
+                    text = stringResource(R.string.configura_la_informacion_de_tu_negocio),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -81,7 +83,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
             isError = businessName.isNotBlank() && !isBusinessNameValid,
             supportingText = {
                 if (businessName.isNotBlank() && !isBusinessNameValid) {
-                    Text("El nombre del negocio debe tener al menos 3 caracteres")
+                    Text(stringResource(R.string.nombre_del_negocio_validacion))
                 }
             },
             leadingIcon = { Icon(Icons.Default.Store, contentDescription = null) },
@@ -93,13 +95,13 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
         OutlinedTextField(
             value = businessEmail,
             onValueChange = { businessEmail = it },
-            label = { Text("Email del negocio") },
+            label = { Text(stringResource(R.string.email_del_negocio)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
             isError = businessEmail.isNotBlank() && !isBusinessEmailValid,
             supportingText = {
                 if (businessEmail.isNotBlank() && !isBusinessEmailValid) {
-                    Text("Ingresa un correo electrónico válido")
+                    Text(stringResource(R.string.email_validacion))
                 }
             },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
@@ -111,7 +113,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
         OutlinedTextField(
             value = businessAddress,
             onValueChange = { businessAddress = it },
-            label = { Text("Dirección (opcional)") },
+            label = { Text(stringResource(R.string.direccion_label)) },
             singleLine = true,
             leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
             modifier = Modifier.fillMaxWidth()
@@ -122,7 +124,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
         OutlinedTextField(
             value = businessPhone,
             onValueChange = { businessPhone = it },
-            label = { Text("Teléfono (opcional)") },
+            label = { Text(stringResource(R.string.telefono_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
@@ -161,7 +163,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
             } else {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Crear Cuenta", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.boton_crear_cuenta), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             }
         }
 

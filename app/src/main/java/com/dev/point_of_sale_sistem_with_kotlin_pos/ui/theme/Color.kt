@@ -1,4 +1,4 @@
-package com.example.compose
+package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val primaryLight = Color(0xFF4D41DF)

@@ -1,10 +1,7 @@
-package com.example.ui.theme
+package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 
 import androidx.compose.ui.text.googlefonts.GoogleFont
