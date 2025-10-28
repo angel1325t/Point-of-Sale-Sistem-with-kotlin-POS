@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import android.util.Log
+import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 
 class RegisterViewModel(
     private val supabase: SupabaseClient,
@@ -47,6 +48,7 @@ class RegisterViewModel(
     private suspend fun handleRegister(intent: AuthIntent.Register) {
         _state.value = _state.value.copy(isLoading = true, error = null)
         Log.d("RegisterViewModel", "Attempting to register user: ${intent.userEmail}")
+
         val result = repository.register(
             userEmail = intent.userEmail,
             userPassword = intent.userPassword,
@@ -56,21 +58,27 @@ class RegisterViewModel(
             businessPhone = intent.businessPhone,
             businessAddress = intent.businessAddress
         )
+
         result.onSuccess {
             Log.d("RegisterViewModel", "Registration successful")
             _state.value = _state.value.copy(
                 isLoading = false,
-                successMessage = "Registro exitoso"
+                successMessage = "REGISTER_SUCCESS"
             )
-            authSessionViewModel.checkSession()
+            authSessionViewModel.sendIntent(AuthIntent.CheckSession)
         }.onFailure { e ->
             Log.e("RegisterViewModel", "Registration failed: ${e.message}")
+
             val authError = when {
                 e.message?.contains("Username") == true -> AuthError.UsernameTaken(intent.userName)
+                e.message?.contains("User already registered") == true ||
+                        e.message?.contains("user email") == true -> AuthError.EmailTaken(intent.userEmail)
+                e.message?.contains("Business email") == true -> AuthError.CompanyEmailTaken(intent.businessEmail)
                 e.message?.contains("Company name") == true -> AuthError.CompanyNameTaken(intent.businessName)
-                e.message?.contains("Branch name") == true -> AuthError.BranchNameTaken("$intent.businessName - Principal")
-                else -> AuthError.Other(e.message ?: "Error al registrar")
+                e.message?.contains("Branch name") == true -> AuthError.BranchNameTaken("${intent.businessName} - Principal")
+                else -> AuthError.Other("REGISTER_FAILED")
             }
+
             _state.value = _state.value.copy(
                 isLoading = false,
                 error = authError
@@ -89,39 +97,17 @@ class RegisterViewModel(
         _state.value = _state.value.copy(currentStep = newStep)
         savedStateHandle["currentStep"] = newStep
     }
-    fun onUserNameChange(value: String) {
-        _state.value = _state.value.copy(userName = value, error = null)
-    }
-    fun onUserEmailChange(value: String) {
-        _state.value = _state.value.copy(userEmail = value, error = null)
-    }
-    fun onUserPasswordChange(value: String) {
-        _state.value = _state.value.copy(userPassword = value, error = null)
-    }
-    fun onUserConfirmPasswordChange(value: String) {
-        _state.value = _state.value.copy(userConfirmPassword = value, error = null)
-    }
-    fun onBusinessNameChange(value: String) {
-        _state.value = _state.value.copy(businessName = value, error = null)
-    }
-    fun onBusinessEmailChange(value: String) {
-        _state.value = _state.value.copy(businessEmail = value, error = null)
-    }
-    fun onBusinessAddressChange(value: String) {
-        _state.value = _state.value.copy(businessAddress = value, error = null)
-    }
-    fun onBusinessPhoneChange(value: String) {
-        _state.value = _state.value.copy(businessPhone = value, error = null)
-    }
 
-    fun toggleShowPassword() {
-        _state.value = _state.value.copy(showPassword = !_state.value.showPassword)
-    }
+    fun onUserNameChange(value: String) = _state.update { it.copy(userName = value, error = null) }
+    fun onUserEmailChange(value: String) = _state.update { it.copy(userEmail = value, error = null) }
+    fun onUserPasswordChange(value: String) = _state.update { it.copy(userPassword = value, error = null) }
+    fun onUserConfirmPasswordChange(value: String) = _state.update { it.copy(userConfirmPassword = value, error = null) }
+    fun onBusinessNameChange(value: String) = _state.update { it.copy(businessName = value, error = null) }
+    fun onBusinessEmailChange(value: String) = _state.update { it.copy(businessEmail = value, error = null) }
+    fun onBusinessAddressChange(value: String) = _state.update { it.copy(businessAddress = value, error = null) }
+    fun onBusinessPhoneChange(value: String) = _state.update { it.copy(businessPhone = value, error = null) }
 
-    fun toggleShowConfirmPassword() {
-        _state.value = _state.value.copy(showConfirmPassword = !_state.value.showConfirmPassword)
-    }
-    fun clearError() {
-        _state.value = _state.value.copy(error = null)
-    }
+    fun toggleShowPassword() = _state.update { it.copy(showPassword = !it.showPassword) }
+    fun toggleShowConfirmPassword() = _state.update { it.copy(showConfirmPassword = !it.showConfirmPassword) }
+    fun clearError() = _state.update { it.copy(error = null) }
 }

@@ -1,5 +1,6 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -8,15 +9,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
 import kotlinx.coroutines.delay
-import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -28,8 +31,9 @@ fun RegisterScreen(
     val state by registerViewModel.state.collectAsState()
     val sessionState by authSessionViewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current  // Para acceder a strings.xml
 
-    // Navigate to home if authenticated
+    // Navegar si el usuario ya está autenticado
     LaunchedEffect(sessionState.isAuthenticated) {
         if (sessionState.isAuthenticated) {
             Log.d("RegisterScreen", "User is authenticated, navigating to home")
@@ -39,29 +43,58 @@ fun RegisterScreen(
         }
     }
 
-    // Show success message in Snackbar
+    // Mostrar mensaje de éxito
     LaunchedEffect(state.successMessage) {
-        if (state.successMessage != null) {
-            Log.d("RegisterScreen", "Showing success message: ${state.successMessage}")
-            snackbarHostState.showSnackbar(state.successMessage!!)
-            delay(2000) // Mostrar el mensaje durante 2 segundos
+        state.successMessage?.let { message ->
+            Log.d("RegisterScreen", "Showing success message: $message")
+            snackbarHostState.showSnackbar(message)
+            delay(2000)
         }
     }
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            val errorMessage = when (error) {
+                is AuthError.InvalidCredentials ->
+                    context.getString(R.string.credenciales_invalidas)
+                is AuthError.UsernameTaken ->
+                    context.getString(R.string.el_nombre_de_usuario_ya_esta_en_uso, error.username)
+                is AuthError.EmailTaken ->
+                    context.getString(R.string.el_email_de_usuario_ya_esta_en_uso, error.email)
+                is AuthError.CompanyEmailTaken ->
+                    context.getString(R.string.el_email_de_compania_ya_esta_en_uso, error.email)
+                is AuthError.CompanyNameTaken ->
+                    context.getString(R.string.el_nombre_de_la_compania_ya_esta_en_uso, error.name)
+                is AuthError.BranchNameTaken ->
+                    context.getString(R.string.el_nombre_de_la_sucursal_ya_esta_en_uso, error.name)
+                is AuthError.Other ->
+                    error.customMessage
+            }
+
+            Log.d("RegisterScreen", "Displaying error: $errorMessage")
+            snackbarHostState.showSnackbar(errorMessage)
+            delay(4000)
+            registerViewModel.clearError()
+        }
+    }
+
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "Crear Cuenta",
+                        stringResource(R.string.crear_cuenta_text)  ,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (state.currentStep > 1) registerViewModel.goToPreviousStep()
-                        else navController.navigateUp()
+                        if (state.currentStep > 1) {
+                            registerViewModel.goToPreviousStep()
+                        } else {
+                            navController.navigateUp()
+                        }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
@@ -90,9 +123,11 @@ fun RegisterScreen(
                 targetState = state.currentStep,
                 transitionSpec = {
                     if (targetState > initialState) {
-                        slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
+                        slideInHorizontally { it } + fadeIn() togetherWith
+                                slideOutHorizontally { -it } + fadeOut()
                     } else {
-                        slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
+                        slideInHorizontally { -it } + fadeIn() togetherWith
+                                slideOutHorizontally { it } + fadeOut()
                     }.using(SizeTransform(clip = false))
                 },
                 label = "step_transition"
@@ -100,23 +135,6 @@ fun RegisterScreen(
                 when (step) {
                     1 -> UserInfoStep(registerViewModel)
                     2 -> BusinessInfoStep(registerViewModel)
-                }
-            }
-
-            // Show error message in Snackbar
-            LaunchedEffect(state.error) {
-                state.error?.let { error ->
-                    val errorMessage = when (error) {
-                        is AuthError.InvalidCredentials -> error.message
-                        is AuthError.UsernameTaken -> error.message
-                        is AuthError.CompanyNameTaken -> error.message
-                        is AuthError.BranchNameTaken -> error.message
-                        is AuthError.Other -> error.message
-                    }
-                    Log.d("RegisterScreen", "Displaying error: $errorMessage")
-                    snackbarHostState.showSnackbar(errorMessage)
-                    delay(4000) // Show error for 4 seconds
-                    registerViewModel.clearError() // Clear error after display
                 }
             }
         }

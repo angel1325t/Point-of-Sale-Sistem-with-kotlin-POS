@@ -2,6 +2,7 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.LoginState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.AuthRepository
@@ -10,7 +11,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class LoginViewModel(private val supabase: SupabaseClient,private val authSessionViewModel: AuthSessionViewModel) : ViewModel() {
+class LoginViewModel(
+    private val supabase: SupabaseClient,
+    private val authSessionViewModel: AuthSessionViewModel
+) : ViewModel() {
 
     private val repository = AuthRepository(supabase)
 
@@ -43,18 +47,19 @@ class LoginViewModel(private val supabase: SupabaseClient,private val authSessio
         val result = repository.login(intent.email, intent.password)
 
         result.onSuccess {
+            // ✅ Usar identificador en lugar de string
             _state.value = _state.value.copy(
                 isLoading = false,
-                successMessage = "Inicio de sesión exitoso ✅"
+                successMessage = "SIGN_IN_SUCCESS"
             )
-            authSessionViewModel.checkSession() // Actualiza el estado de la sesión
+            authSessionViewModel.sendIntent(AuthIntent.CheckSession)
         }.onFailure { e ->
             _state.value = _state.value.copy(
                 isLoading = false,
                 error = if (e.message?.contains("invalid") == true)
                     AuthError.InvalidCredentials
                 else
-                    AuthError.Other(e.message ?: "Error desconocido")
+                    AuthError.Other(e.message ?: "SIGN_IN_FAILED")
             )
         }
     }

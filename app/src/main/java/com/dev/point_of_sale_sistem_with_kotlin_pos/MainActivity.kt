@@ -23,7 +23,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewM
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModelFactory
-import com.example.compose.AppTheme
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
