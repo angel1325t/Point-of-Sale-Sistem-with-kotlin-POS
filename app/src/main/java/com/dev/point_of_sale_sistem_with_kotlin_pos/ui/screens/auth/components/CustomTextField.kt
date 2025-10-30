@@ -36,11 +36,11 @@ fun CustomTextField(
     onPasswordValidationChange: ((Boolean) -> Unit)? = null
 ) {
     val passwordRequirements = listOf(
-        stringResource(R.string.contrasena_validacion_1) to (value.length >= 8),
-        stringResource(R.string.contrasena_validacion_2) to value.any { it.isUpperCase() },
-        stringResource(R.string.contrasena_validacion_3) to value.any { it.isLowerCase() },
-        stringResource(R.string.contrasena_validacion_4) to value.any { it.isDigit() },
-        stringResource(R.string.contrasena_validacion_5) to value.any { it in "!@#$%^&*()-_=+<>?/{}[]~" }
+        stringResource(R.string.password_validation_1) to (value.length >= 8),
+        stringResource(R.string.password_validation_2) to value.any { it.isUpperCase() },
+        stringResource(R.string.password_validation_3) to value.any { it.isLowerCase() },
+        stringResource(R.string.password_validation_4) to value.any { it.isDigit() },
+        stringResource(R.string.password_validation_5) to value.any { it in "!@#$%^&*()-_=+<>?/{}[]~" }
     )
 
     val missingRequirements = passwordRequirements.filter { !it.second }
@@ -121,7 +121,7 @@ fun CustomTextField(
         if (showPasswordStrength && isPassword && value.isNotEmpty() && isPasswordStrong) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.contrasena_check),
+                text = stringResource(R.string.password_check),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.bodySmall
             )

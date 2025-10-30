@@ -55,17 +55,17 @@ fun RegisterScreen(
         state.error?.let { error ->
             val errorMessage = when (error) {
                 is AuthError.InvalidCredentials ->
-                    context.getString(R.string.credenciales_invalidas)
+                    context.getString(R.string.invalid_credentials)
                 is AuthError.UsernameTaken ->
-                    context.getString(R.string.el_nombre_de_usuario_ya_esta_en_uso, error.username)
+                    context.getString(R.string.username_already_exists, error.username)
                 is AuthError.EmailTaken ->
-                    context.getString(R.string.el_email_de_usuario_ya_esta_en_uso, error.email)
+                    context.getString(R.string.user_email_already_exists, error.email)
                 is AuthError.CompanyEmailTaken ->
-                    context.getString(R.string.el_email_de_compania_ya_esta_en_uso, error.email)
+                    context.getString(R.string.company_email_already_exists, error.email)
                 is AuthError.CompanyNameTaken ->
-                    context.getString(R.string.el_nombre_de_la_compania_ya_esta_en_uso, error.name)
+                    context.getString(R.string.company_name_already_exists, error.name)
                 is AuthError.BranchNameTaken ->
-                    context.getString(R.string.el_nombre_de_la_sucursal_ya_esta_en_uso, error.name)
+                    context.getString(R.string.branch_name_already_exists, error.name)
                 is AuthError.Other ->
                     error.customMessage
             }
@@ -83,7 +83,7 @@ fun RegisterScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        stringResource(R.string.crear_cuenta_text)  ,
+                        stringResource(R.string.create_account_text)  ,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )

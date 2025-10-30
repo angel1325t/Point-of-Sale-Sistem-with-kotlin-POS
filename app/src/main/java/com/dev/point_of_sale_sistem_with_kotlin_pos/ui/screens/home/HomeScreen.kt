@@ -86,10 +86,10 @@ fun HomeScreen(
                     fontSize = 20.sp
                 )
                 HorizontalDivider()
-                DrawerItem(stringResource(R.string.drawer_item_1)) {}
-                DrawerItem(stringResource(R.string.drawer_item_2)) {}
-                DrawerItem(stringResource(R.string.drawer_item_3)) {}
-                DrawerItem(stringResource(R.string.drawer_item_4)) {}
+                DrawerItem(stringResource(R.string.drawer_item_sales)) {}
+                DrawerItem(stringResource(R.string.drawer_item_returns)) {}
+                DrawerItem(stringResource(R.string.drawer_item_inventory)) {}
+                DrawerItem(stringResource(R.string.drawer_item_reports)) {}
             }
         }
     ) {
@@ -102,19 +102,19 @@ fun HomeScreen(
                 ) {
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-                        label = { Text(stringResource(R.string.navegacion_1)) },
+                        label = { Text(stringResource(R.string.navigation_home)) },
                         selected = true,
                         onClick = { }
                     )
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Sucursales") },
-                        label = { Text(stringResource(R.string.navegacion_2)) },
+                        label = { Text(stringResource(R.string.navigation_branches)) },
                         selected = false,
                         onClick = { }
                     )
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Settings, contentDescription = "Configuración") },
-                        label = { Text(stringResource(R.string.navegacion_3)) },
+                        label = { Text(stringResource(R.string.navigation_settings)) },
                         selected = false,
                         onClick = { }
                     )
@@ -158,15 +158,15 @@ fun HomeScreen(
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.dropdown_menu_1)) },
+                                text = { Text(stringResource(R.string.dropdown_profile)) },
                                 onClick = { menuExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.dropdown_menu_2)) },
+                                text = { Text(stringResource(R.string.dropdown_notifications)) },
                                 onClick = { menuExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.dropdown_menu_3)) },
+                                text = { Text(stringResource(R.string.dropdown_logout)) },
                                 onClick = {
                                     menuExpanded = false
                                     sessionViewModel.sendIntent(AuthIntent.Logout)
@@ -189,7 +189,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.bienvenida),
+                            text = stringResource(R.string.welcome),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold
                         )

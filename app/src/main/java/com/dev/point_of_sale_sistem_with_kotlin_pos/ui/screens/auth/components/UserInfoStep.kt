@@ -78,7 +78,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = stringResource(R.string.datos_personales),
+                    text = stringResource(R.string.personal_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -94,7 +94,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             enabled = !state.isLoading,
             isError = userName.isNotBlank() && !isUserNameValid,
             supportingText = if (userName.isNotBlank() && !isUserNameValid)
-                stringResource(R.string.nombre_validacion)
+                stringResource(R.string.name_validation)
             else null
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -109,7 +109,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             enabled = !state.isLoading,
             isError = userEmail.isNotBlank() && !isEmailValid,
             supportingText = if (userEmail.isNotBlank() && !isEmailValid)
-                stringResource(R.string.email_validacion)
+                stringResource(R.string.email_validation)
             else null
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -132,7 +132,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
         CustomTextField(
             value = userConfirmPassword,
             onValueChange = { userConfirmPassword = it },
-            label = stringResource(R.string.confirmar_contrasena_label),
+            label = stringResource(R.string.confirm_password_label),
             icon = Icons.Default.Lock,
             isPassword = true,
             showPassword = showConfirmPassword,
@@ -140,7 +140,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             enabled = !state.isLoading,
             isError = userConfirmPassword.isNotBlank() && !passwordsMatch,
             supportingText = if (userConfirmPassword.isNotBlank() && !passwordsMatch)
-                stringResource(R.string.contrasena_validacion_6)
+                stringResource(R.string.password_validation_6)
             else null
         )
 
@@ -157,7 +157,7 @@ fun UserInfoStep(viewModel: RegisterViewModel) {
             shape = RoundedCornerShape(12.dp)
         ) {
             Text(
-                stringResource(R.string.continuar),
+                stringResource(R.string.continue_text),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold
             )

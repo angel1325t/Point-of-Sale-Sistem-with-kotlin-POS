@@ -64,7 +64,7 @@ fun LoginScreen(
         state.error?.let { error ->
             val message = when (error) {
                 is AuthError.InvalidCredentials ->
-                    context.getString(R.string.credenciales_invalidas)
+                    context.getString(R.string.invalid_credentials)
                 is AuthError.Other ->
                     error.customMessage
                 else -> null // Ignorar errores que no aplican al login
@@ -163,7 +163,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text(stringResource(R.string.contrasena)) },
+                        label = { Text(stringResource(R.string.password)) },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
@@ -214,7 +214,7 @@ fun LoginScreen(
                             )
                         } else {
                             Text(
-                                text = stringResource(R.string.entrar),
+                                text = stringResource(R.string.login),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -228,7 +228,7 @@ fun LoginScreen(
                         enabled = !state.isLoading
                     ) {
                         Text(
-                            text = stringResource(R.string.olvidaste_tu_contrasena),
+                            text = stringResource(R.string.forgot_password),
                             color = colorScheme.primary
                         )
                     }
@@ -259,7 +259,7 @@ fun LoginScreen(
                         )
                     ) {
                         Text(
-                            text = stringResource(R.string.registrate),
+                            text = stringResource(R.string.sign_up),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )

@@ -45,7 +45,7 @@ fun StepIndicator(
                     if (step < currentStep) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.completado),
+                            contentDescription = stringResource(R.string.completed),
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(20.dp)
                         )
