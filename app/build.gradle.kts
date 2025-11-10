@@ -79,22 +79,21 @@ dependencies {
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.6.0")
 
-    // Supabase
+    // Persistencia de sesión
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // SUPABASE - BOM + MÓDULOS
     implementation(platform("io.github.jan-tennert.supabase:bom:3.2.4"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
 
-    // ✅ NUEVAS DEPENDENCIAS PARA PERSISTENCIA DE SESIÓN
-    implementation("io.github.jan-tennert.supabase:storage-kt") // Opcional pero recomendado
-    implementation("androidx.security:security-crypto:1.1.0-alpha06") // Para EncryptedSharedPreferences
-    implementation("androidx.datastore:datastore-preferences:1.1.1") // Alternativa moderna a SharedPreferences
-
-    // Ktor (necesario para Supabase)
-    implementation("io.ktor:ktor-client-android:3.3.1")
+// Ktor
     implementation("io.ktor:ktor-client-core:3.3.1")
-    implementation("io.ktor:ktor-client-cio:3.3.1") // Motor CIO recomendado para Android
+    implementation("io.ktor:ktor-client-android:3.3.1")
 
-    // Serialization (ya tienes el plugin, pero asegúrate de tener la lib)
+// Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // Testing
