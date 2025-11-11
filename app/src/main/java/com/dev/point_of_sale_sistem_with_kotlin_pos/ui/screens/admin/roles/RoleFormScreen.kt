@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -31,9 +32,10 @@ fun RoleFormScreen(
     val state = viewModel.state
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var name by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var nameError by remember { mutableStateOf<String?>(null) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var nameError by rememberSaveable { mutableStateOf<String?>(null) }
+    var dataLoaded by rememberSaveable { mutableStateOf(false) }
 
     val isEditMode = roleId != null
 
@@ -44,11 +46,14 @@ fun RoleFormScreen(
         }
     }
 
-    // Rellenar campos cuando se carga el rol
-    LaunchedEffect(state.selectedRole) {
-        state.selectedRole?.let { role ->
-            name = role.name
-            description = role.description ?: ""
+    // Rellenar campos cuando se carga el rol (solo una vez)
+    LaunchedEffect(state.selectedRole, dataLoaded) {
+        if (isEditMode && !dataLoaded) {
+            state.selectedRole?.let { role ->
+                name = role.name
+                description = role.description ?: ""
+                dataLoaded = true
+            }
         }
     }
 

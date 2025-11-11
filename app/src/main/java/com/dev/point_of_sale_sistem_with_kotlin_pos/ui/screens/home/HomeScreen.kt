@@ -161,9 +161,11 @@ fun HomeScreen(
                     icon = Icons.Default.People,
                     title = "Usuarios",
                     onClick = {
+                        navController.navigate("users")
                         scope.launch { drawerState.close() }
                     }
                 )
+
 
                 DrawerItem(
                     icon = Icons.Default.Store,

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,16 +31,26 @@ fun RolePermissionsScreen(
 ) {
     val state = viewModel.state
     val snackbarHostState = remember { SnackbarHostState() }
-    var selectedPermissions by remember(state.assignedPermissionIds) {
+
+    var selectedPermissions by rememberSaveable {
         mutableStateOf(state.assignedPermissionIds)
     }
-    var hasChanges by remember { mutableStateOf(false) }
+    var hasChanges by rememberSaveable { mutableStateOf(false) }
+    var initialLoadDone by rememberSaveable { mutableStateOf(false) }
 
     // Cargar datos iniciales
     LaunchedEffect(roleId) {
         viewModel.clearMessages() // Limpia mensajes viejos
         viewModel.handleIntent(RoleIntent.LoadRole(roleId))
         viewModel.handleIntent(RoleIntent.LoadPermissions)
+    }
+
+    // Sincronizar permisos asignados desde el ViewModel (solo la primera vez)
+    LaunchedEffect(state.assignedPermissionIds, initialLoadDone) {
+        if (!initialLoadDone && state.assignedPermissionIds.isNotEmpty()) {
+            selectedPermissions = state.assignedPermissionIds
+            initialLoadDone = true
+        }
     }
 
     // Mostrar errores
@@ -69,6 +80,7 @@ fun RolePermissionsScreen(
             navController.navigateUp()
         }
     }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {

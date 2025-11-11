@@ -208,9 +208,8 @@ fun RolesListScreen(
         )
     }
 }
-
 @Composable
-private fun RoleCard(
+fun RoleCard(
     role: RoleRepository.RoleModel,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -218,75 +217,53 @@ private fun RoleCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = role.name,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.inverseSurface
-                    )
-                    role.description?.let { desc ->
-                        if (desc.isNotEmpty()) {
-                            Text(
-                                text = desc,
-                                fontSize = 14.sp,
-                                color = Color.Gray,
-                                lineHeight = 20.sp
-                            )
-                        }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = role.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                role.description?.let { desc ->
+                    if (desc.isNotEmpty()) {
+                        Text(
+                            text = desc,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
+            }
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(
-                        onClick = onAssignPermissions,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Lock,
-                            contentDescription = "Gestionar permisos",
-                            tint = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    }
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Editar",
-                            tint = Color(0xFF4CAF50)
-                        )
-                    }
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Eliminar",
-                            tint = Color(0xFFD32F2F)
-                        )
-                    }
+            Row {
+                IconButton(onClick = onAssignPermissions) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Gestionar permisos",
+                        tint = MaterialTheme.colorScheme.primaryContainer
+                    )
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = Color(0xFF4CAF50)
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }

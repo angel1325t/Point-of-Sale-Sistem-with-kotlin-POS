@@ -17,16 +17,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RoleFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolePermissionsScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolesListScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UserFormScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UsersListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
@@ -44,19 +48,23 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // ViewModels de Autenticación
+                    // ViewModels de autenticación
                     val authSessionViewModel = remember { AuthSessionViewModel(supabase) }
                     val loginViewModel = remember { LoginViewModel(supabase, authSessionViewModel) }
 
-                    // ViewModel de Roles
+                    // ViewModels de roles y usuarios
                     val roleRepository = remember { RoleRepository(supabase) }
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
+
+                    val userRepository = remember { UserRepository(supabase) }
+                    val userViewModel = remember { UserViewModel(userRepository) }
 
                     AppNavigation(
                         navController = navController,
                         loginViewModel = loginViewModel,
                         authSessionViewModel = authSessionViewModel,
-                        roleViewModel = roleViewModel
+                        roleViewModel = roleViewModel,
+                        userViewModel = userViewModel
                     )
                 }
             }
@@ -69,7 +77,8 @@ fun AppNavigation(
     navController: NavHostController,
     loginViewModel: LoginViewModel,
     authSessionViewModel: AuthSessionViewModel,
-    roleViewModel: RoleViewModel
+    roleViewModel: RoleViewModel,
+    userViewModel: UserViewModel
 ) {
     NavHost(
         navController = navController,
@@ -97,52 +106,62 @@ fun AppNavigation(
 
         // ===== GESTIÓN DE ROLES =====
         composable("roles") {
-            RolesListScreen(
-                navController = navController,
-                viewModel = roleViewModel
-            )
+            RolesListScreen(navController, roleViewModel)
         }
 
         composable("roles/create") {
-            RoleFormScreen(
-                navController = navController,
-                viewModel = roleViewModel,
-                roleId = null
-            )
+            RoleFormScreen(navController, roleViewModel, null)
         }
 
         composable(
-            route = "roles/edit/{roleId}",
-            arguments = listOf(
-                navArgument("roleId") {
-                    type = NavType.IntType
-                }
-            )
+            "roles/edit/{roleId}",
+            arguments = listOf(navArgument("roleId") { type = NavType.IntType })
         ) { backStackEntry ->
             val roleId = backStackEntry.arguments?.getInt("roleId")
             roleId?.let {
-                RoleFormScreen(
-                    navController = navController,
-                    viewModel = roleViewModel,
-                    roleId = it
-                )
+                RoleFormScreen(navController, roleViewModel, it)
             }
         }
 
         composable(
-            route = "roles/{roleId}/permissions",
-            arguments = listOf(
-                navArgument("roleId") {
-                    type = NavType.IntType
-                }
-            )
+            "roles/{roleId}/permissions",
+            arguments = listOf(navArgument("roleId") { type = NavType.IntType })
         ) { backStackEntry ->
             val roleId = backStackEntry.arguments?.getInt("roleId")
             roleId?.let {
-                RolePermissionsScreen(
-                    navController = navController,
-                    viewModel = roleViewModel,
-                    roleId = it
+                RolePermissionsScreen(navController, roleViewModel, it)
+            }
+        }
+
+        // ===== GESTIÓN DE USUARIOS =====
+        composable("users") {
+            UsersListScreen(
+                navController,
+                viewModel = userViewModel,
+                onNavigateToCreate = { navController.navigate("users/create") },
+                onNavigateToEdit = { userId ->
+                    navController.navigate("users/edit/$userId")
+                }
+            )
+        }
+
+        composable("users/create") {
+            UserFormScreen(
+                viewModel = userViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "users/edit/{userId}",
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            userId?.let {
+                UserFormScreen(
+                    viewModel = userViewModel,
+                    userId = it,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }
