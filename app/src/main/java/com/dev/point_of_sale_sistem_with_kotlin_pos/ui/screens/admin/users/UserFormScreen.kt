@@ -1,111 +1,181 @@
-package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users
+    package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.UserError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
-import kotlinx.coroutines.delay
-import java.util.UUID
+    import android.widget.Toast
+    import androidx.compose.foundation.layout.*
+    import androidx.compose.foundation.rememberScrollState
+    import androidx.compose.foundation.verticalScroll
+    import androidx.compose.material.icons.Icons
+    import androidx.compose.material.icons.filled.ArrowBack
+    import androidx.compose.material3.*
+    import androidx.compose.runtime.*
+    import androidx.compose.runtime.saveable.rememberSaveable
+    import androidx.compose.ui.Alignment
+    import androidx.compose.ui.Modifier
+    import androidx.compose.ui.platform.LocalContext
+    import androidx.compose.ui.res.stringResource
+    import androidx.compose.ui.unit.dp
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.UserError
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
+    import kotlinx.coroutines.delay
+    import java.util.UUID
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun UserFormScreen(
+        viewModel: UserViewModel,
+        userId: String? = null,
+        onNavigateBack: () -> Unit
+    ) {
+        val state = viewModel.state
+        val isEditMode = userId != null
+        val context = LocalContext.current
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun UserFormScreen(
-    viewModel: UserViewModel,
-    userId: String? = null,
-    onNavigateBack: () -> Unit
-) {
-    val state = viewModel.state
-    val isEditMode = userId != null
 
-    var email by rememberSaveable { mutableStateOf("") }
-    var selectedRoleId by rememberSaveable { mutableStateOf<Int?>(null) }
-    var selectedBranchId by rememberSaveable { mutableStateOf<String?>(null) }
-    var expandedRole by rememberSaveable { mutableStateOf(false) }
-    var expandedBranch by rememberSaveable { mutableStateOf(false) }
-    var dataLoaded by rememberSaveable { mutableStateOf(false) }
+        var email by remember { mutableStateOf("") }
+        var selectedRoleId by remember { mutableStateOf<Int?>(null) }
+        var selectedBranchId by remember { mutableStateOf<String?>(null) }
 
-    // 🔹 Cargar roles, sucursales y usuario si aplica
-    LaunchedEffect(isEditMode, userId) {
-        viewModel.handleIntent(UserIntent.LoadRoles)
-        viewModel.handleIntent(UserIntent.LoadBranches)
+        // 🔥 Estados de error
+        var emailError by remember { mutableStateOf<String?>(null) }
+        var roleError by remember { mutableStateOf<String?>(null) }
+        var branchError by remember { mutableStateOf<String?>(null) }
 
-        if (isEditMode && !dataLoaded) {
-            viewModel.handleIntent(UserIntent.LoadUser(userId!!))
-        } else if (!isEditMode) {
+        var expandedRole by remember { mutableStateOf(false) }
+        var expandedBranch by remember { mutableStateOf(false) }
+        var loadedUserId by remember { mutableStateOf<String?>(null) }
+
+        LaunchedEffect(userId) {
             viewModel.clearSelectedUser()
+            loadedUserId = null
+            email = ""
+            selectedRoleId = null
+            selectedBranchId = null
+            emailError = null
+            roleError = null
+            branchError = null
         }
-    }
 
-    // 🔹 Llenar los campos al cargar usuario en modo edición
-    LaunchedEffect(state.selectedUser) {
-        if (isEditMode && !dataLoaded) {
-            state.selectedUser?.let { user ->
-                email = user.email ?: ""
-                selectedRoleId = user.role_id
-                selectedBranchId = user.branch_id?.toString()
-                dataLoaded = true
+        LaunchedEffect(Unit) {
+            viewModel.handleIntent(UserIntent.LoadRoles)
+            viewModel.handleIntent(UserIntent.LoadBranches)
+
+            if (isEditMode) {
+                viewModel.handleIntent(UserIntent.LoadUser(userId!!))
             }
         }
-    }
 
-    // 🔹 Navegar atrás al guardar con éxito
-    LaunchedEffect(state.successMessage) {
-        if (state.successMessage != null) {
-            delay(1500)
-            onNavigateBack()
+        LaunchedEffect(state.selectedUser) {
+            state.selectedUser?.let { user ->
+                if (loadedUserId != user.user_id.toString()) {
+                    email = user.email ?: ""
+                    selectedRoleId = user.role_id
+                    selectedBranchId = user.branch_id?.toString()
+                    loadedUserId = user.user_id.toString()
+                }
+            }
         }
-    }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (isEditMode) "Editar Usuario" else "Nuevo Usuario") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+        LaunchedEffect(state.successMessage) {
+            state.successMessage?.let { msg ->
+                val messageText = context.getString(
+                    when (msg) {
+                        "SUCCESS_CREATE_USER" -> R.string.success_create_user
+                        "SUCCESS_UPDATE_USER" -> R.string.success_update_user
+                        else -> R.string.success_generic
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.surface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.surface
                 )
-            )
+
+                Toast.makeText(context, messageText, Toast.LENGTH_SHORT).show()
+
+
+                // Limpia mensaje para evitar duplicados
+                viewModel.clearMessages()
+
+                // Y volver atrás
+                onNavigateBack()
+            }
         }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+
+
+        DisposableEffect(Unit) {
+            onDispose {
+                viewModel.clearSelectedUser()
+                viewModel.clearMessages()
+            }
+        }
+
+        fun validateFields(): Boolean {
+            var isValid = true
+
+            // Validación email
+            if (email.isBlank()) {
+                emailError = context.getString(R.string.email_required_validation)
+                isValid = false
+            } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                emailError = context.getString(R.string.invalid_format)
+                isValid = false
+            } else {
+                emailError = null
+            }
+
+            // Validación rol
+            if (selectedRoleId == null) {
+                roleError = context.getString(R.string.role_validation)
+                isValid = false
+            } else {
+                roleError = null
+            }
+
+            // Validación sucursal
+            if (selectedBranchId == null) {
+                branchError = context.getString(R.string.branch_validation)
+                isValid = false
+            } else {
+                branchError = null
+            }
+
+            return isValid
+        }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(if (isEditMode) stringResource(R.string.edit_user_title) else stringResource(R.string.new_user_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.go_back))
+                        }
+                    }
+                )
+            }
+        ) { padding ->
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(padding)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 📧 Email
+
+                // ----------------------------- EMAIL -----------------------------
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email") },
+                    onValueChange = {
+                        email = it
+                        emailError = null
+                    },
+                    label = { Text(stringResource(R.string.email)) },
+                    isError = emailError != null,
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = !state.isLoading
+                    enabled = !isEditMode
                 )
 
-                // 👤 Rol (ahora visible tanto en crear como editar)
+                if (emailError != null) {
+                    Text(emailError!!, color = MaterialTheme.colorScheme.error)
+                }
+
+                // ----------------------------- ROL -----------------------------
                 ExposedDropdownMenuBox(
                     expanded = expandedRole,
                     onExpandedChange = { expandedRole = !expandedRole }
@@ -114,15 +184,16 @@ fun UserFormScreen(
                         value = state.roles.find { it.role_id == selectedRoleId }?.name ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Rol") },
+                        label = { Text(stringResource(R.string.role)) },
+                        isError = roleError != null,
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRole)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .menuAnchor(),
-                        enabled = !state.isLoading
                     )
+
                     ExposedDropdownMenu(
                         expanded = expandedRole,
                         onDismissRequest = { expandedRole = false }
@@ -132,6 +203,7 @@ fun UserFormScreen(
                                 text = { Text(role.name) },
                                 onClick = {
                                     selectedRoleId = role.role_id
+                                    roleError = null
                                     expandedRole = false
                                 }
                             )
@@ -139,26 +211,29 @@ fun UserFormScreen(
                     }
                 }
 
-                // 🏢 Sucursal (en crear y editar)
+                if (roleError != null) {
+                    Text(roleError!!, color = MaterialTheme.colorScheme.error)
+                }
+
+                // ----------------------------- SUCURSAL -----------------------------
                 ExposedDropdownMenuBox(
                     expanded = expandedBranch,
                     onExpandedChange = { expandedBranch = !expandedBranch }
                 ) {
                     OutlinedTextField(
-                        value = state.branches.find {
-                            it.branch_id?.toString() == selectedBranchId
-                        }?.name ?: "",
+                        value = state.branches.find { it.branch_id?.toString() == selectedBranchId }?.name ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Sucursal") },
+                        label = { Text(stringResource(R.string.branch)) },
+                        isError = branchError != null,
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBranch)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(),
-                        enabled = !state.isLoading
+                            .menuAnchor()
                     )
+
                     ExposedDropdownMenu(
                         expanded = expandedBranch,
                         onDismissRequest = { expandedBranch = false }
@@ -168,6 +243,7 @@ fun UserFormScreen(
                                 text = { Text(branch.name) },
                                 onClick = {
                                     selectedBranchId = branch.branch_id?.toString()
+                                    branchError = null
                                     expandedBranch = false
                                 }
                             )
@@ -175,97 +251,53 @@ fun UserFormScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                if (branchError != null) {
+                    Text(branchError!!, color = MaterialTheme.colorScheme.error)
+                }
 
-                // 💾 Botón Guardar
+                // ----------------------------- BOTÓN GUARDAR -----------------------------
                 Button(
                     onClick = {
+                        if (!validateFields()) return@Button
+
                         if (isEditMode) {
                             viewModel.handleIntent(
                                 UserIntent.UpdateUser(
                                     userId = userId!!,
-                                    email = if (email.isNotBlank()) email else null,
+                                    email = email,
                                     branchId = selectedBranchId?.let { UUID.fromString(it) },
                                     roleId = selectedRoleId
                                 )
                             )
                         } else {
-                            if (email.isNotBlank() && selectedRoleId != null && selectedBranchId != null) {
-                                viewModel.handleIntent(
-                                    UserIntent.CreateUser(
-                                        email = email,
-                                        roleId = selectedRoleId!!,
-                                        username = "",
-                                        phone = null,
-                                        branchId = UUID.fromString(selectedBranchId!!)
-                                    )
+                            viewModel.handleIntent(
+                                UserIntent.CreateUser(
+                                    email = email,
+                                    roleId = selectedRoleId!!,
+                                    branchId = UUID.fromString(selectedBranchId!!)
                                 )
-                            }
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading && email.isNotBlank()
+                    enabled = !state.isLoading
                 ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(if (isEditMode) "Actualizar" else "Crear")
-                    }
+                    Text(if (isEditMode) stringResource(R.string.update_text) else stringResource(R.string.create_text))
                 }
 
-                // ⚠️ Error
+                // ----------------------------- ERRORES DE BACKEND -----------------------------
                 state.error?.let { error ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Text(
-                            text = when (error) {
-                                UserError.ConnectionError -> "Error de conexión"
-                                UserError.UserNotFound -> "Usuario no encontrado"
-                                UserError.EmailAlreadyExists -> "El email ya existe"
-                                UserError.AuthError -> "Error al crear usuario en autenticación"
-                                is UserError.Other -> error.message ?: "Error desconocido"
-                            },
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-
-                // ✅ Éxito
-                state.successMessage?.let { message ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Text(
-                            text = message,
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-            }
-
-            // ⏳ Overlay de carga
-            if (state.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+                    Text(
+                        text = when (error) {
+                            UserError.ConnectionError -> context.getString(R.string.conection_error)
+                            UserError.UserNotFound -> stringResource(R.string.user_not_found)
+                            UserError.EmailAlreadyExists -> stringResource(R.string.email_already_exists)
+                            UserError.AuthError -> stringResource(R.string.supabase_auth_error)
+                            is UserError.Other -> error.message ?: context.getString(R.string.unknown_error)
+                        },
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
     }
-}

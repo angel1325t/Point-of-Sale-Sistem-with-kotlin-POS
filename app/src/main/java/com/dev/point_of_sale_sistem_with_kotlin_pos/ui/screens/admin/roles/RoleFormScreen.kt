@@ -13,10 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.roles.RoleIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.roles.RoleError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
@@ -31,6 +34,8 @@ fun RoleFormScreen(
 ) {
     val state = viewModel.state
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val context = LocalContext.current
 
     var name by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
@@ -61,9 +66,9 @@ fun RoleFormScreen(
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
-                is RoleError.ConnectionError -> "Error de conexión"
-                is RoleError.RoleNotFound -> "Rol no encontrado"
-                is RoleError.Other -> error.customMessage ?: "Error desconocido"
+                is RoleError.ConnectionError -> context.getString(R.string.conection_error)
+                is RoleError.RoleNotFound -> context.getString(R.string.role_not_found)
+                is RoleError.Other -> error.customMessage ?: context.getString(R.string.unknown_error)
             }
             snackbarHostState.showSnackbar(
                 message = message,
@@ -88,13 +93,13 @@ fun RoleFormScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(if (isEditMode) "Editar Rol" else "Crear Rol")
+                    Text(if (isEditMode) stringResource(R.string.edit_role) else stringResource(R.string.create_role))
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
+                            contentDescription = stringResource(R.string.go_back)
                         )
                     }
                 },
@@ -110,9 +115,9 @@ fun RoleFormScreen(
                 onClick = {
                     // Validación
                     nameError = when {
-                        name.isBlank() -> "El nombre es obligatorio"
-                        name.length < 3 -> "Mínimo 3 caracteres"
-                        name.length > 50 -> "Máximo 50 caracteres"
+                        name.isBlank() -> context.getString(R.string.user_crud_validation_name)
+                        name.length < 3 -> context.getString(R.string.user_crud_validation_min_len)
+                        name.length > 50 -> context.getString(R.string.user_crud_validation_max_len)
                         else -> null
                     }
 
@@ -134,7 +139,7 @@ fun RoleFormScreen(
             ) {
                 Icon(
                     Icons.Default.Save,
-                    contentDescription = "Guardar",
+                    contentDescription = stringResource(R.string.save),
                     tint = MaterialTheme.colorScheme.surface
                 )
             }
@@ -166,7 +171,7 @@ fun RoleFormScreen(
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
                         Text(
-                            text = "Información del Rol",
+                            text = stringResource(R.string.role_information_title),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.inverseSurface
@@ -179,8 +184,8 @@ fun RoleFormScreen(
                                 name = it
                                 nameError = null
                             },
-                            label = { Text("Nombre del rol *") },
-                            placeholder = { Text("Ej: Administrador, Cajero") },
+                            label = { Text(stringResource(R.string.role_name_label)) },
+                            placeholder = { Text(stringResource(R.string.role_name_example)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             isError = nameError != null,
@@ -204,8 +209,8 @@ fun RoleFormScreen(
                         OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
-                            label = { Text("Descripción (opcional)") },
-                            placeholder = { Text("Describe las funciones de este rol") },
+                            label = { Text(stringResource(R.string.role_description_label)) },
+                            placeholder = { Text(stringResource(R.string.role_description_placeholder)) },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
                             maxLines = 5,
@@ -250,8 +255,8 @@ fun RoleFormScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "Los roles te permiten organizar los permisos de tus usuarios. " +
-                                        "Después de crear el rol, podrás asignarle permisos específicos.",
+                                stringResource(R.string.role_helper_1) +
+                                        stringResource(R.string.role_helper_2),
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 lineHeight = 20.sp

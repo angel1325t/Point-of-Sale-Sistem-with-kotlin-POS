@@ -1,5 +1,6 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,8 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.UserError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
@@ -28,6 +32,7 @@ fun UsersListScreen(
 ) {
     val state = viewModel.state
     var showDeleteDialog by remember { mutableStateOf<UserRepository.UserModel?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.handleIntent(UserIntent.LoadUsers)
@@ -40,16 +45,36 @@ fun UsersListScreen(
             viewModel.clearMessages()
         }
     }
+    val successText = when (state.successMessage) {
+        "SUCCESS_CREATE_USER" -> stringResource(R.string.success_create_user)
+        "SUCCESS_UPDATE_USER" -> stringResource(R.string.success_update_user)
+        "SUCCESS_DELETE_USER" -> stringResource(R.string.success_delete_user)
+        else -> state.successMessage?.let { stringResource(R.string.success_generic) }
+    }
+
+    LaunchedEffect(state.successMessage) {
+        successText?.let {
+            Toast.makeText(
+                context,
+                it,
+                Toast.LENGTH_SHORT
+            ).show()
+
+            viewModel.clearMessages()
+        }
+    }
+
+
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Gestión de Usuarios") },
+                title = { Text(stringResource(R.string.manage_user_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
+                            contentDescription = stringResource(R.string.go_back)
                         )
                     }
                 },
@@ -62,7 +87,7 @@ fun UsersListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onNavigateToCreate) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Usuario")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_user_description))
             }
         }
     ) { padding ->
@@ -93,11 +118,11 @@ fun UsersListScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = when (state.error) {
-                                UserError.ConnectionError -> "Error de conexión"
-                                UserError.UserNotFound -> "Usuario no encontrado"
-                                UserError.EmailAlreadyExists -> "El email ya existe"
-                                UserError.AuthError -> "Error de autenticación"
-                                is UserError.Other -> state.error.message ?: "Error desconocido"
+                                UserError.ConnectionError -> context.getString(R.string.conection_error)
+                                UserError.UserNotFound -> stringResource(R.string.user_not_found)
+                                UserError.EmailAlreadyExists -> stringResource(R.string.email_already_exists)
+                                UserError.AuthError -> stringResource(R.string.supabase_auth_error)
+                                is UserError.Other -> state.error.message ?: context.getString(R.string.unknown_error)
                             },
                             color = MaterialTheme.colorScheme.error
                         )
@@ -117,7 +142,7 @@ fun UsersListScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("No hay usuarios registrados")
+                        Text(stringResource(R.string.no_user_registrated))
                     }
                 }
                 else -> {
@@ -154,8 +179,8 @@ fun UsersListScreen(
     showDeleteDialog?.let { user ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Confirmar eliminación") },
-            text = { Text("¿Está seguro que desea eliminar al usuario ${user.username}?") },
+            title = { Text(stringResource(R.string.confirm_delete_title)) },
+            text = { Text(stringResource(R.string.confirm_user_deletion, user.username)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -163,12 +188,12 @@ fun UsersListScreen(
                         showDeleteDialog = null
                     }
                 ) {
-                    Text("Eliminar")
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -194,15 +219,11 @@ fun UserCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = user.username, style = MaterialTheme.typography.titleMedium)
-                user.phone?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+
                 Text(
-                    text = "Estado: ${if (user.active == true) "Activo" else "Inactivo"}",
+                    text = "Estado: ${if (user.active == true) stringResource(R.string.active) else stringResource(
+                        R.string.inactive
+                    )}",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (user.active == true)
                         MaterialTheme.colorScheme.primary
@@ -212,12 +233,12 @@ fun UserCard(
             }
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar",tint = Color(0xFF4CAF50))
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit),tint = Color(0xFF4CAF50))
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Eliminar",
+                        contentDescription = stringResource(R.string.delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

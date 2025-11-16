@@ -12,10 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.roles.RoleIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.roles.RoleError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
@@ -33,6 +36,9 @@ fun RolesListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteDialog by remember { mutableStateOf<Int?>(null) }
 
+    val context = LocalContext.current
+
+
     // Cargar roles al iniciar
     LaunchedEffect(Unit) {
         viewModel.handleIntent(RoleIntent.LoadRoles)
@@ -42,9 +48,9 @@ fun RolesListScreen(
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
-                is RoleError.ConnectionError -> "Error de conexión"
-                is RoleError.RoleNotFound -> "Rol no encontrado"
-                is RoleError.Other -> error.customMessage ?: "Error desconocido"
+                is RoleError.ConnectionError -> context.getString(R.string.conection_error)
+                is RoleError.RoleNotFound -> context.getString(R.string.role_not_found)
+                is RoleError.Other -> error.customMessage ?: context.getString(R.string.unknown_error)
             }
             snackbarHostState.showSnackbar(
                 message = message,
@@ -67,12 +73,12 @@ fun RolesListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Gestión de Roles") },
+                title = { Text(stringResource(R.string.roles_header)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
+                            contentDescription = stringResource(R.string.go_back)
                         )
                     }
                 },
@@ -90,7 +96,7 @@ fun RolesListScreen(
             ) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Crear rol",
+                    contentDescription = stringResource(R.string.create_role),
                     tint = MaterialTheme.colorScheme.surface
                 )
             }
@@ -124,7 +130,7 @@ fun RolesListScreen(
                             tint = Color.Gray
                         )
                         Text(
-                            "No hay roles registrados",
+                            stringResource(R.string.no_roles_registrated),
                             fontSize = 16.sp,
                             color = Color.Gray
                         )
@@ -133,7 +139,7 @@ fun RolesListScreen(
                         ) {
                             Icon(Icons.Default.Add, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Crear primer rol")
+                            Text(stringResource(R.string.create_first_role))
                         }
                     }
                 }
@@ -180,12 +186,12 @@ fun RolesListScreen(
             },
             title = {
                 Text(
-                    "Confirmar eliminación",
+                    stringResource(R.string.confirm_delete_title),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
-                Text("¿Estás seguro de eliminar este rol? Esta acción no se puede deshacer.")
+                Text(stringResource(R.string.confirm_delete_body))
             },
             confirmButton = {
                 Button(
@@ -197,12 +203,12 @@ fun RolesListScreen(
                         containerColor = MaterialTheme.colorScheme.onError, contentColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
-                    Text("Eliminar")
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -247,21 +253,21 @@ fun RoleCard(
                 IconButton(onClick = onAssignPermissions) {
                     Icon(
                         Icons.Default.Lock,
-                        contentDescription = "Gestionar permisos",
+                        contentDescription = stringResource(R.string.manage_permissions_description),
                         tint = MaterialTheme.colorScheme.primaryContainer
                     )
                 }
                 IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Default.Edit,
-                        contentDescription = "Editar",
+                        contentDescription = stringResource(R.string.edit),
                         tint = Color(0xFF4CAF50)
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Eliminar",
+                        contentDescription = stringResource(R.string.delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

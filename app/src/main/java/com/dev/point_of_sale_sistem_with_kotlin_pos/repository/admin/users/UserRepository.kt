@@ -61,24 +61,26 @@ class UserRepository(private val supabase: SupabaseClient) {
     ): UserModel {
         Log.d(TAG, "Starting user creation for $email")
 
-        // === 1. Validaciones ===
         if (email.isBlank()) throw IllegalArgumentException("Email cannot be empty")
 
-        // Verificar si el username ya existe
+        // === username basado en email ===
+        val username = email.substringBefore("@")
+
+        // === Verificar si username ya existe ===
         val existingUser = supabase.postgrest.from("users")
-            .select { filter { eq("email", email) } }
+            .select { filter { eq("username", username) } }
             .decodeList<UserCheck>()
             .firstOrNull()
+
         if (existingUser != null) {
-            throw IllegalArgumentException("email '$email' is already in use")
+            throw IllegalArgumentException("username '$username' is already in use")
         }
 
-        // === 2. Generar contraseña aleatoria ===
+        // === Generar contraseña ===
         val randomPassword = generateRandomPassword()
-        Log.d(TAG, "Generated random password for user")
+        Log.d(TAG, "Generated random password for auth")
 
-        // === 3. Crear usuario en auth.users usando RPC o REST API ===
-        // Nota: Supabase Kotlin no expone signUpWith para admin, necesitamos usar el endpoint REST
+        // === Crear usuario en auth.users ===
         val authResponse = supabase.postgrest.rpc(
             "create_auth_user",
             buildJsonObject {
@@ -88,8 +90,8 @@ class UserRepository(private val supabase: SupabaseClient) {
         )
 
         val authId = try {
-            val result = authResponse.decodeAs<AuthUserResult>()
-            UUID.fromString(result.id)
+            val idString = authResponse.decodeAs<String>()
+            UUID.fromString(idString)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse auth user ID", e)
             throw Exception("Failed to create auth user: ${e.message}")
@@ -97,30 +99,31 @@ class UserRepository(private val supabase: SupabaseClient) {
 
         Log.d(TAG, "Auth user created: authId=$authId")
 
-        // === 4. Generar UUID para el usuario ===
+        // === UUID para public.user ===
         val userId = UUID.randomUUID()
 
-        // === 5. Insertar usuario en public.users ===
+        // === Insert en public.users ===
         val userData = UserInsert(
             user_id = userId,
             auth_id = authId,
             role_id = roleId,
-            active = true, // Por motivos de prueba
+            active = true,
             company_id = companyId,
-            branch_id = branchId
+            branch_id = branchId,
+            username = username  // ← AQUI LO AGREGAS
         )
 
-        Log.d(TAG, "Inserting user: $userData")
-        val userResponse: PostgrestResult = supabase.postgrest.from("users").insert(userData)
+        Log.d(TAG, "Inserting user in public.users: $userData")
+        val userResponse = supabase.postgrest.from("users").insert(userData)
         Log.d(TAG, "User insert response: $userResponse")
 
         return getUserById(userId.toString())
             ?: throw Exception("User created but could not retrieve")
     }
 
+
     suspend fun updateUser(
         userId: String,
-        email: String?,
         branchId: UUID?,
         roleId: Int?
     ): UserModel {
@@ -129,26 +132,8 @@ class UserRepository(private val supabase: SupabaseClient) {
         val currentUser = getUserById(userId)
             ?: throw IllegalStateException("User not found")
 
-        // 🔹 Si se actualiza el email, actualizar también en auth.users
-        if (email != null && currentUser.auth_id != null) {
-            try {
-                supabase.postgrest.rpc(
-                    "update_auth_user_email",
-                    buildJsonObject {
-                        put("user_auth_id", currentUser.auth_id.toString())
-                        put("new_email", email)
-                    }
-                )
-                Log.d(TAG, "Auth email updated successfully")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update auth email", e)
-                // Continuar aunque falle la actualización del email en auth
-            }
-        }
-
         // 🔹 Crear el objeto con los datos a actualizar
         val updateData = buildJsonObject {
-            if (email != null) put("email", email)
             if (branchId != null) put("branch_id", branchId.toString())
             if (roleId != null) put("role_id", roleId)
             put("updated_at", "now()")
@@ -198,10 +183,18 @@ class UserRepository(private val supabase: SupabaseClient) {
 
     suspend fun getAllBranches(): List<BranchModel> =
         supabase.postgrest.from("branches")
+            .select { }
+            .decodeList<BranchModel>()
+
+    suspend fun getBranchesByCompany(companyId: UUID): List<BranchModel> =
+        supabase.postgrest.from("branches")
             .select {
-                filter { /* no filter needed */ }
+                filter {
+                    eq("company_id", companyId)
+                }
             }
             .decodeList<BranchModel>()
+
 
     // Generar contraseña aleatoria
     private fun generateRandomPassword(length: Int = 12): String {
@@ -237,7 +230,8 @@ class UserRepository(private val supabase: SupabaseClient) {
         val role_id: Int,
         val active: Boolean,
         @Contextual val company_id: UUID,
-        @Contextual val branch_id: UUID
+        @Contextual val branch_id: UUID,
+        val username: String,
     )
 
     @Serializable

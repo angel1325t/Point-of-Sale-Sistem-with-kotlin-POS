@@ -52,4 +52,66 @@
     <string name="register_failed">Error al registrar</string>
     <string name="register_success">Registro exitoso</string>
     <string name="company_email_already_exists">El email de la compañía \'%1$s\' ya está en uso</string>
+    <string name="conection_error">Error de conexión</string>
+    <string name="role_not_found">Rol no encontrado</string>
+    <string name="unknown_error">Error desconocido</string>
+    <string name="edit_role">Editar Rol</string>
+    <string name="create_role">Crear Rol</string>
+    <string name="go_back">Volver</string>
+    <string name="user_crud_validation_name">El nombre es obligatorio</string>
+    <string name="user_crud_validation_min_len">Mínimo 3 caracteres</string>
+    <string name="user_crud_validation_max_len">Máximo 50 caracteres</string>
+    <string name="save">Guardar</string>
+    <string name="role_information_title">Información del Rol</string>
+    <string name="role_name_label">Nombre del rol *</string>
+    <string name="role_name_example">Ej: Administrador, Cajero</string>
+    <string name="role_description_label">Descripción (opcional)</string>
+    <string name="role_description_placeholder">Describe las funciones de este rol</string>
+    <string name="role_helper_1">"Los roles te permiten organizar los permisos de tus usuarios. "</string>
+    <string name="role_helper_2">Después de crear el rol, podrás asignarle permisos específicos.</string>
+    <string name="permissions_header">Permisos</string>
+    <string name="no_available_permissions_message">No hay permisos disponibles</string>
+    <string name="contact_admin">Contacta al administrador del sistema</string>
+    <string name="roles_header">Gestión de Roles</string>
+    <string name="no_roles_registrated">No hay roles registrados</string>
+    <string name="create_first_role">Crear primer rol</string>
+    <string name="confirm_delete_title">Confirmar eliminación</string>
+    <string name="confirm_delete_body">¿Estás seguro de eliminar este rol? Esta acción no se puede deshacer.</string>
+    <string name="delete">Eliminar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="manage_permissions_description">Gestionar permisos</string>
+    <string name="edit">Editar</string>
+    <string name="email_required_validation">El email es obligatorio</string>
+    <string name="invalid_format">Formato de email inválido</string>
+    <string name="role_validation">Debe seleccionar un rol</string>
+    <string name="branch_validation">Debe seleccionar una sucursal</string>
+    <string name="new_user_title">Nuevo Usuario</string>
+    <string name="edit_user_title">Editar Usuario</string>
+    <string name="role">Rol</string>
+    <string name="branch">Sucursales</string>
+    <string name="update_text">Actualizar</string>
+    <string name="create_text">Crear</string>
+    <string name="user_not_found">Usuario no encontrado</string>
+    <string name="email_already_exists">El email ya existe</string>
+    <string name="supabase_auth_error">Error en autenticación de Supabase</string>
+    <string name="manage_user_title">Gestión de Usuarios</string>
+    <string name="add_user_description">Agregar Usuario</string>
+    <string name="no_user_registrated">No hay usuarios registrados</string>
+    <string name="confirm_user_deletion">¿Está seguro que desea eliminar al usuario %1$s?</string>
+    <string name="active">Activo</string>
+    <string name="inactive">Inactivo</string>
+
+    <!-- Success -->
+    <string name="success_create_user">Usuario creado</string>
+    <string name="success_update_user">Usuario actualizado</string>
+    <string name="success_delete_user">Usuario eliminado</string>
+    <string name="success_generic">Operación exitosa</string>
+
+
+    <!-- Errors -->
+    <string name="error_no_current_user">No se pudo obtener el usuario actual</string>
+    <string name="error_no_company_id">El usuario actual no tiene company_id</string>
+    <string name="error_load_roles">Error al cargar los roles</string>
+    <string name="error_load_branches">Error al cargar las sucursales</string>
+
 </resources>

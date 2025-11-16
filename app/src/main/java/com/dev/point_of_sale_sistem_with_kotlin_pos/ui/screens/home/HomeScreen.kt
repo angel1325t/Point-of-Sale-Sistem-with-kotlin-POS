@@ -3,7 +3,9 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -73,107 +75,107 @@ fun HomeScreen(
             ModalDrawerSheet(
                 drawerContainerColor = MaterialTheme.colorScheme.surface
             ) {
-                // Header del drawer
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primaryContainer
+
+                // ⬇️ AGREGADO: Scroll para el drawer
+                val scrollState = rememberScrollState()
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
+
+                    // Header del drawer
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primaryContainer
                     ) {
-                        Icon(
-                            Icons.Default.AccountCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.White
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = state.email ?: "Usuario",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "Sistema POS",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.White
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = state.email ?: "Usuario",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Sistema POS",
+                                fontSize = 14.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
                     }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    DrawerSection("Operaciones")
+
+                    DrawerItem(
+                        icon = Icons.Default.ShoppingCart,
+                        title = "Ventas",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.KeyboardReturn,
+                        title = "Devoluciones",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.Inventory,
+                        title = "Inventario",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.Assessment,
+                        title = "Reportes",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(Modifier.height(8.dp))
+
+                    DrawerSection("Administración")
+
+                    DrawerItem(
+                        icon = Icons.Default.Security,
+                        title = "Gestión de Roles",
+                        onClick = {
+                            navController.navigate("roles")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.People,
+                        title = "Usuarios",
+                        onClick = {
+                            navController.navigate("users")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.Store,
+                        title = "Sucursales",
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                        }
+                    )
                 }
-
-                Spacer(Modifier.height(8.dp))
-
-                // Sección Principal
-                DrawerSection("Operaciones")
-
-                DrawerItem(
-                    icon = Icons.Default.ShoppingCart,
-                    title = "Ventas",
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                    }
-                )
-
-                DrawerItem(
-                    icon = Icons.Default.KeyboardReturn,
-                    title = "Devoluciones",
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                    }
-                )
-
-                DrawerItem(
-                    icon = Icons.Default.Inventory,
-                    title = "Inventario",
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                    }
-                )
-
-                DrawerItem(
-                    icon = Icons.Default.Assessment,
-                    title = "Reportes",
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                    }
-                )
-
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                Spacer(Modifier.height(8.dp))
-
-                // Sección Administración
-                DrawerSection("Administración")
-
-                DrawerItem(
-                    icon = Icons.Default.Security,
-                    title = "Gestión de Roles",
-                    onClick = {
-                        navController.navigate("roles")
-                        scope.launch { drawerState.close() }
-                    }
-                )
-
-                DrawerItem(
-                    icon = Icons.Default.People,
-                    title = "Usuarios",
-                    onClick = {
-                        navController.navigate("users")
-                        scope.launch { drawerState.close() }
-                    }
-                )
-
-
-                DrawerItem(
-                    icon = Icons.Default.Store,
-                    title = "Sucursales",
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                    }
-                )
             }
         }
     ) {

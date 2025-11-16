@@ -14,10 +14,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.roles.RoleIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.roles.RoleError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
@@ -31,6 +34,9 @@ fun RolePermissionsScreen(
 ) {
     val state = viewModel.state
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val context = LocalContext.current
+
 
     var selectedPermissions by rememberSaveable {
         mutableStateOf(state.assignedPermissionIds)
@@ -57,9 +63,9 @@ fun RolePermissionsScreen(
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
-                is RoleError.ConnectionError -> "Error de conexión"
-                is RoleError.RoleNotFound -> "Rol no encontrado"
-                is RoleError.Other -> error.customMessage ?: "Error desconocido"
+                is RoleError.ConnectionError -> context.getString(R.string.conection_error)
+                is RoleError.RoleNotFound -> context.getString(R.string.role_not_found)
+                is RoleError.Other -> error.customMessage ?: context.getString(R.string.unknown_error)
             }
             snackbarHostState.showSnackbar(
                 message = message,
@@ -87,7 +93,7 @@ fun RolePermissionsScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Permisos")
+                        Text(stringResource(R.string.permissions_header))
                         state.selectedRole?.let { role ->
                             Text(
                                 text = role.name,
@@ -102,7 +108,7 @@ fun RolePermissionsScreen(
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
+                            contentDescription = stringResource(R.string.go_back)
                         )
                     }
                 },
@@ -128,7 +134,7 @@ fun RolePermissionsScreen(
                 ) {
                     Icon(
                         Icons.Default.Save,
-                        contentDescription = "Guardar permisos",
+                        contentDescription = stringResource(R.string.save),
                         tint = MaterialTheme.colorScheme.surface
                     )
                 }
@@ -165,13 +171,13 @@ fun RolePermissionsScreen(
                             tint = Color.Gray
                         )
                         Text(
-                            "No hay permisos disponibles",
+                            stringResource(R.string.no_available_permissions_message),
                             fontSize = 16.sp,
                             color = Color.Gray,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            "Contacta al administrador del sistema",
+                            stringResource(R.string.contact_admin),
                             fontSize = 14.sp,
                             color = Color.Gray
                         )
@@ -250,7 +256,7 @@ private fun PermissionCard(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.secondary
+                MaterialTheme.colorScheme.inversePrimary
             } else {
                 MaterialTheme.colorScheme.surfaceContainerHigh
             }
@@ -274,11 +280,7 @@ private fun PermissionCard(
                 Icon(
                     if (isSelected) Icons.Default.CheckCircle else Icons.Default.Lock,
                     contentDescription = null,
-                    tint = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        Color.Gray
-                    },
+                    tint = Color.Gray,
                     modifier = Modifier.size(24.dp)
                 )
                 Column {
@@ -286,11 +288,7 @@ private fun PermissionCard(
                         text = permission.name,
                         fontSize = 16.sp,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.inverseSurface
-                        }
+                        color = MaterialTheme.colorScheme.inverseSurface,
                     )
                     Text(
                         text = formatPermissionName(permission.name),
@@ -304,8 +302,8 @@ private fun PermissionCard(
                 checked = isSelected,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.primary,
-                    checkedTrackColor = MaterialTheme.colorScheme.secondary
+                    checkedThumbColor = MaterialTheme.colorScheme.inversePrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
                 )
             )
         }
