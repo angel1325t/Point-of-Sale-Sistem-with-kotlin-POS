@@ -3,26 +3,22 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
-import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
@@ -49,13 +45,12 @@ fun HomeScreen(
         }
     }
 
-    // Mostrar error en Snackbar (mejor UX que un Text fijo)
     // Mostrar error en Snackbar
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
                 is AuthError.Other -> error.customMessage
-                else -> null // Ignorar errores que no aplican al home
+                else -> null
             }
 
             message?.let {
@@ -67,7 +62,6 @@ fun HomeScreen(
         }
     }
 
-
     // Mostrar mensaje de éxito
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { msg ->
@@ -78,18 +72,110 @@ fun HomeScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
-                Text(
-                    text = "Menú",
-                    modifier = Modifier.padding(16.dp),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-                HorizontalDivider()
-                DrawerItem(stringResource(R.string.drawer_item_sales)) {}
-                DrawerItem(stringResource(R.string.drawer_item_returns)) {}
-                DrawerItem(stringResource(R.string.drawer_item_inventory)) {}
-                DrawerItem(stringResource(R.string.drawer_item_reports)) {}
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface
+            ) {
+
+                // ⬇️ AGREGADO: Scroll para el drawer
+                val scrollState = rememberScrollState()
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                ) {
+
+                    // Header del drawer
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.White
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = state.email ?: "Usuario",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Sistema POS",
+                                fontSize = 14.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    DrawerSection("Operaciones")
+
+                    DrawerItem(
+                        icon = Icons.Default.ShoppingCart,
+                        title = "Ventas",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.KeyboardReturn,
+                        title = "Devoluciones",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.Inventory,
+                        title = "Inventario",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.Assessment,
+                        title = "Reportes",
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(Modifier.height(8.dp))
+
+                    DrawerSection("Administración")
+
+                    DrawerItem(
+                        icon = Icons.Default.Security,
+                        title = "Gestión de Roles",
+                        onClick = {
+                            navController.navigate("roles")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.People,
+                        title = "Usuarios",
+                        onClick = {
+                            navController.navigate("users")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.Store,
+                        title = "Sucursales",
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+                }
             }
         }
     ) {
@@ -97,24 +183,24 @@ fun HomeScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 NavigationBar(
-                    containerColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 4.dp
                 ) {
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-                        label = { Text(stringResource(R.string.navigation_home)) },
+                        label = { Text("Inicio") },
                         selected = true,
                         onClick = { }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Sucursales") },
-                        label = { Text(stringResource(R.string.navigation_branches)) },
+                        icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Ventas") },
+                        label = { Text("Ventas") },
                         selected = false,
                         onClick = { }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = "Configuración") },
-                        label = { Text(stringResource(R.string.navigation_settings)) },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = "Ajustes") },
+                        label = { Text("Ajustes") },
                         selected = false,
                         onClick = { }
                     )
@@ -124,54 +210,86 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF2F2F2))
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(paddingValues)
             ) {
                 // Top bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface,
                 ) {
-                    IconButton(onClick = {
-                        scope.launch {
-                            if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    if (drawerState.isClosed) drawerState.open()
+                                    else drawerState.close()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Menu,
+                                contentDescription = "Menú",
+                                tint = Color.Gray
+                            )
                         }
-                    }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menú", tint = Color.Black)
-                    }
 
-                    Box {
-                        AsyncImage(
-                            model = "https://uhtlmanoxrfdefelpybs.supabase.co/storage/v1/object/public/avatars/default-image.webp",
-                            contentDescription = "Foto de usuario",
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .clickable { menuExpanded = true }
+                        Text(
+                            text = "Dashboard",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.dropdown_profile)) },
-                                onClick = { menuExpanded = false }
+                        Box {
+                            AsyncImage(
+                                model = "https://uhtlmanoxrfdefelpybs.supabase.co/storage/v1/object/public/avatars/default-image.webp",
+                                contentDescription = "Foto de usuario",
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .clickable { menuExpanded = true }
                             )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.dropdown_notifications)) },
-                                onClick = { menuExpanded = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.dropdown_logout)) },
-                                onClick = {
-                                    menuExpanded = false
-                                    sessionViewModel.sendIntent(AuthIntent.Logout)
-                                }
-                            )
+
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Perfil") },
+                                    onClick = { menuExpanded = false },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Person, null)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Notificaciones") },
+                                    onClick = { menuExpanded = false },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Notifications, null)
+                                    }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Cerrar sesión") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        sessionViewModel.sendIntent(AuthIntent.Logout)
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.ExitToApp,
+                                            null,
+                                            tint = Color(0xFFD32F2F)
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -188,13 +306,27 @@ fun HomeScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        Icon(
+                            Icons.Default.Dashboard,
+                            contentDescription = null,
+                            modifier = Modifier.size(80.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+
                         Text(
-                            text = stringResource(R.string.welcome),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold
+                            text = "Bienvenido al Sistema POS",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "Usa el menú lateral para navegar",
+                            fontSize = 16.sp,
+                            color = Color.Gray
                         )
 
                         if (state.isLoading) {
+                            Spacer(Modifier.height(16.dp))
                             CircularProgressIndicator(modifier = Modifier.size(32.dp))
                         }
                     }
@@ -205,14 +337,47 @@ fun HomeScreen(
 }
 
 @Composable
-private fun DrawerItem(title: String, onClick: () -> Unit) {
+private fun DrawerSection(title: String) {
     Text(
         text = title,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        color = MaterialTheme.colorScheme.inverseSurface
+    )
+}
+
+@Composable
+private fun DrawerItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 20.dp),
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Medium
-    )
+            .clickable(onClick = onClick),
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.inverseSurface
+            )
+        }
+    }
 }

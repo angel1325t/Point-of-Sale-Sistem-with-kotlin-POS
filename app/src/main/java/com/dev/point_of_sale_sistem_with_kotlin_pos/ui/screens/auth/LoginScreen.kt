@@ -107,7 +107,7 @@ fun LoginScreen(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.background)
+                .background(colorScheme.surface)
                 .padding(paddingValues)
         ) {
             val isLandscape = maxWidth > maxHeight
