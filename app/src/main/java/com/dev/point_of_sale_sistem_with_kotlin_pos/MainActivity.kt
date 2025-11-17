@@ -16,10 +16,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.BranchesScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RoleFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolePermissionsScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolesListScreen
@@ -29,6 +31,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
@@ -48,9 +51,18 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // ViewModels de autenticación
-                    val authSessionViewModel = remember { AuthSessionViewModel(supabase) }
-                    val loginViewModel = remember { LoginViewModel(supabase, authSessionViewModel) }
+                    // ✅ Obtener SessionPreferences desde Application
+                    val sessionPreferences = remember {
+                        (application as MyApplication).sessionPreferences
+                    }
+
+                    // ✅ ViewModels de autenticación con SessionPreferences
+                    val authSessionViewModel = remember {
+                        AuthSessionViewModel(supabase, sessionPreferences)
+                    }
+                    val loginViewModel = remember {
+                        LoginViewModel(supabase, authSessionViewModel)
+                    }
 
                     // ViewModels de roles y usuarios
                     val roleRepository = remember { RoleRepository(supabase) }
@@ -59,12 +71,17 @@ class MainActivity : ComponentActivity() {
                     val userRepository = remember { UserRepository(supabase) }
                     val userViewModel = remember { UserViewModel(userRepository) }
 
+                    // ViewModel de sucursales
+                    val branchRepository = remember { BranchRepository(supabase) }
+                    val branchViewModel = remember { BranchViewModel(branchRepository) }
+
                     AppNavigation(
                         navController = navController,
                         loginViewModel = loginViewModel,
                         authSessionViewModel = authSessionViewModel,
                         roleViewModel = roleViewModel,
-                        userViewModel = userViewModel
+                        userViewModel = userViewModel,
+                        branchViewModel = branchViewModel
                     )
                 }
             }
@@ -78,7 +95,8 @@ fun AppNavigation(
     loginViewModel: LoginViewModel,
     authSessionViewModel: AuthSessionViewModel,
     roleViewModel: RoleViewModel,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    branchViewModel: BranchViewModel
 ) {
     NavHost(
         navController = navController,
@@ -148,7 +166,7 @@ fun AppNavigation(
         composable("users/create") {
             UserFormScreen(
                 viewModel = userViewModel,
-                    onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -164,6 +182,15 @@ fun AppNavigation(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+        }
+
+        // ===== GESTIÓN DE SUCURSALES =====
+        composable("branches") {
+            BranchesScreen(
+                viewModel = branchViewModel,
+                sessionViewModel = authSessionViewModel, // ✅ Pasar sessionViewModel
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

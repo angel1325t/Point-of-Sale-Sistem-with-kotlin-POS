@@ -10,6 +10,7 @@ sealed class AuthIntent {
 
     // 🔹 Verificar sesión
     object CheckSession : AuthIntent()
+    data class ChangeBranch(val branchId: String) : AuthIntent()
 
     data class Register(
         val userEmail: String,
