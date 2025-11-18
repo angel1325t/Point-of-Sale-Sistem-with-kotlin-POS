@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.LoginState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.SessionState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.AuthRepository
 import io.github.jan.supabase.SupabaseClient
@@ -45,6 +46,7 @@ class AuthSessionViewModel(
                 when (intent) {
                     is AuthIntent.CheckSession -> handleCheckSession()
                     is AuthIntent.Logout -> handleLogout()
+                    is AuthIntent.UserDisabled -> handleUserDisabled(intent)
                     is AuthIntent.ChangeBranch -> handleChangeBranch(intent.branchId)
                     else -> {}
                 }
@@ -58,44 +60,60 @@ class AuthSessionViewModel(
 
     private fun handleCheckSession() {
         viewModelScope.launch {
-            Log.d(TAG, "Checking session")
             _state.value = _state.value.copy(isLoading = true)
 
             val user = supabase.auth.currentUserOrNull()
-            if (user != null) {
-                // ✅ Recuperar branchId guardado
-                val savedBranchId = sessionPreferences.getBranchId()
-                Log.d(TAG, "Recovered branchId: $savedBranchId")
+            val isDisabled = sessionPreferences.isUserDisabled() // ✅ revisar estado
 
+            if (user != null && !isDisabled) {
+                val savedBranchId = sessionPreferences.getBranchId()
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isAuthenticated = true,
                     userId = user.id,
                     email = user.email,
                     branchId = savedBranchId,
+                    isUserDisabled = false,
                     error = null,
                     successMessage = null
                 )
-                Log.d(TAG, "Session check: Authenticated userId=${user.id}, email=${user.email}, branchId=$savedBranchId")
             } else {
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isAuthenticated = false,
+                    isUserDisabled = isDisabled,
                     userId = null,
                     email = null,
                     branchId = null,
-                    error = null,
+                    error = if (isDisabled) AuthError.Other("USER_DISABLED") else null,
                     successMessage = null
                 )
-                Log.d(TAG, "Session check: Not authenticated")
             }
         }
     }
 
-    /**
-     * ✅ Manejar cambio de sucursal
-     * Simula una "recarga" de la app con el nuevo contexto de sucursal
-     */
+    private fun handleUserDisabled(intent: AuthIntent.UserDisabled) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                isUserDisabled = true,
+                isAuthenticated = false
+            )
+            sessionPreferences.setUserDisabled(true) // ✅ guardar estado
+        }
+    }
+
+
+    fun resetState() {
+        _state.value = _state.value.copy(
+            isLoading = false,
+            isAuthenticated = false,
+            isUserDisabled = false,
+            error = null,
+            successMessage = null
+        )
+    }
+
     private fun handleChangeBranch(branchId: String) {
         viewModelScope.launch {
             Log.d(TAG, "Changing branch to: $branchId")
@@ -168,19 +186,5 @@ class AuthSessionViewModel(
                 Log.e(TAG, "Logout failed: ${e.message}")
             }
         }
-    }
-
-    /**
-     * ✅ Función auxiliar para obtener el branchId actual
-     */
-    fun getCurrentBranchId(): String? {
-        return _state.value.branchId
-    }
-
-    /**
-     * ✅ Verificar si hay una sucursal seleccionada
-     */
-    fun hasBranchSelected(): Boolean {
-        return _state.value.branchId != null
     }
 }
