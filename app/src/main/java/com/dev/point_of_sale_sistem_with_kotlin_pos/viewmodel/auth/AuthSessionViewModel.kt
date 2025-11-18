@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class AuthSessionViewModel(
     private val supabase: SupabaseClient,
@@ -63,30 +64,38 @@ class AuthSessionViewModel(
             _state.value = _state.value.copy(isLoading = true)
 
             val user = supabase.auth.currentUserOrNull()
-            val isDisabled = sessionPreferences.isUserDisabled() // ✅ revisar estado
+            if (user != null) {
+                // ✅ Consultar en la DB si el usuario sigue deshabilitado
+                val isDisabledInDB = repository.isUserDisabled(UUID.fromString(user.id))
 
-            if (user != null && !isDisabled) {
-                val savedBranchId = sessionPreferences.getBranchId()
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isAuthenticated = true,
-                    userId = user.id,
-                    email = user.email,
-                    branchId = savedBranchId,
-                    isUserDisabled = false,
-                    error = null,
-                    successMessage = null
-                )
+                // Actualizar SharedPreferences para mantenerlo sincronizado
+                sessionPreferences.setUserDisabled(isDisabledInDB)
+
+                if (!isDisabledInDB) {
+                    val savedBranchId = sessionPreferences.getBranchId()
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        userId = user.id,
+                        email = user.email,
+                        branchId = savedBranchId,
+                        isUserDisabled = false,
+                        error = null,
+                        successMessage = null
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        isAuthenticated = false,
+                        isUserDisabled = true,
+                        error = AuthError.Other("USER_DISABLED")
+                    )
+                }
             } else {
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isAuthenticated = false,
-                    isUserDisabled = isDisabled,
-                    userId = null,
-                    email = null,
-                    branchId = null,
-                    error = if (isDisabled) AuthError.Other("USER_DISABLED") else null,
-                    successMessage = null
+                    isUserDisabled = false
                 )
             }
         }
