@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,6 +22,10 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.components.BranchSelectorDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import kotlinx.coroutines.launch
 
@@ -32,9 +37,28 @@ fun HomeScreen(
 ) {
     val state by sessionViewModel.state.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // ✅ ViewModel de branches para obtener la lista
+    val branchViewModel = remember {
+        BranchViewModel(BranchRepository(supabase))
+    }
+    val branchState by branchViewModel.state.collectAsState()
+
+    // ✅ Determinar si mostrar selector de sucursal
+    val showBranchSelector = state.isAuthenticated &&
+            state.branchId == null &&
+            !state.isLoading
+
+    // ✅ Obtener la sucursal actual
+    val currentBranch = remember(state.branchId, branchState.branches) {
+        state.branchId?.let { branchId ->
+            branchState.branches.find { it.branchId == branchId }
+        }
+    }
 
     // Redirigir al login si no está autenticado
     LaunchedEffect(state.isAuthenticated, state.isLoading) {
@@ -65,7 +89,12 @@ fun HomeScreen(
     // Mostrar mensaje de éxito
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { msg ->
-            snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Short)
+            val displayMessage = when(msg) {
+                "BRANCH_CHANGED" -> "Sucursal cambiada exitosamente"
+                "LOGOUT_SUCCESS" -> "Sesión cerrada"
+                else -> msg
+            }
+            snackbarHostState.showSnackbar(displayMessage, duration = SnackbarDuration.Short)
         }
     }
 
@@ -75,8 +104,6 @@ fun HomeScreen(
             ModalDrawerSheet(
                 drawerContainerColor = MaterialTheme.colorScheme.surface
             ) {
-
-                // ⬇️ AGREGADO: Scroll para el drawer
                 val scrollState = rememberScrollState()
 
                 Column(
@@ -84,7 +111,6 @@ fun HomeScreen(
                         .fillMaxSize()
                         .verticalScroll(scrollState)
                 ) {
-
                     // Header del drawer
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -113,6 +139,43 @@ fun HomeScreen(
                                 fontSize = 14.sp,
                                 color = Color.White.copy(alpha = 0.8f)
                             )
+
+                            // ✅ Mostrar sucursal actual en el drawer
+                            Spacer(Modifier.height(8.dp))
+                            currentBranch?.let { branch ->
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Store,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Sucursal actual",
+                                                fontSize = 11.sp,
+                                                color = Color.White.copy(alpha = 0.8f)
+                                            )
+                                            Text(
+                                                text = branch.name,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -168,10 +231,12 @@ fun HomeScreen(
                         }
                     )
 
+                    // ✅ Agregar opción de Sucursales en el drawer
                     DrawerItem(
                         icon = Icons.Default.Store,
                         title = "Sucursales",
                         onClick = {
+                            navController.navigate("branches")
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -189,150 +254,208 @@ fun HomeScreen(
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
                         label = { Text("Inicio") },
-                        selected = true,
-                        onClick = { }
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.ShoppingCart, contentDescription = "Ventas") },
-                        label = { Text("Ventas") },
-                        selected = false,
-                        onClick = { }
+                        icon = { Icon(Icons.Default.Store, contentDescription = "Sucursales") },
+                        label = { Text("Sucursales") },
+                        selected = selectedTab == 1,
+                        onClick = {
+                            selectedTab = 1
+                            navController.navigate("branches")
+                        }
                     )
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Settings, contentDescription = "Ajustes") },
                         label = { Text("Ajustes") },
-                        selected = false,
-                        onClick = { }
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 }
                     )
                 }
             }
         ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(paddingValues)
-            ) {
-                // Top bar
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(paddingValues)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Top bar
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
                     ) {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    if (drawerState.isClosed) drawerState.open()
-                                    else drawerState.close()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        if (drawerState.isClosed) drawerState.open()
+                                        else drawerState.close()
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.Menu,
+                                    contentDescription = "Menú",
+                                    tint = Color.Gray
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Dashboard",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                // ✅ Mostrar sucursal en el top bar
+                                currentBranch?.let {
+                                    Text(
+                                        text = it.name,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
+
+                            Box {
+                                AsyncImage(
+                                    model = "https://uhtlmanoxrfdefelpybs.supabase.co/storage/v1/object/public/avatars/default-image.webp",
+                                    contentDescription = "Foto de usuario",
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .clickable { menuExpanded = true }
+                                )
+
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Perfil") },
+                                        onClick = { menuExpanded = false },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Person, null)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Notificaciones") },
+                                        onClick = { menuExpanded = false },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Notifications, null)
+                                        }
+                                    )
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = { Text("Cerrar sesión") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            sessionViewModel.sendIntent(AuthIntent.Logout)
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.ExitToApp,
+                                                null,
+                                                tint = Color(0xFFD32F2F)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Contenido principal
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Icon(
-                                Icons.Default.Menu,
-                                contentDescription = "Menú",
-                                tint = Color.Gray
-                            )
-                        }
-
-                        Text(
-                            text = "Dashboard",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Box {
-                            AsyncImage(
-                                model = "https://uhtlmanoxrfdefelpybs.supabase.co/storage/v1/object/public/avatars/default-image.webp",
-                                contentDescription = "Foto de usuario",
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .clickable { menuExpanded = true }
+                                Icons.Default.Dashboard,
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                             )
 
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Perfil") },
-                                    onClick = { menuExpanded = false },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Person, null)
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Notificaciones") },
-                                    onClick = { menuExpanded = false },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Notifications, null)
-                                    }
-                                )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text("Cerrar sesión") },
-                                    onClick = {
-                                        menuExpanded = false
-                                        sessionViewModel.sendIntent(AuthIntent.Logout)
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.ExitToApp,
-                                            null,
-                                            tint = Color(0xFFD32F2F)
-                                        )
-                                    }
-                                )
+                            Text(
+                                text = "Bienvenido al Sistema POS",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = "Usa el menú inferior para navegar",
+                                fontSize = 16.sp,
+                                color = Color.Gray
+                            )
+
+                            if (state.isLoading) {
+                                Spacer(Modifier.height(16.dp))
+                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
                             }
                         }
                     }
                 }
 
-                // Contenido principal
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                // ✅ Overlay de carga cuando está cambiando de sucursal
+                if (state.isLoading && state.isAuthenticated) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Dashboard,
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                        )
-
-                        Text(
-                            text = "Bienvenido al Sistema POS",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = "Usa el menú lateral para navegar",
-                            fontSize = 16.sp,
-                            color = Color.Gray
-                        )
-
-                        if (state.isLoading) {
-                            Spacer(Modifier.height(16.dp))
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(60.dp),
+                                strokeWidth = 6.dp
+                            )
+                            Text(
+                                text = "Cambiando de sucursal...",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Por favor espera",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
             }
         }
+    }
+
+    // ✅ Mostrar selector de sucursal si es necesario
+    if (showBranchSelector) {
+        BranchSelectorDialog(
+            branches = branchState.branches,
+            isLoading = branchState.isLoading,
+            onBranchSelected = { branchId ->
+                sessionViewModel.sendIntent(AuthIntent.ChangeBranch(branchId))
+            }
+        )
     }
 }
 
