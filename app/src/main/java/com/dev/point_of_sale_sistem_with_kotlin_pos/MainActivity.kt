@@ -188,8 +188,28 @@ fun AppNavigation(
         composable("branches") {
             BranchesScreen(
                 viewModel = branchViewModel,
-                sessionViewModel = authSessionViewModel, // ✅ Pasar sessionViewModel
-                onBack = { navController.popBackStack() }
+                sessionViewModel = authSessionViewModel,
+                onNavigateToTab = { tab ->
+                    when(tab) {
+                        0 -> {
+                            navController.navigate("home") {
+                                // Limpiar el back stack hasta home
+                                popUpTo("home") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                        1 -> {
+                            // Ya estamos en branches, no hacer nada
+                        }
+                        2 -> {
+                            // TODO: Navegar a ajustes cuando esté implementado
+                            // navController.navigate("settings") {
+                            //     popUpTo("home") { inclusive = false }
+                            //     launchSingleTop = true
+                            // }
+                        }
+                    }
+                }
             )
         }
     }

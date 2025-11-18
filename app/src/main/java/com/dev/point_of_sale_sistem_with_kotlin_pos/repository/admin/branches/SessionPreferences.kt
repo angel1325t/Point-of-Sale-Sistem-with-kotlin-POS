@@ -9,7 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-// Extensión para crear el DataStore
+// Extensión DataStore
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "session_preferences")
 
 class SessionPreferences(private val context: Context) {
@@ -19,7 +19,7 @@ class SessionPreferences(private val context: Context) {
     }
 
     /**
-     * Guardar el ID de la sucursal actual
+     * Guarda el ID de sucursal
      */
     suspend fun saveBranchId(branchId: String) {
         context.dataStore.edit { preferences ->
@@ -28,7 +28,7 @@ class SessionPreferences(private val context: Context) {
     }
 
     /**
-     * Obtener el ID de la sucursal guardada
+     * Obtiene el ID guardado
      */
     suspend fun getBranchId(): String? {
         return context.dataStore.data.map { preferences ->
@@ -37,7 +37,7 @@ class SessionPreferences(private val context: Context) {
     }
 
     /**
-     * Limpiar el ID de la sucursal (al cerrar sesión)
+     * Limpia solo el branch_id
      */
     suspend fun clearBranchId() {
         context.dataStore.edit { preferences ->
@@ -46,11 +46,9 @@ class SessionPreferences(private val context: Context) {
     }
 
     /**
-     * Limpiar todas las preferencias
+     * Limpia todo DataStore
      */
     suspend fun clearAll() {
-        context.dataStore.edit { preferences ->
-            preferences.clear()
-        }
+        context.dataStore.edit { it.clear() }
     }
 }

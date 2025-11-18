@@ -13,10 +13,18 @@ class MyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Inicializar Supabase con persistencia de sesión
-        supabase = createSupabaseClient(applicationContext)
 
-        // ✅ Inicializar SessionPreferences
-        sessionPreferences = SessionPreferences(applicationContext)
+        try {
+            supabase = createSupabaseClient(applicationContext)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        try {
+            sessionPreferences = SessionPreferences(applicationContext)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
+
 }

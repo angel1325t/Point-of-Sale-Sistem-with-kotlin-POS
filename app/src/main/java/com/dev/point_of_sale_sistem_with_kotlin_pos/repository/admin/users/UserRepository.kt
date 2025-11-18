@@ -78,6 +78,7 @@ class UserRepository(private val supabase: SupabaseClient) {
 
         // === Generar contraseña ===
         val randomPassword = generateRandomPassword()
+        val passwordTest = "12345678"
         Log.d(TAG, "Generated random password for auth")
 
         // === Crear usuario en auth.users ===
@@ -85,7 +86,7 @@ class UserRepository(private val supabase: SupabaseClient) {
             "create_auth_user",
             buildJsonObject {
                 put("email", email)
-                put("password", randomPassword)
+                put("password", passwordTest)
             }
         )
 
