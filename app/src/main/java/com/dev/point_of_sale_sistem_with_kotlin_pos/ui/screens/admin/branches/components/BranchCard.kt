@@ -9,7 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.components.InfoRow
 
@@ -72,7 +74,9 @@ fun BranchCard(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = if (branch.active) "Activa" else "Inactiva",
+                        text = if (branch.active) stringResource(R.string.branch_active) else stringResource(
+                            R.string.branch_inactive
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (branch.active)
                             MaterialTheme.colorScheme.primary
@@ -107,7 +111,7 @@ fun BranchCard(
                 TextButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Editar")
+                    Text(stringResource(R.string.edit))
                 }
 
                 TextButton(
@@ -118,7 +122,7 @@ fun BranchCard(
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Eliminar")
+                    Text(stringResource(R.string.delete))
                 }
             }
         }

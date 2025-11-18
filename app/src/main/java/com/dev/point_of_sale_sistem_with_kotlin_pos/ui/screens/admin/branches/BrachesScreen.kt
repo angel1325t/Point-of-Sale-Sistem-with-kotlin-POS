@@ -9,8 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.braches.BranchIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
@@ -35,6 +38,7 @@ fun BranchesScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showChangeBranchDialog by remember { mutableStateOf(false) }
     var selectedBranch by remember { mutableStateOf<Branch?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.handleIntent(BranchIntent.LoadBranches)
@@ -47,8 +51,8 @@ fun BranchesScreen(
                 is BranchError.NetworkError -> error.message
                 is BranchError.ValidationError -> error.message
                 is BranchError.DatabaseError -> error.message
-                is BranchError.UnauthorizedError -> "No autorizado"
-                is BranchError.BranchNotFound -> "Sucursal no encontrada"
+                is BranchError.UnauthorizedError -> context.getString(R.string.unauthorize_error)
+                is BranchError.BranchNotFound -> context.getString(R.string.branch_not_found_error)
                 is BranchError.UnknownError -> error.message
             }
             snackbarHostState.showSnackbar(message)
@@ -71,12 +75,16 @@ fun BranchesScreen(
                 title = {
                     Column {
                         Text(
-                            "Gestión de Sucursales",
+                            stringResource(R.string.branch_management_text),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "${state.branches.size} sucursal${if (state.branches.size != 1) "es" else ""}",
+                            stringResource(
+                                R.string.branches_amount_mini_helper,
+                                state.branches.size,
+                                if (state.branches.size != 1) "es" else ""
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -88,26 +96,26 @@ fun BranchesScreen(
             ExtendedFloatingActionButton(
                 onClick = { showCreateDialog = true },
                 icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("Nueva Sucursal") }
+                text = { Text(stringResource(R.string.new_branch_text)) }
             )
         },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text("Inicio") },
+                    label = { Text(stringResource(R.string.home_menu_text)) },
                     selected = false,
                     onClick = { onNavigateToTab(0) }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Store, null) },
-                    label = { Text("Sucursales") },
+                    label = { Text(stringResource(R.string.branches_menu_text)) },
                     selected = true,
                     onClick = {}
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Settings, null) },
-                    label = { Text("Ajustes") },
+                    label = { Text(stringResource(R.string.settings_menu_text)) },
                     selected = false,
                     onClick = { onNavigateToTab(2) }
                 )
@@ -195,7 +203,7 @@ fun BranchesScreen(
 
     if (showCreateDialog) {
         BranchFormDialog(
-            title = "Crear Sucursal",
+            title = stringResource(R.string.create_branch_text),
             onDismiss = { showCreateDialog = false },
             onSave = { alias, address, phone, city ->
                 viewModel.handleIntent(
@@ -208,7 +216,7 @@ fun BranchesScreen(
 
     if (showEditDialog && selectedBranch != null) {
         BranchFormDialog(
-            title = "Editar Sucursal",
+            title = stringResource(R.string.edit_branch_text),
             branch = selectedBranch,
             onDismiss = {
                 showEditDialog = false

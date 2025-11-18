@@ -8,8 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
 
 @Composable
@@ -65,7 +67,7 @@ fun CurrentBranchCard(
                 ) {
                     Icon(Icons.Default.ChangeCircle, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Cambiar")
+                    Text(stringResource(R.string.change))
                 }
             }
         }

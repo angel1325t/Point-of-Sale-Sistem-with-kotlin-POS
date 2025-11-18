@@ -8,9 +8,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +36,7 @@ fun DeleteConfirmationDialog(
         },
         title = {
             Text(
-                "Eliminar Sucursal",
+                stringResource(R.string.delete_branch_text),
                 textAlign = TextAlign.Center
             )
         },
@@ -46,7 +48,7 @@ fun DeleteConfirmationDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "¿Estás seguro de que deseas eliminar esta sucursal?",
+                    text = stringResource(R.string.confirm_branch_deletion),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
@@ -73,7 +75,7 @@ fun DeleteConfirmationDialog(
                 }
 
                 Text(
-                    text = "Esta acción no se puede deshacer. Para confirmar, escribe el nombre completo de la sucursal:",
+                    text = stringResource(R.string.branch_deletion_helper),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -82,14 +84,14 @@ fun DeleteConfirmationDialog(
                 OutlinedTextField(
                     value = confirmationText,
                     onValueChange = { confirmationText = it },
-                    label = { Text("Nombre de la sucursal") },
+                    label = { Text(stringResource(R.string.branch_name_label)) },
                     placeholder = { Text(branchName) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = confirmationText.isNotBlank() && !isValid,
                     supportingText = {
                         if (confirmationText.isNotBlank() && !isValid) {
-                            Text("El nombre no coincide")
+                            Text(stringResource(R.string.branch_name_validation))
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
@@ -110,12 +112,12 @@ fun DeleteConfirmationDialog(
                     contentColor = MaterialTheme.colorScheme.onError
                 )
             ) {
-                Text("Eliminar Sucursal")
+                Text(stringResource(R.string.delete_branch))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.cancel))
             }
         },
         shape = RoundedCornerShape(16.dp)

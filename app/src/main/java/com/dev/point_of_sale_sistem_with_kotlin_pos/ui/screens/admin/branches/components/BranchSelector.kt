@@ -13,17 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
 
-/**
- * Diálogo OBLIGATORIO para seleccionar sucursal
- * No se puede cerrar hasta que se seleccione una sucursal
- */
 @Composable
 fun BranchSelectorDialog(
     branches: List<Branch>,
@@ -52,7 +50,7 @@ fun BranchSelectorDialog(
             ) {
                 // Título
                 Text(
-                    text = "Selecciona una Sucursal",
+                    text = stringResource(R.string.select_branch),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -61,7 +59,7 @@ fun BranchSelectorDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Debes seleccionar una sucursal para continuar",
+                    text = stringResource(R.string.select_branch_requiered),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -75,18 +73,18 @@ fun BranchSelectorDialog(
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Cargando sucursales...")
+                    Text(stringResource(R.string.loading_branches))
                 } else if (branches.isEmpty()) {
                     // Empty state
                     Text(
-                        text = "No hay sucursales disponibles",
+                        text = stringResource(R.string.no_branches_available),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Contacta al administrador",
+                        text = stringResource(R.string.admin_contact),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -183,7 +181,7 @@ private fun BranchSelectableCard(
 
             Icon(
                 Icons.Default.CheckCircle,
-                contentDescription = "Seleccionar",
+                contentDescription = stringResource(R.string.select),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(32.dp)
             )

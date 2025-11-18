@@ -7,7 +7,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 
 @Composable
 fun EmptyBranchesScreen() {
@@ -32,7 +34,7 @@ fun EmptyBranchesScreen() {
             Spacer(Modifier.height(16.dp))
 
             Text(
-                "No hay sucursales registradas",
+                stringResource(R.string.no_branches_registrared),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -40,7 +42,7 @@ fun EmptyBranchesScreen() {
             Spacer(Modifier.height(8.dp))
 
             Text(
-                "Pulsa el botón \"+ Nueva Sucursal\" para agregar una",
+                stringResource(R.string.add_branch_helper),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -13,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
 
 @Composable
@@ -27,9 +29,9 @@ fun ChangeBranchDialog(
         onDismissRequest = onDismiss,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Cambiar sucursal", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.change_branch_text), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Selecciona una sucursal activa",
+                    stringResource(R.string.select_active_branch_warning),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -94,7 +96,7 @@ fun ChangeBranchDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cerrar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         },
         shape = RoundedCornerShape(20.dp)
     )

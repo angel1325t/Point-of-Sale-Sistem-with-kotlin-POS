@@ -7,7 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 
 @Composable
 fun LoadingBranches() {
@@ -21,7 +23,7 @@ fun LoadingBranches() {
         CircularProgressIndicator()
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Cargando sucursales...",
+            text = stringResource(R.string.loading_branches_helper),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

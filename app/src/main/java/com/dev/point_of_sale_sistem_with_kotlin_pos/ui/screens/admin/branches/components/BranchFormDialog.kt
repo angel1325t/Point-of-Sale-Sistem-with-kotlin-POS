@@ -5,14 +5,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
 
-/**
- * Diálogo para crear/editar sucursal
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BranchFormDialog(
@@ -48,13 +47,13 @@ fun BranchFormDialog(
                         alias = it
                         aliasError = it.isBlank()
                     },
-                    label = { Text("Alias *") },
-                    placeholder = { Text("Ej: Centro, Norte, Sur") },
+                    label = { Text(stringResource(R.string.branch_alias_label)) },
+                    placeholder = { Text(stringResource(R.string.branch_alias_example)) },
                     modifier = Modifier.fillMaxWidth(),
                     isError = aliasError,
                     supportingText = {
                         if (aliasError) {
-                            Text("El alias es obligatorio")
+                            Text(stringResource(R.string.alias_requiered))
                         }
                     },
                     singleLine = true
@@ -63,8 +62,8 @@ fun BranchFormDialog(
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },
-                    label = { Text("Dirección") },
-                    placeholder = { Text("Calle, número, colonia") },
+                    label = { Text(stringResource(R.string.address_branch_label)) },
+                    placeholder = { Text(stringResource(R.string.address_branch_example)) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 2
                 )
@@ -72,8 +71,8 @@ fun BranchFormDialog(
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("Teléfono") },
-                    placeholder = { Text("(XXX) XXX-XXXX") },
+                    label = { Text(stringResource(R.string.phone_branch_label)) },
+                    placeholder = { Text(stringResource(R.string.phone_branch_example)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true
@@ -82,8 +81,8 @@ fun BranchFormDialog(
                 OutlinedTextField(
                     value = city,
                     onValueChange = { city = it },
-                    label = { Text("Ciudad") },
-                    placeholder = { Text("Nombre de la ciudad") },
+                    label = { Text(stringResource(R.string.city_branch_label)) },
+                    placeholder = { Text(stringResource(R.string.city_branch_example)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -100,12 +99,12 @@ fun BranchFormDialog(
                 },
                 enabled = alias.isNotBlank()
             ) {
-                Text(if (branch == null) "Crear" else "Guardar")
+                Text(if (branch == null) stringResource(R.string.create_text) else stringResource(R.string.save) )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.cancel) )
             }
         }
     )
