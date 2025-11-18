@@ -142,9 +142,13 @@ fun BranchesScreen(
                 }
 
                 when {
-                    state.isLoading || sessionState.isLoading -> {
+                    state.isLoading -> {
                         LoadingBranches()
                     }
+                    sessionState.isLoading -> {
+                        SwitchBranchesLoader()
+                    }
+
 
                     state.branches.isEmpty() -> {
                         EmptyBranchesScreen()

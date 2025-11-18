@@ -134,6 +134,8 @@
     <string name="select_active_branch_warning">Selecciona una sucursal activa</string>
     <string name="close">Cerrar</string>
     <string name="change">Cambiar</string>
+    <string name="switching_branch_text">Cambiando de sucursal...</string>
+    <string name="please_wait_text">Por favor espera un momento</string>
     <string name="delete_branch_text">Eliminar Sucursal</string>
     <string name="confirm_branch_deletion">¿Estás seguro de que deseas eliminar esta sucursal?</string>
     <string name="branch_deletion_helper">Esta acción no se puede deshacer. Para confirmar, escribe el nombre completo de la sucursal:</string>
