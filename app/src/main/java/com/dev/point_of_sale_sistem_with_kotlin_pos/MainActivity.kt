@@ -29,6 +29,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UserF
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UsersListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.UserDisabledScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
@@ -110,6 +111,9 @@ fun AppNavigation(
 
         composable("login") {
             LoginScreen(navController, loginViewModel, authSessionViewModel)
+        }
+        composable("user_disabled") {
+            UserDisabledScreen(navController,authSessionViewModel)
         }
 
         composable("register") {

@@ -16,38 +16,30 @@ class SessionPreferences(private val context: Context) {
 
     companion object {
         private val BRANCH_ID_KEY = stringPreferencesKey("branch_id")
+        private val USER_DISABLED_KEY = stringPreferencesKey("user_disabled") // ✅ nuevo
     }
 
-    /**
-     * Guarda el ID de sucursal
-     */
+    // BranchId
     suspend fun saveBranchId(branchId: String) {
-        context.dataStore.edit { preferences ->
-            preferences[BRANCH_ID_KEY] = branchId
-        }
+        context.dataStore.edit { preferences -> preferences[BRANCH_ID_KEY] = branchId }
     }
 
-    /**
-     * Obtiene el ID guardado
-     */
-    suspend fun getBranchId(): String? {
-        return context.dataStore.data.map { preferences ->
-            preferences[BRANCH_ID_KEY]
-        }.first()
-    }
+    suspend fun getBranchId(): String? =
+        context.dataStore.data.map { it[BRANCH_ID_KEY] }.first()
 
-    /**
-     * Limpia solo el branch_id
-     */
     suspend fun clearBranchId() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(BRANCH_ID_KEY)
-        }
+        context.dataStore.edit { it.remove(BRANCH_ID_KEY) }
     }
 
-    /**
-     * Limpia todo DataStore
-     */
+    // Usuario deshabilitado
+    suspend fun setUserDisabled(disabled: Boolean) {
+        context.dataStore.edit { it[USER_DISABLED_KEY] = disabled.toString() }
+    }
+
+    suspend fun isUserDisabled(): Boolean =
+        context.dataStore.data.map { it[USER_DISABLED_KEY]?.toBoolean() ?: false }.first()
+
+    // Limpiar todo
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }

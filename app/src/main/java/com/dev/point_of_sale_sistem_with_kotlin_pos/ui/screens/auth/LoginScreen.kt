@@ -48,28 +48,47 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
-    val context = LocalContext.current  // Para traducir errores
+    val context = LocalContext.current
 
-    // Navegar si el usuario está autenticado
-    LaunchedEffect(sessionState.isAuthenticated) {
-        if (sessionState.isAuthenticated) {
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true }
+    // ⚡ Evitar renderizar login si el usuario está deshabilitado o autenticado
+    when {
+        sessionState.isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
+            return
+        }
+
+        sessionState.isUserDisabled -> {
+            LaunchedEffect(Unit) {
+                navController.navigate("user_disabled") {
+                    popUpTo("login") { inclusive = true }
+                }
+            }
+            return
+        }
+
+        sessionState.isAuthenticated -> {
+            LaunchedEffect(Unit) {
+                navController.navigate("home") {
+                    popUpTo("login") { inclusive = true }
+                }
+            }
+            return
         }
     }
 
-    // Mostrar error traducido en Snackbar
+    // Mostrar errores de login
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
-                is AuthError.InvalidCredentials ->
-                    context.getString(R.string.invalid_credentials)
-                is AuthError.Other ->
-                    error.customMessage
-                else -> null // Ignorar errores que no aplican al login
+                is AuthError.InvalidCredentials -> context.getString(R.string.invalid_credentials)
+                is AuthError.Other -> error.customMessage
+                else -> null
             }
-
             message?.let {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
@@ -81,7 +100,6 @@ fun LoginScreen(
             }
         }
     }
-
 
     Scaffold(
         snackbarHost = {

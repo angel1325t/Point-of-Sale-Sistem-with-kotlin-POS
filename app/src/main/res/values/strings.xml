@@ -131,6 +131,9 @@
     <string name="admin_contact">Contacta al administrador</string>
     <string name="select">Seleccionar</string>
     <string name="change_branch_text">Cambiar sucursal</string>
+    <string name="user_disabled_title">Usuario desabilitado</string>
+    <string name="user_disabled_message">Comunícate con el administrador para reactivar tu cuenta.</string>
+    <string name="user_disabled_back_button">Volver al inicio de sesión</string>
     <string name="select_active_branch_warning">Selecciona una sucursal activa</string>
     <string name="close">Cerrar</string>
     <string name="change">Cambiar</string>

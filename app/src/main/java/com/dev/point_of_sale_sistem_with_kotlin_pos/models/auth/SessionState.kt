@@ -7,5 +7,6 @@ data class SessionState(
     val branchId: String? = null,
     val isLoading: Boolean = false,
     val error: AuthError? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val isUserDisabled: Boolean = false
 )
