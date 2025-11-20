@@ -1,14 +1,18 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.fragment.app.FragmentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -19,7 +23,9 @@ import androidx.navigation.navArgument
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
+import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserver
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.BranchesScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RoleFormScreen
@@ -27,10 +33,14 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RoleP
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolesListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UserFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UsersListScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.BiometricAuthScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.UserDisabledScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterHistoryScreen
+//import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterMainScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterManagementScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
@@ -39,11 +49,12 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionVi
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModelFactory
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        AppLifecycleObserver.start()
         setContent {
             AppTheme {
                 Surface(
@@ -52,12 +63,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    // ✅ Obtener SessionPreferences desde Application
                     val sessionPreferences = remember {
                         (application as MyApplication).sessionPreferences
                     }
-
-                    // ✅ ViewModels de autenticación con SessionPreferences
                     val authSessionViewModel = remember {
                         AuthSessionViewModel(supabase, sessionPreferences)
                     }
@@ -76,13 +84,22 @@ class MainActivity : ComponentActivity() {
                     val branchRepository = remember { BranchRepository(supabase) }
                     val branchViewModel = remember { BranchViewModel(branchRepository) }
 
+                    val cashRegisterRepository = remember {
+                        CashRegisterRepository(supabase)
+                    }
+
+                    val cashRegisterViewModel = remember {
+                        CashRegisterViewModel(cashRegisterRepository)
+                    }
+
                     AppNavigation(
                         navController = navController,
                         loginViewModel = loginViewModel,
                         authSessionViewModel = authSessionViewModel,
                         roleViewModel = roleViewModel,
                         userViewModel = userViewModel,
-                        branchViewModel = branchViewModel
+                        branchViewModel = branchViewModel,
+                        cashRegisterViewModel = cashRegisterViewModel
                     )
                 }
             }
@@ -97,8 +114,24 @@ fun AppNavigation(
     authSessionViewModel: AuthSessionViewModel,
     roleViewModel: RoleViewModel,
     userViewModel: UserViewModel,
-    branchViewModel: BranchViewModel
+    branchViewModel: BranchViewModel,
+    cashRegisterViewModel: CashRegisterViewModel
 ) {
+    val requireBiometricState = AppLifecycleObserver.requireBiometric.collectAsState()
+    val requireBiometric = requireBiometricState.value
+
+    LaunchedEffect(requireBiometric) {
+        if (requireBiometric) {
+            val currentRoute = navController.currentDestination?.route ?: "home"
+
+            navController.navigate("biometric_auth/$currentRoute") {
+                launchSingleTop = true
+            }
+
+            AppLifecycleObserver.reset()
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = "splash"
@@ -108,11 +141,24 @@ fun AppNavigation(
             Splash(navController, authSessionViewModel)
         }
 
+        // ✅ Nueva pantalla de autenticación biométrica
+        composable(
+            route = "biometric_auth/{targetRoute}",
+            arguments = listOf(navArgument("targetRoute") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val targetRoute = backStackEntry.arguments?.getString("targetRoute") ?: "login"
+            BiometricAuthScreen(
+                navController = navController,
+                targetRoute = targetRoute
+            )
+        }
+
         composable("login") {
             LoginScreen(navController, loginViewModel, authSessionViewModel)
         }
+
         composable("user_disabled") {
-            UserDisabledScreen(navController,authSessionViewModel)
+            UserDisabledScreen(navController, authSessionViewModel)
         }
 
         composable("register") {
@@ -197,7 +243,6 @@ fun AppNavigation(
                     when(tab) {
                         0 -> {
                             navController.navigate("home") {
-                                // Limpiar el back stack hasta home
                                 popUpTo("home") { inclusive = false }
                                 launchSingleTop = true
                             }
@@ -207,12 +252,35 @@ fun AppNavigation(
                         }
                         2 -> {
                             // TODO: Navegar a ajustes cuando esté implementado
-                            // navController.navigate("settings") {
-                            //     popUpTo("home") { inclusive = false }
-                            //     launchSingleTop = true
-                            // }
                         }
                     }
+                }
+            )
+        }
+
+        // ===== GESTIÓN DE CAJAS =====
+        composable("cash_register/manage") {
+            CashRegisterManagementScreen(
+                viewModel = cashRegisterViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+//        // ===== CAJA REGISTRADORA =====
+//        composable("cash_register") {
+//            CashRegisterMainScreen(
+//                viewModel = cashRegisterViewModel,
+//                onNavigateToManagement = {
+//                    navController.navigate("cash_register/history")
+//                }
+//            )
+//        }
+
+        composable("cash_register/history") {
+            CashRegisterHistoryScreen(
+                viewModel = cashRegisterViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

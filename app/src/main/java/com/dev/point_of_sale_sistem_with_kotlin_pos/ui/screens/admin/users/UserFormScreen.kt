@@ -67,14 +67,15 @@
 
         LaunchedEffect(state.selectedUser) {
             state.selectedUser?.let { user ->
-                if (loadedUserId != user.user_id.toString()) {
+                if (loadedUserId != user.auth_id.toString()) {
                     email = user.email ?: ""
                     selectedRoleId = user.role_id
                     selectedBranchId = user.branch_id?.toString()
-                    loadedUserId = user.user_id.toString()
+                    loadedUserId = user.auth_id.toString()
                 }
             }
         }
+
 
         LaunchedEffect(state.successMessage) {
             state.successMessage?.let { msg ->
@@ -263,7 +264,7 @@
                         if (isEditMode) {
                             viewModel.handleIntent(
                                 UserIntent.UpdateUser(
-                                    userId = userId!!,
+                                    authId = loadedUserId!!,
                                     email = email,
                                     branchId = selectedBranchId?.let { UUID.fromString(it) },
                                     roleId = selectedRoleId

@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -16,7 +17,8 @@ class SessionPreferences(private val context: Context) {
 
     companion object {
         private val BRANCH_ID_KEY = stringPreferencesKey("branch_id")
-        private val USER_DISABLED_KEY = stringPreferencesKey("user_disabled") // ✅ nuevo
+        private val USER_DISABLED_KEY = stringPreferencesKey("user_disabled")
+        private val BIOMETRIC_ENABLED_KEY = booleanPreferencesKey("biometric_enabled") // ✅ nuevo
     }
 
     // BranchId
@@ -38,6 +40,14 @@ class SessionPreferences(private val context: Context) {
 
     suspend fun isUserDisabled(): Boolean =
         context.dataStore.data.map { it[USER_DISABLED_KEY]?.toBoolean() ?: false }.first()
+
+    // ✅ Biométrico
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[BIOMETRIC_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun isBiometricEnabled(): Boolean =
+        context.dataStore.data.map { it[BIOMETRIC_ENABLED_KEY] ?: true }.first() // ✅ Por defecto true
 
     // Limpiar todo
     suspend fun clearAll() {

@@ -107,7 +107,106 @@
     <string name="success_delete_user">Usuario eliminado</string>
     <string name="success_generic">Operación exitosa</string>
 
+    <!-- Cash Register General -->
+    <string name="cash_register_title">Caja Registradora</string>
+    <string name="cash_register_open">Abrir Caja</string>
+    <string name="cash_register_close">Cerrar Caja</string>
+    <string name="cash_register_history">Historial de Cajas</string>
 
+    <!-- Cash Register Status -->
+    <string name="cash_register_status_open">Caja Abierta</string>
+    <string name="cash_register_status_closed">Caja Cerrada</string>
+    <string name="cash_register_no_open">No hay caja abierta</string>
+
+    <!-- Cash Register Form -->
+    <string name="cash_register_initial_balance">Saldo Inicial</string>
+    <string name="cash_register_final_balance">Saldo Final</string>
+    <string name="cash_register_opening_date">Fecha de Apertura</string>
+    <string name="cash_register_closing_date">Fecha de Cierre</string>
+    <string name="cash_register_enter_amount">Ingrese el monto</string>
+
+    <!-- Cash Register Actions -->
+    <string name="cash_register_confirm_open">Confirmar Apertura</string>
+    <string name="cash_register_confirm_close">Confirmar Cierre</string>
+    <string name="cash_register_cancel">Cancelar</string>
+
+    <!-- Cash Register Messages -->
+    <string name="cash_register_opened_success">Caja abierta exitosamente</string>
+    <string name="cash_register_closed_success">Caja cerrada exitosamente</string>
+    <!-- Currency Format -->
+    <string name="currency_format">$%,.2f</string>
+
+    <!-- Pantalla Home -->
+    <string name="user">Usuario</string>
+    <string name="pos_system">Sistema POS</string>
+    <string name="current_branch">Sucursal actual</string>
+    <string name="operations">Operaciones</string>
+    <string name="sales">Ventas</string>
+    <string name="cash_register">Caja Registradora</string>
+    <string name="returns">Devoluciones</string>
+    <string name="inventory">Inventario</string>
+    <string name="reports">Reportes</string>
+    <string name="administration">Administración</string>
+    <string name="role_management">Gestión de Roles</string>
+    <string name="users">Usuarios</string>
+    <string name="branches">Sucursales</string>
+    <string name="home">Inicio</string>
+    <string name="settings">Ajustes</string>
+    <string name="menu">Menú</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="user_photo">Foto de usuario</string>
+    <string name="profile">Perfil</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="welcome_pos_system">Bienvenido al Sistema POS</string>
+    <string name="use_bottom_menu_navigate">Usa el menú inferior para navegar</string>
+    <string name="changing_branch">Cambiando de sucursal...</string>
+    <string name="please_wait">Por favor espera</string>
+    <string name="branch_changed_success">Sucursal cambiada exitosamente</string>
+    <!-- Cash Register Strings -->
+    <string name="cash_register_management">Gestión de Cajas</string>
+    <string name="cash_register_select">Seleccionar Caja</string>
+    <string name="cash_register_name">Nombre de la Caja</string>
+    <string name="cash_register_enter_name">Ingrese el nombre</string>
+    <string name="cash_register_no_registers">No hay cajas registradas</string>
+    <string name="cash_register_create_first">Presiona + para crear tu primera caja</string>
+    <string name="cash_register_created_at">Creada: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cash_register_open_dialog_title">Abrir Caja</string>
+    <string name="cash_register_close_dialog_title">Cerrar Caja</string>
+    <string name="cash_register_create_title">Crear Caja</string>
+    <string name="cash_register_edit_title">Editar Caja</string>
+    <string name="cash_register_delete_title">Eliminar Caja</string>
+
+    <!-- Confirmations -->
+    <string name="cash_register_close_confirmation">¿Estás seguro de que deseas cerrar la caja? Esta acción no se puede deshacer.</string>
+    <string name="cash_register_delete_confirmation">¿Estás seguro de que deseas eliminar la caja "%1$s"? Esta acción no se puede deshacer.</string>
+
+    <!-- Buttons -->
+    <string name="cash_register_create">Crear Caja</string>
+    <string name="cash_register_edit">Editar</string>
+    <string name="cash_register_delete">Eliminar</string>
+    <string name="cash_register_confirm_create">Crear</string>
+    <string name="cash_register_confirm_edit">Guardar</string>
+    <string name="cash_register_confirm_delete">Eliminar</string>
+    <string name="no_cash_registers_yet">Aún no hay cajas registradoras</string>
+    <!-- Errors -->
+    <string name="cash_register_no_history">No hay historial de cajas</string>
+    <string name="cash_register_error_negative_balance">El saldo no puede ser negativo</string>
+    <string name="cash_register_error_empty_name">El nombre no puede estar vacío</string>
+    <string name="cash_register_error_network">Error de conexión. Verifica tu internet.</string>
+    <string name="cash_register_error_validation">Error de validación: %1$s</string>
+    <string name="cash_register_error_database">Error de base de datos: %1$s</string>
+    <string name="cash_register_error_unauthorized">No autorizado</string>
+    <string name="cash_register_error_not_found">Caja no encontrada</string>
+    <string name="cash_register_error_unknown">Error desconocido: %1$s</string>
+
+    <!-- General -->
+    <string name="retry">Reintentar</string>
+
+    <!-- Common -->
+    <string name="loading">Cargando…</string>
+    <string name="open">Abrir</string>
     <!-- Errors -->
     <string name="error_no_current_user">No se pudo obtener el usuario actual</string>
     <string name="error_no_company_id">El usuario actual no tiene company_id</string>
@@ -158,5 +257,6 @@
     <string name="settings_menu_text">Ajustes</string>
     <string name="create_branch_text">Crear Sucursal</string>
     <string name="edit_branch_text">Editar Sucursal</string>
+    <string name="cash_register_not_found_error">Caja no encontrada.</string>
 
 </resources>
