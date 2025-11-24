@@ -17,11 +17,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories.CategoryRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.BranchesScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.categories.CategoriesListScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.categories.CategoryFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RoleFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolePermissionsScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolesListScreen
@@ -34,6 +37,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.CategoryViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
@@ -77,13 +81,18 @@ class MainActivity : ComponentActivity() {
                     val branchRepository = remember { BranchRepository(supabase) }
                     val branchViewModel = remember { BranchViewModel(branchRepository) }
 
+                    // ViewModel de categorías
+                    val categoryRepository = remember { CategoryRepository(supabase) }
+                    val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
+
                     AppNavigation(
                         navController = navController,
                         loginViewModel = loginViewModel,
                         authSessionViewModel = authSessionViewModel,
                         roleViewModel = roleViewModel,
                         userViewModel = userViewModel,
-                        branchViewModel = branchViewModel
+                        branchViewModel = branchViewModel,
+                        categoryViewModel = categoryViewModel
                     )
                 }
             }
@@ -98,7 +107,8 @@ fun AppNavigation(
     authSessionViewModel: AuthSessionViewModel,
     roleViewModel: RoleViewModel,
     userViewModel: UserViewModel,
-    branchViewModel: BranchViewModel
+    branchViewModel: BranchViewModel,
+    categoryViewModel: CategoryViewModel
 ) {
     NavHost(
         navController = navController,
@@ -112,8 +122,9 @@ fun AppNavigation(
         composable("login") {
             LoginScreen(navController, loginViewModel, authSessionViewModel)
         }
+
         composable("user_disabled") {
-            UserDisabledScreen(navController,authSessionViewModel)
+            UserDisabledScreen(navController, authSessionViewModel)
         }
 
         composable("register") {
@@ -128,7 +139,8 @@ fun AppNavigation(
         }
 
         composable("profile") {
-            ProfileScreen(navController, authSessionViewModel) }
+            ProfileScreen(navController, authSessionViewModel)
+        }
 
         // ===== GESTIÓN DE ROLES =====
         composable("roles") {
@@ -201,7 +213,6 @@ fun AppNavigation(
                     when(tab) {
                         0 -> {
                             navController.navigate("home") {
-                                // Limpiar el back stack hasta home
                                 popUpTo("home") { inclusive = false }
                                 launchSingleTop = true
                             }
@@ -211,14 +222,52 @@ fun AppNavigation(
                         }
                         2 -> {
                             // TODO: Navegar a ajustes cuando esté implementado
-                            // navController.navigate("settings") {
-                            //     popUpTo("home") { inclusive = false }
-                            //     launchSingleTop = true
-                            // }
                         }
                     }
                 }
             )
+        }
+
+        // ===== GESTIÓN DE CATEGORÍAS =====
+        composable("categories") {
+            CategoriesListScreen(
+                viewModel = categoryViewModel,
+                onNavigateToCreate = {
+                    navController.navigate("categories/create")
+                },
+                onNavigateToEdit = { categoryId ->
+                    navController.navigate("categories/edit/$categoryId")
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("categories/create") {
+            CategoryFormScreen(
+                viewModel = categoryViewModel,
+                categoryId = null,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "categories/edit/{categoryId}",
+            arguments = listOf(navArgument("categoryId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val categoryId = backStackEntry.arguments?.getInt("categoryId")
+            categoryId?.let {
+                CategoryFormScreen(
+                    viewModel = categoryViewModel,
+                    categoryId = it,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }

@@ -238,6 +238,15 @@ fun HomeScreen(
                             scope.launch { drawerState.close() }
                         }
                     )
+
+                    DrawerItem(
+                        icon = Icons.Default.Store,
+                        title = "Categorias",
+                        onClick = {
+                            navController.navigate("categories")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
                 }
             }
         }
