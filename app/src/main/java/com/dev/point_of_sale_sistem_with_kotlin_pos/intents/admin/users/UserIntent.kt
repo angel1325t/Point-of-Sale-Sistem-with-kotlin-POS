@@ -5,10 +5,10 @@ import java.util.UUID
 
 sealed class UserIntent {
     object LoadUsers : UserIntent()
-    data class LoadUser(val id: String) : UserIntent()
+    data class LoadUser(val authId: String) : UserIntent()
     data class CreateUser(val email: String, val roleId: Int, val branchId: UUID) : UserIntent()
-    data class UpdateUser(val userId: String, val email: String?,val branchId: UUID?, val roleId: Int?) : UserIntent()
-    data class DeleteUser(val id: String) : UserIntent()
+    data class UpdateUser(val authId: String, val email: String?,val branchId: UUID?, val roleId: Int?) : UserIntent()
+    data class DeleteUser(val authId: String) : UserIntent()
     object LoadRoles : UserIntent()
     object LoadBranches : UserIntent()
 

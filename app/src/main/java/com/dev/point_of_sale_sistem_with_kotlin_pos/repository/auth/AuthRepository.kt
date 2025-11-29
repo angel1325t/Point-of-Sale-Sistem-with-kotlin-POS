@@ -141,7 +141,6 @@ class AuthRepository(private val supabase: SupabaseClient) {
 
         // === 6. Insertar usuario ===
         val userData = UserInsert(
-            user_id = userId,
             username = userName,
             auth_id = authId,
             phone = businessPhone,
@@ -189,7 +188,6 @@ class AuthRepository(private val supabase: SupabaseClient) {
 
     @Serializable
     data class UserInsert(
-        @Contextual val user_id: UUID,
         val username: String,
         @Contextual val auth_id: UUID,
         val phone: String?,
