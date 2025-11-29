@@ -1,7 +1,5 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register
 
-import android.R.attr.enabled
-import android.R.attr.type
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -28,15 +26,16 @@ fun OpenCashRegisterDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Abrir caja registradora") },
+        title = { Text(stringResource(R.string.cash_register_open_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
                     OutlinedTextField(
-                        value = cashRegisters.find { it.cash_register_id == selectedId }?.name ?: "Seleccionar caja",
+                        value = cashRegisters.find { it.cash_register_id == selectedId }?.name
+                            ?: stringResource(R.string.cash_register_open_dialog_select_register),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Caja") },
+                        label = { Text(stringResource(R.string.cash_register_select)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
@@ -56,7 +55,7 @@ fun OpenCashRegisterDialog(
                 OutlinedTextField(
                     value = balanceText,
                     onValueChange = { balanceText = it },
-                    label = { Text("Saldo inicial") },
+                    label = { Text(stringResource(R.string.cash_register_initial_balance)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -68,16 +67,17 @@ fun OpenCashRegisterDialog(
                 if (selectedId != null && amount >= 0) {
                     onConfirm(selectedId!!, amount)
                 }
-            }) { Text("Abrir") }
+            }) { Text(stringResource(R.string.open)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
+
 @Composable
 fun CloseCashRegisterDialog(
-    currentBalance: Double, // ← puedes pasar el saldo actual calculado o initial_balance
+    currentBalance: Double,
     onDismiss: () -> Unit,
     onConfirm: (Double) -> Unit
 ) {
@@ -86,10 +86,10 @@ fun CloseCashRegisterDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Cerrar caja registradora") },
+        title = { Text(stringResource(R.string.cash_register_close_dialog_title)) },
         text = {
             Column {
-                Text("Ingresa el saldo final en efectivo:")
+                Text(stringResource(R.string.cash_register_close_dialog_final_balance))
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = finalBalanceText,
@@ -104,24 +104,25 @@ fun CloseCashRegisterDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     val balance = finalBalanceText.toDoubleOrNull()
                     if (balance == null || balance < 0) {
-                        error = "Ingresa un monto válido"
+                        error = stringResource(R.string.cash_register_error_invalid_amount)
                     } else {
                         onConfirm(balance)
                     }
                 }
             ) {
-                Text("Cerrar caja")
+                Text(stringResource(R.string.cash_register_close_dialog_confirm))
             }
         }
     )
 }
+
 @Composable
 fun CreateCashRegisterDialog(
     onDismiss: () -> Unit,

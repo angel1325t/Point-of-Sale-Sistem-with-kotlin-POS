@@ -202,7 +202,6 @@
     <string name="cash_register_error_unknown">Error desconocido: %1$s</string>
 
     <!-- General -->
-    <string name="retry">Reintentar</string>
 
     <!-- Common -->
     <string name="loading">Cargando…</string>
@@ -258,5 +257,99 @@
     <string name="create_branch_text">Crear Sucursal</string>
     <string name="edit_branch_text">Editar Sucursal</string>
     <string name="cash_register_not_found_error">Caja no encontrada.</string>
+    <!-- Agrega estos strings al final de tu archivo strings.xml, antes de </resources> -->
+
+    <!-- Cash Register Management Screen -->
+    <string name="cash_register_back">Volver</string>
+    <string name="cash_register_create_new">Crear caja</string>
+    <string name="cash_register_no_available">No hay cajas disponibles</string>
+
+    <!-- Cash Register Dialogs -->
+    <string name="cash_register_open_dialog_select_register">Seleccionar caja</string>
+    <string name="cash_register_open_dialog_initial_balance">Saldo inicial</string>
+    <string name="cash_register_open_dialog_confirm">Abrir</string>
+    <string name="cash_register_close_dialog_final_balance">Ingresa el saldo final en efectivo:</string>
+    <string name="cash_register_close_dialog_confirm">Cerrar caja</string>
+    <string name="cash_register_dialog_name_label">Nombre de la caja</string>
+    <string name="cash_register_dialog_save">Guardar</string>
+    <string name="cash_register_dialog_error_empty">El nombre no puede estar vacío</string>
+    <string name="cash_register_dialog_error_min_length">Mínimo 3 caracteres</string>
+    <string name="cash_register_dialog_delete_message">¿Estás seguro de eliminar la caja \"%1$s\"?\n\nEsta acción no se puede deshacer.</string>
+
+    <!-- Cash Register Empty States -->
+    <string name="cash_register_empty_title">Aún no hay cajas registradoras</string>
+    <string name="cash_register_empty_description">Presiona el botón + para crear tu primera caja registradora</string>
+    <string name="cash_register_no_open_description">Abre una caja para comenzar a vender</string>
+    <string name="cash_register_open_button">Abrir caja</string>
+
+    <!-- Cash Register History -->
+    <string name="cash_register_history_empty">No hay historial de cajas</string>
+    <string name="cash_register_history_no_data">No hay registros en el historial</string>
+
+    <!-- Cash Register Card -->
+    <string name="cash_register_card_status">Estado</string>
+
+    <!-- Error Messages -->
+    <string name="cash_register_error_invalid_amount">Ingresa un monto válido</string>
+    <string name="cash_register_error_load_failed">Error al cargar las cajas</string>
+    <string name="cash_register_error_operation_failed">Error en la operación</string>
+
+    <!-- General Actions -->
+    <string name="action_retry">Reintentar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_confirm">Confirmar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_create">Crear</string>
+        <!-- Error Content -->
+        <string name="cash_register_error_title">Error</string>
+
+        <!-- Dialogs adicionales -->
+        <string name="cash_register_dialog_error_invalid">Ingresa un monto válido</string>
+
+        <!-- Confirmations y validaciones -->
+        <string name="cash_register_validation_amount">El monto debe ser mayor o igual a 0</string>
+        <string name="cash_register_validation_name_min">El nombre debe tener al menos 3 caracteres</string>
+
+        <!-- Estados de caja -->
+        <string name="cash_register_status_text">Estado: %1$s</string>
+        <string name="cash_register_balance_text">Saldo: %1$s</string>
+
+        <!-- Acciones adicionales -->
+        <string name="cash_register_view_history">Ver Historial</string>
+        <string name="cash_register_refresh">Actualizar</string>
+
+        <!-- Mensajes de éxito -->
+        <string name="cash_register_created_success">Caja creada exitosamente</string>
+        <string name="cash_register_updated_success">Caja actualizada exitosamente</string>
+        <string name="cash_register_deleted_success">Caja eliminada exitosamente</string>
+
+        <!-- Placeholders -->
+        <string name="cash_register_name_placeholder">Ej: Caja Principal, Caja 1</string>
+        <string name="cash_register_amount_placeholder">0.00</string>
+
+        <!-- Información adicional -->
+        <string name="cash_register_info_title">Información de Caja</string>
+        <string name="cash_register_transactions">Transacciones</string>
+        <string name="cash_register_total_sales">Total de Ventas</string>
+        <string name="cash_register_expected_balance">Saldo Esperado</string>
+        <string name="cash_register_actual_balance">Saldo Real</string>
+        <string name="cash_register_difference">Diferencia</string>
+
+        <!-- Ayuda y tooltips -->
+        <string name="cash_register_help_initial_balance">Ingresa el dinero en efectivo con el que cuentas al abrir la caja</string>
+        <string name="cash_register_help_final_balance">Ingresa el dinero en efectivo que hay en la caja al cerrar</string>
+        <string name="cash_register_help_create">Crea cajas registradoras para organizar tus puntos de venta</string>
+
+        <!-- Estados vacíos -->
+        <string name="cash_register_no_transactions">No hay transacciones registradas</string>
+        <string name="cash_register_select_to_open">Selecciona una caja para abrirla</string>
+
+        <!-- Validaciones de formulario -->
+        <string name="cash_register_field_required">Este campo es requerido</string>
+        <string name="cash_register_invalid_number">Ingresa un número válido</string>
+        <string name="cash_register_must_be_positive">El valor debe ser positivo</string>
+    <string name="retry">Reintentar</string>
 
 </resources>

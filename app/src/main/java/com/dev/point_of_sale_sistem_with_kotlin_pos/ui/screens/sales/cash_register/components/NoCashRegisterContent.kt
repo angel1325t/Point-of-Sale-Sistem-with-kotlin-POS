@@ -1,4 +1,3 @@
-// components/NoCashRegisterContent.kt
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components
 
 import androidx.compose.foundation.layout.*
@@ -20,7 +19,9 @@ fun NoCashRegisterContent(
     onOpenCashRegister: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -37,7 +38,7 @@ fun NoCashRegisterContent(
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = "Abre una caja para comenzar a vender",
+            text = stringResource(R.string.cash_register_no_open_description),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -45,11 +46,13 @@ fun NoCashRegisterContent(
         Spacer(Modifier.height(48.dp))
         Button(
             onClick = onOpenCashRegister,
-            modifier = Modifier.fillMaxWidth(0.8f).height(60.dp)
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .height(60.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(12.dp))
-            Text("Abrir caja", fontSize = 18.sp)
+            Text(stringResource(R.string.cash_register_open_button), fontSize = 18.sp)
         }
     }
 }

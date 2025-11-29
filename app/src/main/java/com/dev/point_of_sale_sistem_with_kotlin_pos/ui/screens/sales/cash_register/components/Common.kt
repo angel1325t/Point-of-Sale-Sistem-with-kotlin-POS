@@ -1,4 +1,3 @@
-
 // components/Common.kt
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components
 
@@ -33,8 +32,16 @@ import java.util.*
 @Composable
 fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-        Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -42,7 +49,9 @@ fun formatDate(dateString: String): String = try {
     val input = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
     val output = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     input.parse(dateString)?.let { output.format(it) } ?: dateString
-} catch (e: Exception) { dateString }
+} catch (e: Exception) {
+    dateString
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +69,7 @@ fun CashRegisterCard(
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Companion.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -68,7 +77,9 @@ fun CashRegisterCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(Modifier.Companion.height(4.dp))
+
+                Spacer(Modifier.height(4.dp))
+
                 Text(
                     text = stringResource(
                         R.string.cash_register_created_at,
@@ -83,14 +94,14 @@ fun CashRegisterCard(
                 IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Default.Edit,
-                        contentDescription = "Editar",
+                        contentDescription = stringResource(R.string.cash_register_edit),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Eliminar",
+                        contentDescription = stringResource(R.string.cash_register_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

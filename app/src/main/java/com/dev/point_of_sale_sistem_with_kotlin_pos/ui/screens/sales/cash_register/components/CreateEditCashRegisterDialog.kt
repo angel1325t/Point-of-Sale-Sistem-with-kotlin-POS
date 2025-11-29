@@ -1,4 +1,3 @@
-// ui/screens/sales/cash_register/components/CreateEditCashRegisterDialog.kt
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components
 
 import androidx.compose.foundation.layout.*
@@ -7,8 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.job
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +33,7 @@ fun CreateEditCashRegisterDialog(
                         name = it
                         error = null
                     },
-                    label = { Text("Nombre de la caja") },
+                    label = { Text(stringResource(R.string.cash_register_dialog_name_label)) },
                     singleLine = true,
                     isError = error != null,
                     supportingText = { error?.let { Text(it) } },
@@ -48,23 +48,22 @@ fun CreateEditCashRegisterDialog(
                 onClick = {
                     val trimmed = name.trim()
                     when {
-                        trimmed.isEmpty() -> error = "El nombre no puede estar vacío"
-                        trimmed.length < 3 -> error = "Mínimo 3 caracteres"
+                        trimmed.isEmpty() -> error = stringResource(R.string.cash_register_dialog_error_empty)
+                        trimmed.length < 3 -> error = stringResource(R.string.cash_register_dialog_error_min_length)
                         else -> onConfirm(trimmed)
                     }
                 }
             ) {
-                Text("Guardar")
+                Text(stringResource(R.string.cash_register_dialog_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.cash_register_cancel))
             }
         }
     )
 
-    // Focus automático al abrir
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(100)
         focusRequester.requestFocus()

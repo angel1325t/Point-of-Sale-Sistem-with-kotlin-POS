@@ -6,5 +6,8 @@ data class CashRegisterState(
     val success: Boolean = false,
     val currentCashRegister: CashRegisterHistory? = null,
     val allCashRegisters: List<CashRegister>? = null,
-    val cashRegisterHistory: List<CashRegisterHistory> = emptyList()
+    val cashRegisterHistory: List<CashRegisterHistory> = emptyList(),
+    val historyLoaded: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val allPagesLoaded: Boolean = false
 )

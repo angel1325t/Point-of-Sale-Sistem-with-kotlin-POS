@@ -11,6 +11,7 @@ import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.UUID
+import java.util.stream.IntStream.range
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -172,16 +173,22 @@ class CashRegisterRepository(private val supabase: SupabaseClient) {
             .firstOrNull()
     }
 
-    suspend fun getCashRegisterHistory(): List<CashRegisterHistory> {
+    suspend fun getCashRegisterHistory(limit: Int, offset: Int): List<CashRegisterHistory> {
         val authId = getCurrentUserId() ?: return emptyList()
 
-        return supabase.postgrest.from("cash_registers_history")
+        return supabase.postgrest["cash_registers_history"]
             .select {
-                filter { eq("auth_id", authId) }
+                filter {
+                    eq("auth_id", authId)
+                }
                 order("opening_date", Order.DESCENDING)
+                limit(limit.toLong())
+                range(offset.toLong(), (offset + limit - 1).toLong())
             }
-            .decodeList()
+            .decodeList<CashRegisterHistory>()
     }
+
+
 
     // ----------------------------------------------------
     // UTILIDADES

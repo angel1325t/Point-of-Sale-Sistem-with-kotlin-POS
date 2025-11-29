@@ -1,8 +1,10 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -21,6 +23,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.C
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components.ErrorContent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components.formatDate
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,12 +32,50 @@ fun CashRegisterHistoryScreen(
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(state) {
+        Log.d("HistoryScreen", "Nuevo estado recibido: isLoadingMore=${state.isLoadingMore}, allPagesLoaded=${state.allPagesLoaded}")
+    }
+
     val history = state.cashRegisterHistory
 
     LaunchedEffect(Unit) {
-        viewModel.processIntent(CashRegisterIntent.LoadCashRegisterHistory)
+        if (!viewModel.state.value.historyLoaded) {
+            Log.d("HistoryScreen", "Cargando historial por primera vez...")
+            viewModel.processIntent(CashRegisterIntent.LoadCashRegisterHistory)
+        }
     }
 
+    val listState = rememberLazyListState()
+
+    val canLoadMore by remember(
+        state.isLoadingMore,
+        state.allPagesLoaded,
+        history
+    ) {
+        derivedStateOf {
+            !state.isLoadingMore && !state.allPagesLoaded && history.isNotEmpty()
+        }
+    }
+
+    LaunchedEffect(listState, canLoadMore) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+        }
+            .distinctUntilChanged()
+            .collect { lastVisible ->
+                val total = listState.layoutInfo.totalItemsCount
+
+                if (lastVisible == total - 1 && total > 0 && canLoadMore) {
+                    Log.d("HistoryScreen", "Trigger loadMore() - llegó al final del scroll")
+                    viewModel.processIntent(
+                        CashRegisterIntent.LoadMoreHistory(
+                            nextOffset = history.size
+                        )
+                    )
+                }
+            }
+    }
 
     Scaffold(
         topBar = {
@@ -73,11 +114,23 @@ fun CashRegisterHistoryScreen(
 
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(history) { cashRegisterHistory ->
                         CashRegisterHistoryCard(cashRegisterHistory = cashRegisterHistory)
+                    }
+
+                    item {
+                        if (state.isLoadingMore) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth()
+                                    .wrapContentWidth(Alignment.CenterHorizontally)
+                            )
+                        }
                     }
                 }
             }
@@ -222,7 +275,7 @@ fun EmptyHistoryContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = stringResource(R.string.cash_register_no_history),
+            text = stringResource(R.string.cash_register_history_empty),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )

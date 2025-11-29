@@ -266,12 +266,20 @@ fun AppNavigation(
             )
         }
 
+        composable("cash_register/history") {
+            CashRegisterHistoryScreen(
+                viewModel = cashRegisterViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+
 //        // ===== CAJA REGISTRADORA =====
 //        composable("cash_register") {
 //            CashRegisterMainScreen(
 //                viewModel = cashRegisterViewModel,
 //                onNavigateToManagement = {
-//                    navController.navigate("cash_register/history")
+//                    navController.navigate("cash_register/manage")
 //                }
 //            )
 //        }

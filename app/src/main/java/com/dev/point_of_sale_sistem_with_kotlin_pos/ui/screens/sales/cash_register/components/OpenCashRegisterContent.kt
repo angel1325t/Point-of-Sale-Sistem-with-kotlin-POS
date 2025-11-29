@@ -36,7 +36,11 @@ fun OpenCashRegisterContent(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = stringResource(R.string.cash_register_status_open),
@@ -44,11 +48,24 @@ fun OpenCashRegisterContent(
                         fontWeight = FontWeight.Bold
                     )
                 }
+
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(12.dp))
-                InfoRow("Saldo inicial", stringResource(R.string.currency_format, cashRegisterHistory.initial_balance))
-                InfoRow("Apertura", formatDate(cashRegisterHistory.opening_date))
+
+                // Usando strings.xml
+                InfoRow(
+                    label = stringResource(R.string.cash_register_initial_balance),
+                    value = stringResource(
+                        R.string.currency_format,
+                        cashRegisterHistory.initial_balance
+                    )
+                )
+
+                InfoRow(
+                    label = stringResource(R.string.cash_register_opening_date),
+                    value = formatDate(cashRegisterHistory.opening_date)
+                )
             }
         }
 
@@ -63,7 +80,10 @@ fun OpenCashRegisterContent(
         ) {
             Icon(Icons.Default.Lock, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Cerrar caja", fontSize = 18.sp)
+            Text(
+                text = stringResource(R.string.cash_register_close),
+                fontSize = 18.sp
+            )
         }
     }
 }

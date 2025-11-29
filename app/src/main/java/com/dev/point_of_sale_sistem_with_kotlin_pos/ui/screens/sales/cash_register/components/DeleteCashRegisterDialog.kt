@@ -1,8 +1,9 @@
-// ui/screens/sales/cash_register/components/DeleteCashRegisterDialog.kt
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -13,8 +14,10 @@ fun DeleteCashRegisterDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Eliminar caja") },
-        text = { Text("¿Estás seguro de eliminar la caja \"$cashRegisterName\"?\n\nEsta acción no se puede deshacer.") },
+        title = { Text(stringResource(R.string.cash_register_delete_title)) },
+        text = {
+            Text(stringResource(R.string.cash_register_dialog_delete_message, cashRegisterName))
+        },
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
@@ -22,12 +25,12 @@ fun DeleteCashRegisterDialog(
                     contentColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Eliminar")
+                Text(stringResource(R.string.cash_register_confirm_delete))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.cash_register_cancel))
             }
         }
     )

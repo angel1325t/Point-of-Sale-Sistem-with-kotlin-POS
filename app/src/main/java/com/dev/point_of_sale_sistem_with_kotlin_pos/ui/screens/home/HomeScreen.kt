@@ -203,7 +203,7 @@ fun HomeScreen(
                         icon = Icons.Default.AccountBalanceWallet,
                         title = stringResource(R.string.cash_register),
                         onClick = {
-                            navController.navigate("cash_register")
+                            navController.navigate("cash_register/history")
                             scope.launch { drawerState.close() }
                         }
                     )
