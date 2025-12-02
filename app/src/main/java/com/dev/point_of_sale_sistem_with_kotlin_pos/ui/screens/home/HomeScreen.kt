@@ -247,6 +247,23 @@ fun HomeScreen(
                             scope.launch { drawerState.close() }
                         }
                     )
+                    DrawerItem(
+                        icon = Icons.Default.Store,
+                        title = "Productos",
+                        onClick = {
+                            navController.navigate("products")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    DrawerItem(
+                        icon = Icons.Default.Store,
+                        title = "Proveedores",
+                        onClick = {
+                            navController.navigate("suppliers")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
                 }
             }
         }

@@ -1,33 +1,43 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+
+// Suppliers
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierListScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierFormScreen
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories.CategoryRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductsRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.BranchesScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.categories.CategoriesListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.categories.CategoryFormScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.ProductFormScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.ProductsListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RoleFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolePermissionsScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolesListScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierFormScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UserFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UsersListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
@@ -36,14 +46,8 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.U
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.CategoryViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModelFactory
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,35 +59,41 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surface
                 ) {
+
                     val navController = rememberNavController()
 
-                    // ✅ Obtener SessionPreferences desde Application
+                    // SESSION PREFS
                     val sessionPreferences = remember {
                         (application as MyApplication).sessionPreferences
                     }
 
-                    // ✅ ViewModels de autenticación con SessionPreferences
+                    // AUTH
                     val authSessionViewModel = remember {
                         AuthSessionViewModel(supabase, sessionPreferences)
                     }
+
                     val loginViewModel = remember {
                         LoginViewModel(supabase, authSessionViewModel)
                     }
 
-                    // ViewModels de roles y usuarios
+                    // REPOSITORIES
                     val roleRepository = remember { RoleRepository(supabase) }
-                    val roleViewModel = remember { RoleViewModel(roleRepository) }
-
                     val userRepository = remember { UserRepository(supabase) }
-                    val userViewModel = remember { UserViewModel(userRepository) }
-
-                    // ViewModel de sucursales
                     val branchRepository = remember { BranchRepository(supabase) }
-                    val branchViewModel = remember { BranchViewModel(branchRepository) }
-
-                    // ViewModel de categorías
                     val categoryRepository = remember { CategoryRepository(supabase) }
+                    val productsRepository = remember { ProductsRepository(supabase) }
+                    val supplierRepository = remember { SupplierRepository(supabase) }   // ← NUEVO
+
+                    // VIEWMODELS
+                    val roleViewModel = remember { RoleViewModel(roleRepository) }
+                    val userViewModel = remember { UserViewModel(userRepository) }
+                    val branchViewModel = remember { BranchViewModel(branchRepository) }
                     val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
+                    val productsViewModel = remember { ProductsViewModel(productsRepository) }
+
+                    val supplierViewModel = remember {         // ← NUEVO
+                        SupplierViewModel(supplierRepository)
+                    }
 
                     AppNavigation(
                         navController = navController,
@@ -92,7 +102,9 @@ class MainActivity : ComponentActivity() {
                         roleViewModel = roleViewModel,
                         userViewModel = userViewModel,
                         branchViewModel = branchViewModel,
-                        categoryViewModel = categoryViewModel
+                        categoryViewModel = categoryViewModel,
+                        productsViewModel = productsViewModel,
+                        supplierViewModel = supplierViewModel     // ← NUEVO
                     )
                 }
             }
@@ -108,13 +120,21 @@ fun AppNavigation(
     roleViewModel: RoleViewModel,
     userViewModel: UserViewModel,
     branchViewModel: BranchViewModel,
-    categoryViewModel: CategoryViewModel
+    categoryViewModel: CategoryViewModel,
+    productsViewModel: ProductsViewModel,
+    supplierViewModel: SupplierViewModel
 ) {
+
+    val categoryState by categoryViewModel.state.collectAsState()
+
     NavHost(
         navController = navController,
         startDestination = "splash"
     ) {
-        // ===== AUTENTICACIÓN =====
+
+        // =========================
+        //        AUTENTICACIÓN
+        // =========================
         composable("splash") {
             Splash(navController, authSessionViewModel)
         }
@@ -142,7 +162,9 @@ fun AppNavigation(
             ProfileScreen(navController, authSessionViewModel)
         }
 
-        // ===== GESTIÓN DE ROLES =====
+        // =========================
+        //        ROLES
+        // =========================
         composable("roles") {
             RolesListScreen(navController, roleViewModel)
         }
@@ -154,32 +176,28 @@ fun AppNavigation(
         composable(
             "roles/edit/{roleId}",
             arguments = listOf(navArgument("roleId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val roleId = backStackEntry.arguments?.getInt("roleId")
-            roleId?.let {
-                RoleFormScreen(navController, roleViewModel, it)
-            }
+        ) {
+            val roleId = it.arguments?.getInt("roleId")
+            RoleFormScreen(navController, roleViewModel, roleId)
         }
 
         composable(
             "roles/{roleId}/permissions",
             arguments = listOf(navArgument("roleId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val roleId = backStackEntry.arguments?.getInt("roleId")
-            roleId?.let {
-                RolePermissionsScreen(navController, roleViewModel, it)
-            }
+        ) {
+            val roleId = it.arguments?.getInt("roleId")
+            RolePermissionsScreen(navController, roleViewModel, roleId!!)
         }
 
-        // ===== GESTIÓN DE USUARIOS =====
+        // =========================
+        //        USUARIOS
+        // =========================
         composable("users") {
             UsersListScreen(
                 navController,
-                viewModel = userViewModel,
+                userViewModel,
                 onNavigateToCreate = { navController.navigate("users/create") },
-                onNavigateToEdit = { userId ->
-                    navController.navigate("users/edit/$userId")
-                }
+                onNavigateToEdit = { id -> navController.navigate("users/edit/$id") }
             )
         }
 
@@ -191,56 +209,37 @@ fun AppNavigation(
         }
 
         composable(
-            route = "users/edit/{userId}",
+            "users/edit/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
-            userId?.let {
-                UserFormScreen(
-                    viewModel = userViewModel,
-                    userId = it,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
+        ) {
+            val userId = it.arguments?.getString("userId")
+            UserFormScreen(
+                viewModel = userViewModel,
+                userId = userId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
-        // ===== GESTIÓN DE SUCURSALES =====
+        // =========================
+        //        SUCURSALES
+        // =========================
         composable("branches") {
             BranchesScreen(
                 viewModel = branchViewModel,
                 sessionViewModel = authSessionViewModel,
-                onNavigateToTab = { tab ->
-                    when(tab) {
-                        0 -> {
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                        1 -> {
-                            // Ya estamos en branches, no hacer nada
-                        }
-                        2 -> {
-                            // TODO: Navegar a ajustes cuando esté implementado
-                        }
-                    }
-                }
+                onNavigateToTab = {}
             )
         }
 
-        // ===== GESTIÓN DE CATEGORÍAS =====
+        // =========================
+        //        CATEGORÍAS
+        // =========================
         composable("categories") {
             CategoriesListScreen(
                 viewModel = categoryViewModel,
-                onNavigateToCreate = {
-                    navController.navigate("categories/create")
-                },
-                onNavigateToEdit = { categoryId ->
-                    navController.navigate("categories/edit/$categoryId")
-                },
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateToCreate = { navController.navigate("categories/create") },
+                onNavigateToEdit = { id -> navController.navigate("categories/edit/$id") },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -248,26 +247,86 @@ fun AppNavigation(
             CategoryFormScreen(
                 viewModel = categoryViewModel,
                 categoryId = null,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
         composable(
-            route = "categories/edit/{categoryId}",
+            "categories/edit/{categoryId}",
             arguments = listOf(navArgument("categoryId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val categoryId = backStackEntry.arguments?.getInt("categoryId")
-            categoryId?.let {
-                CategoryFormScreen(
-                    viewModel = categoryViewModel,
-                    categoryId = it,
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
+        ) {
+            val id = it.arguments?.getInt("categoryId")
+            CategoryFormScreen(
+                viewModel = categoryViewModel,
+                categoryId = id,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // =========================
+        //        PRODUCTOS
+        // =========================
+        composable("products") {
+            ProductsListScreen(
+                viewModel = productsViewModel,
+                onNavigateToCreate = { navController.navigate("products/create") },
+                onNavigateToEdit = { id -> navController.navigate("products/edit/$id") },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("products/create") {
+            ProductFormScreen(
+                viewModel = productsViewModel,
+                productId = null,
+                categories = categoryState.categories,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            "products/edit/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.IntType })
+        ) { entry ->
+            val id = entry.arguments?.getInt("productId")
+            ProductFormScreen(
+                viewModel = productsViewModel,
+                productId = id!!,
+                categories = categoryState.categories,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // =========================
+        //        SUPPLIERS (NUEVO)
+        // =========================
+        composable("suppliers") {
+            SupplierListScreen(
+                viewModel = supplierViewModel,
+                onNavigateToCreate = { navController.navigate("suppliers/create") },
+                onNavigateToEdit = { id -> navController.navigate("suppliers/edit/$id") },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("suppliers/create") {
+            SupplierFormScreen(
+                viewModel = supplierViewModel,
+                supplierId = null,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            "suppliers/edit/{supplierId}",
+            arguments = listOf(navArgument("supplierId") { type = NavType.IntType })
+        ) {
+            val id = it.arguments?.getInt("supplierId")
+            SupplierFormScreen(
+                viewModel = supplierViewModel,
+                supplierId = id,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }
