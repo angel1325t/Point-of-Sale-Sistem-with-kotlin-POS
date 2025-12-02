@@ -21,10 +21,10 @@ class UserViewModel(
     fun handleIntent(intent: UserIntent) {
         when (intent) {
             is UserIntent.LoadUsers -> loadUsers()
-            is UserIntent.LoadUser -> loadUser(intent.id)
+            is UserIntent.LoadUser -> loadUser(intent.authId)
             is UserIntent.CreateUser -> createUser(intent.email, intent.roleId, intent.branchId)
-            is UserIntent.UpdateUser -> updateUser(intent.userId, intent.email, intent.branchId, intent.roleId)
-            is UserIntent.DeleteUser -> deleteUser(intent.id)
+            is UserIntent.UpdateUser -> updateUser(intent.authId, intent.email, intent.branchId, intent.roleId)
+            is UserIntent.DeleteUser -> deleteUser(intent.authId)
             is UserIntent.LoadRoles -> loadRoles()
             is UserIntent.LoadBranches -> loadBranches()
         }
@@ -42,11 +42,11 @@ class UserViewModel(
         }
     }
 
-    private fun loadUser(id: String) {
+    private fun loadUser(authId: String) {
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
             try {
-                val user = repository.getUserById(id)
+                val user = repository.getUserById(authId)
                 if (user != null) {
                     state = state.copy(isLoading = false, selectedUser = user)
                 } else {
@@ -94,11 +94,11 @@ class UserViewModel(
         }
     }
 
-    private fun updateUser(userId: String, email: String?, branchId: UUID?, roleId: Int?) {
+    private fun updateUser(authId: String, email: String?, branchId: UUID?, roleId: Int?) {
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
             try {
-                repository.updateUser(userId, branchId, roleId)
+                repository.updateUser(authId, branchId, roleId)
                 state = state.copy(
                     isLoading = false,
                     successMessage = "SUCCESS_UPDATE_USER"
@@ -110,11 +110,11 @@ class UserViewModel(
         }
     }
 
-    private fun deleteUser(id: String) {
+    private fun deleteUser(authId: String) {
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
             try {
-                repository.deleteUser(id)
+                repository.deleteUser(authId)
                 state = state.copy(
                     isLoading = false,
                     successMessage = "SUCCESS_DELETE_USER"

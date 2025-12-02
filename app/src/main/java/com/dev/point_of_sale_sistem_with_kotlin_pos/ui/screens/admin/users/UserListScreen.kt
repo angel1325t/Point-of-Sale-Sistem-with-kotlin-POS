@@ -154,7 +154,7 @@ fun UsersListScreen(
                         items(state.users) { user ->
                             UserCard(
                                 user = user,
-                                onEdit = { onNavigateToEdit(user.user_id.toString()) },
+                                onEdit = { onNavigateToEdit(user.auth_id.toString()) },
                                 onDelete = { showDeleteDialog = user }
                             )
                         }
@@ -184,7 +184,7 @@ fun UsersListScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.handleIntent(UserIntent.DeleteUser(user.user_id.toString()))
+                        viewModel.handleIntent(UserIntent.DeleteUser(user.auth_id.toString()))
                         showDeleteDialog = null
                     }
                 ) {
