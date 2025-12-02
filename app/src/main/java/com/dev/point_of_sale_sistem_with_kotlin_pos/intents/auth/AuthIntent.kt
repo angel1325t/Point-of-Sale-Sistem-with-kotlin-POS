@@ -1,5 +1,7 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth
 
+import io.github.jan.supabase.auth.Auth
+
 sealed class AuthIntent {
 
     // 🔹 Login
@@ -10,7 +12,8 @@ sealed class AuthIntent {
 
     // 🔹 Verificar sesión
     object CheckSession : AuthIntent()
-
+    data class ChangeBranch(val branchId: String) : AuthIntent()
+    object UserDisabled: AuthIntent()
     data class Register(
         val userEmail: String,
         val userPassword: String,

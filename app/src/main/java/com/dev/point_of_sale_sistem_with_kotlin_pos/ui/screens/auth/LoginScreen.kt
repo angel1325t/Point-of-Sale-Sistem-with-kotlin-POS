@@ -48,28 +48,47 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
-    val context = LocalContext.current  // Para traducir errores
+    val context = LocalContext.current
 
-    // Navegar si el usuario está autenticado
-    LaunchedEffect(sessionState.isAuthenticated) {
-        if (sessionState.isAuthenticated) {
-            navController.navigate("home") {
-                popUpTo("login") { inclusive = true }
+    // ⚡ Evitar renderizar login si el usuario está deshabilitado o autenticado
+    when {
+        sessionState.isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
+            return
+        }
+
+        sessionState.isUserDisabled -> {
+            LaunchedEffect(Unit) {
+                navController.navigate("user_disabled") {
+                    popUpTo("login") { inclusive = true }
+                }
+            }
+            return
+        }
+
+        sessionState.isAuthenticated -> {
+            LaunchedEffect(Unit) {
+                navController.navigate("home") {
+                    popUpTo("login") { inclusive = true }
+                }
+            }
+            return
         }
     }
 
-    // Mostrar error traducido en Snackbar
+    // Mostrar errores de login
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
-                is AuthError.InvalidCredentials ->
-                    context.getString(R.string.credenciales_invalidas)
-                is AuthError.Other ->
-                    error.customMessage
-                else -> null // Ignorar errores que no aplican al login
+                is AuthError.InvalidCredentials -> context.getString(R.string.invalid_credentials)
+                is AuthError.Other -> error.customMessage
+                else -> null
             }
-
             message?.let {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
@@ -81,7 +100,6 @@ fun LoginScreen(
             }
         }
     }
-
 
     Scaffold(
         snackbarHost = {
@@ -107,7 +125,7 @@ fun LoginScreen(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.background)
+                .background(colorScheme.surface)
                 .padding(paddingValues)
         ) {
             val isLandscape = maxWidth > maxHeight
@@ -163,7 +181,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text(stringResource(R.string.contrasena)) },
+                        label = { Text(stringResource(R.string.password)) },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
@@ -214,7 +232,7 @@ fun LoginScreen(
                             )
                         } else {
                             Text(
-                                text = stringResource(R.string.entrar),
+                                text = stringResource(R.string.login),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -228,7 +246,7 @@ fun LoginScreen(
                         enabled = !state.isLoading
                     ) {
                         Text(
-                            text = stringResource(R.string.olvidaste_tu_contrasena),
+                            text = stringResource(R.string.forgot_password),
                             color = colorScheme.primary
                         )
                     }
@@ -259,7 +277,7 @@ fun LoginScreen(
                         )
                     ) {
                         Text(
-                            text = stringResource(R.string.registrate),
+                            text = stringResource(R.string.sign_up),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )

@@ -1,55 +1,355 @@
 <resources>
     <string name="app_name">Point-of-Sale-Sistem-with-kotlin-POS</string>
-    <string name="entrar">Entrar</string>
-    <string name="iniciar_sesion">Iniciar Sesión</string>
-    <string name="contrasena">Contraseña</string>
-    <string name="bienvenida">Bienvenido al Dashboard</string>
+    <string name="login">Entrar</string>
+    <string name="sign_in">Iniciar Sesión</string>
+    <string name="password">Contraseña</string>
+    <string name="welcome">Bienvenido al Dashboard</string>
     <string name="email">Email</string>
-    <string name="cerrar_sesion">Cerrar sesión</string>
-    <string name="email_o_contrasena_incorrectos">email o contraseña incorrectos</string>
-    <string name="no_tienes_cuenta">¿No tienes cuenta?</string>
-    <string name="registrate">Regístrate</string>
-    <string name="credenciales_invalidas">Credenciales inválidas</string>
-    <string name="el_nombre_de_usuario_ya_esta_en_uso">El nombre de usuario \'%1$s\' ya está en uso</string>
-    <string name="el_email_de_usuario_ya_esta_en_uso">El email de usuario \'%1$s\' ya está en uso</string>
-    <string name="el_nombre_de_la_compania_ya_esta_en_uso">El nombre de la compañía \'%1$s\' ya está en uso</string>
-    <string name="el_nombre_de_la_sucursal_ya_esta_en_uso">El nombre de la sucursal \'%1$s\' ya está en uso</string>
-    <string name="configura_la_informacion_de_tu_negocio">Configura la información de tu negocio</string>
-    <string name="nombre_del_negocio_validacion">El nombre del negocio debe tener al menos 3 caracteres</string>
-    <string name="email_del_negocio">Email del negocio</string>
-    <string name="email_validacion">Ingresa un correo electrónico válido</string>
-    <string name="direccion_label">Dirección (opcional)</string>
-    <string name="telefono_label">Teléfono (opcional)</string>
-    <string name="boton_crear_cuenta">Crear Cuenta</string>
-    <string name="contrasena_validacion_1">Debe tener al menos 8 caracteres</string>
-    <string name="contrasena_validacion_2">Debe tener una letra mayúscula</string>
-    <string name="contrasena_validacion_3">Debe tener una letra minúscula</string>
-    <string name="contrasena_validacion_4">Debe tener un número</string>
-    <string name="contrasena_validacion_5"><![CDATA[Debe tener un símbolo (!@#$%^&*)]]></string>
-    <string name="contrasena_check">Contraseña fuerte 💪</string>
-    <string name="completado">Completado</string>
-    <string name="datos_personales">Ingresa tus datos personales para comenzar</string>
-    <string name="nombre_validacion">El nombre debe tener al menos 3 caracteres y solo letras, números o _</string>
+    <string name="logout">Cerrar sesión</string>
+    <string name="email_or_password_incorrect">email o contraseña incorrectos</string>
+    <string name="no_account">¿No tienes cuenta?</string>
+    <string name="sign_up">Regístrate</string>
+    <string name="invalid_credentials">Credenciales inválidas</string>
+    <string name="username_already_exists">El nombre de usuario \'%1$s\' ya está en uso</string>
+    <string name="user_email_already_exists">El email de usuario \'%1$s\' ya está en uso</string>
+    <string name="company_name_already_exists">El nombre de la compañía \'%1$s\' ya está en uso</string>
+    <string name="branch_name_already_exists">El nombre de la sucursal \'%1$s\' ya está en uso</string>
+    <string name="setup_business_info">Configura la información de tu negocio</string>
+    <string name="business_name_validation">El nombre del negocio debe tener al menos 3 caracteres</string>
+    <string name="business_email">Email del negocio</string>
+    <string name="email_validation">Ingresa un correo electrónico válido</string>
+    <string name="address_label">Dirección (opcional)</string>
+    <string name="phone_label">Teléfono (opcional)</string>
+    <string name="create_account_button">Crear Cuenta</string>
+    <string name="password_validation_1">Debe tener al menos 8 caracteres</string>
+    <string name="password_validation_2">Debe tener una letra mayúscula</string>
+    <string name="password_validation_3">Debe tener una letra minúscula</string>
+    <string name="password_validation_4">Debe tener un número</string>
+    <string name="password_validation_5"><![CDATA[Debe tener un símbolo (!@#$%^&*)]]></string>
+    <string name="password_check">Contraseña fuerte 💪</string>
+    <string name="completed">Completado</string>
+    <string name="personal_data">Ingresa tus datos personales para comenzar</string>
+    <string name="name_validation">El nombre debe tener al menos 3 caracteres y solo letras, números o _</string>
     <string name="email_label">Correo electrónico</string>
-    <string name="confirmar_contrasena_label">Confirmar contraseña</string>
-    <string name="contrasena_validacion_6">Las contraseñas no coinciden</string>
-    <string name="continuar">Continuar</string>
-    <string name="olvidaste_tu_contrasena">¿Olvidaste tu contraseña?</string>
-    <string name="crear_cuenta_text">Crear Cuenta</string>
-    <string name="drawer_item_1">Ventas</string>
-    <string name="drawer_item_2">Devoluciones</string>
-    <string name="drawer_item_3">Inventario</string>
-    <string name="drawer_item_4">Reportes</string>
-    <string name="navegacion_1">Inicio</string>
-    <string name="navegacion_2">Sucursales</string>
-    <string name="navegacion_3">Configuración</string>
-    <string name="dropdown_menu_1">Perfil</string>
-    <string name="dropdown_menu_2">Notificaciones</string>
-    <string name="dropdown_menu_3">Cerrar sesión</string>
+    <string name="confirm_password_label">Confirmar contraseña</string>
+    <string name="password_validation_6">Las contraseñas no coinciden</string>
+    <string name="continue_text">Continuar</string>
+    <string name="forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="create_account_text">Crear Cuenta</string>
+    <string name="drawer_item_sales">Ventas</string>
+    <string name="drawer_item_returns">Devoluciones</string>
+    <string name="drawer_item_inventory">Inventario</string>
+    <string name="drawer_item_reports">Reportes</string>
+    <string name="navigation_home">Inicio</string>
+    <string name="navigation_branches">Sucursales</string>
+    <string name="navigation_settings">Configuración</string>
+    <string name="dropdown_profile">Perfil</string>
+    <string name="dropdown_notifications">Notificaciones</string>
+    <string name="dropdown_logout">Cerrar sesión</string>
     <string name="logout_success">Sesión cerrada correctamente</string>
     <string name="logout_failed">Error al cerrar sesión</string>
     <string name="sign_in_success">Inicio de sesión exitoso ✅</string>
     <string name="register_failed">Error al registrar</string>
     <string name="register_success">Registro exitoso</string>
-    <string name="el_email_de_compania_ya_esta_en_uso">El email de la compañía \'%1$s\' ya está en uso</string>
+    <string name="company_email_already_exists">El email de la compañía \'%1$s\' ya está en uso</string>
+    <string name="conection_error">Error de conexión</string>
+    <string name="role_not_found">Rol no encontrado</string>
+    <string name="unknown_error">Error desconocido</string>
+    <string name="edit_role">Editar Rol</string>
+    <string name="create_role">Crear Rol</string>
+    <string name="go_back">Volver</string>
+    <string name="user_crud_validation_name">El nombre es obligatorio</string>
+    <string name="user_crud_validation_min_len">Mínimo 3 caracteres</string>
+    <string name="user_crud_validation_max_len">Máximo 50 caracteres</string>
+    <string name="save">Guardar</string>
+    <string name="role_information_title">Información del Rol</string>
+    <string name="role_name_label">Nombre del rol *</string>
+    <string name="role_name_example">Ej: Administrador, Cajero</string>
+    <string name="role_description_label">Descripción (opcional)</string>
+    <string name="role_description_placeholder">Describe las funciones de este rol</string>
+    <string name="role_helper_1">"Los roles te permiten organizar los permisos de tus usuarios. "</string>
+    <string name="role_helper_2">Después de crear el rol, podrás asignarle permisos específicos.</string>
+    <string name="permissions_header">Permisos</string>
+    <string name="no_available_permissions_message">No hay permisos disponibles</string>
+    <string name="contact_admin">Contacta al administrador del sistema</string>
+    <string name="roles_header">Gestión de Roles</string>
+    <string name="no_roles_registrated">No hay roles registrados</string>
+    <string name="create_first_role">Crear primer rol</string>
+    <string name="confirm_delete_title">Confirmar eliminación</string>
+    <string name="confirm_delete_body">¿Estás seguro de eliminar este rol? Esta acción no se puede deshacer.</string>
+    <string name="delete">Eliminar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="manage_permissions_description">Gestionar permisos</string>
+    <string name="edit">Editar</string>
+    <string name="email_required_validation">El email es obligatorio</string>
+    <string name="invalid_format">Formato de email inválido</string>
+    <string name="role_validation">Debe seleccionar un rol</string>
+    <string name="branch_validation">Debe seleccionar una sucursal</string>
+    <string name="new_user_title">Nuevo Usuario</string>
+    <string name="edit_user_title">Editar Usuario</string>
+    <string name="role">Rol</string>
+    <string name="branch">Sucursales</string>
+    <string name="update_text">Actualizar</string>
+    <string name="create_text">Crear</string>
+    <string name="user_not_found">Usuario no encontrado</string>
+    <string name="email_already_exists">El email ya existe</string>
+    <string name="supabase_auth_error">Error en autenticación de Supabase</string>
+    <string name="manage_user_title">Gestión de Usuarios</string>
+    <string name="add_user_description">Agregar Usuario</string>
+    <string name="no_user_registrated">No hay usuarios registrados</string>
+    <string name="confirm_user_deletion">¿Está seguro que desea eliminar al usuario %1$s?</string>
+    <string name="active">Activo</string>
+    <string name="inactive">Inactivo</string>
+
+    <!-- Success -->
+    <string name="success_create_user">Usuario creado</string>
+    <string name="success_update_user">Usuario actualizado</string>
+    <string name="success_delete_user">Usuario eliminado</string>
+    <string name="success_generic">Operación exitosa</string>
+
+    <!-- Cash Register General -->
+    <string name="cash_register_title">Caja Registradora</string>
+    <string name="cash_register_open">Abrir Caja</string>
+    <string name="cash_register_close">Cerrar Caja</string>
+    <string name="cash_register_history">Historial de Cajas</string>
+
+    <!-- Cash Register Status -->
+    <string name="cash_register_status_open">Caja Abierta</string>
+    <string name="cash_register_status_closed">Caja Cerrada</string>
+    <string name="cash_register_no_open">No hay caja abierta</string>
+
+    <!-- Cash Register Form -->
+    <string name="cash_register_initial_balance">Saldo Inicial</string>
+    <string name="cash_register_final_balance">Saldo Final</string>
+    <string name="cash_register_opening_date">Fecha de Apertura</string>
+    <string name="cash_register_closing_date">Fecha de Cierre</string>
+    <string name="cash_register_enter_amount">Ingrese el monto</string>
+
+    <!-- Cash Register Actions -->
+    <string name="cash_register_confirm_open">Confirmar Apertura</string>
+    <string name="cash_register_confirm_close">Confirmar Cierre</string>
+    <string name="cash_register_cancel">Cancelar</string>
+
+    <!-- Cash Register Messages -->
+    <string name="cash_register_opened_success">Caja abierta exitosamente</string>
+    <string name="cash_register_closed_success">Caja cerrada exitosamente</string>
+    <!-- Currency Format -->
+    <string name="currency_format">$%,.2f</string>
+
+    <!-- Pantalla Home -->
+    <string name="user">Usuario</string>
+    <string name="pos_system">Sistema POS</string>
+    <string name="current_branch">Sucursal actual</string>
+    <string name="operations">Operaciones</string>
+    <string name="sales">Ventas</string>
+    <string name="cash_register">Caja Registradora</string>
+    <string name="returns">Devoluciones</string>
+    <string name="inventory">Inventario</string>
+    <string name="reports">Reportes</string>
+    <string name="administration">Administración</string>
+    <string name="role_management">Gestión de Roles</string>
+    <string name="users">Usuarios</string>
+    <string name="branches">Sucursales</string>
+    <string name="home">Inicio</string>
+    <string name="settings">Ajustes</string>
+    <string name="menu">Menú</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="user_photo">Foto de usuario</string>
+    <string name="profile">Perfil</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="welcome_pos_system">Bienvenido al Sistema POS</string>
+    <string name="use_bottom_menu_navigate">Usa el menú inferior para navegar</string>
+    <string name="changing_branch">Cambiando de sucursal...</string>
+    <string name="please_wait">Por favor espera</string>
+    <string name="branch_changed_success">Sucursal cambiada exitosamente</string>
+    <!-- Cash Register Strings -->
+    <string name="cash_register_management">Gestión de Cajas</string>
+    <string name="cash_register_select">Seleccionar Caja</string>
+    <string name="cash_register_name">Nombre de la Caja</string>
+    <string name="cash_register_enter_name">Ingrese el nombre</string>
+    <string name="cash_register_no_registers">No hay cajas registradas</string>
+    <string name="cash_register_create_first">Presiona + para crear tu primera caja</string>
+    <string name="cash_register_created_at">Creada: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cash_register_open_dialog_title">Abrir Caja</string>
+    <string name="cash_register_close_dialog_title">Cerrar Caja</string>
+    <string name="cash_register_create_title">Crear Caja</string>
+    <string name="cash_register_edit_title">Editar Caja</string>
+    <string name="cash_register_delete_title">Eliminar Caja</string>
+
+    <!-- Confirmations -->
+    <string name="cash_register_close_confirmation">¿Estás seguro de que deseas cerrar la caja? Esta acción no se puede deshacer.</string>
+    <string name="cash_register_delete_confirmation">¿Estás seguro de que deseas eliminar la caja "%1$s"? Esta acción no se puede deshacer.</string>
+
+    <!-- Buttons -->
+    <string name="cash_register_create">Crear Caja</string>
+    <string name="cash_register_edit">Editar</string>
+    <string name="cash_register_delete">Eliminar</string>
+    <string name="cash_register_confirm_create">Crear</string>
+    <string name="cash_register_confirm_edit">Guardar</string>
+    <string name="cash_register_confirm_delete">Eliminar</string>
+    <string name="no_cash_registers_yet">Aún no hay cajas registradoras</string>
+    <!-- Errors -->
+    <string name="cash_register_no_history">No hay historial de cajas</string>
+    <string name="cash_register_error_negative_balance">El saldo no puede ser negativo</string>
+    <string name="cash_register_error_empty_name">El nombre no puede estar vacío</string>
+    <string name="cash_register_error_network">Error de conexión. Verifica tu internet.</string>
+    <string name="cash_register_error_validation">Error de validación: %1$s</string>
+    <string name="cash_register_error_database">Error de base de datos: %1$s</string>
+    <string name="cash_register_error_unauthorized">No autorizado</string>
+    <string name="cash_register_error_not_found">Caja no encontrada</string>
+    <string name="cash_register_error_unknown">Error desconocido: %1$s</string>
+
+    <!-- General -->
+
+    <!-- Common -->
+    <string name="loading">Cargando…</string>
+    <string name="open">Abrir</string>
+    <!-- Errors -->
+    <string name="error_no_current_user">No se pudo obtener el usuario actual</string>
+    <string name="error_no_company_id">El usuario actual no tiene company_id</string>
+    <string name="error_load_roles">Error al cargar los roles</string>
+    <string name="error_load_branches">Error al cargar las sucursales</string>
+    <string name="branch_active">Activa</string>
+    <string name="branch_inactive">Inactiva</string>
+    <string name="branch_alias_label">Alias</string>
+    <string name="branch_alias_example">Ej: Centro, Norte, Sur</string>
+    <string name="alias_requiered">El alias es obligatorio</string>
+    <string name="address_branch_label">Dirección</string>
+    <string name="address_branch_example">Calle, número, colonia</string>
+    <string name="phone_branch_label">Teléfono</string>
+    <string name="phone_branch_example">(XXX) XXX-XXXX</string>
+    <string name="city_branch_label">Ciudad</string>
+    <string name="city_branch_example">Nombre de la ciudad</string>
+    <string name="select_branch">Selecciona una Sucursal</string>
+    <string name="select_branch_requiered">Debes seleccionar una sucursal para continuar</string>
+    <string name="loading_branches">Cargando sucursales...</string>
+    <string name="no_branches_available">No hay sucursales disponibles</string>
+    <string name="admin_contact">Contacta al administrador</string>
+    <string name="select">Seleccionar</string>
+    <string name="change_branch_text">Cambiar sucursal</string>
+    <string name="user_disabled_title">Usuario desabilitado</string>
+    <string name="user_disabled_message">Comunícate con el administrador para reactivar tu cuenta.</string>
+    <string name="user_disabled_back_button">Volver al inicio de sesión</string>
+    <string name="select_active_branch_warning">Selecciona una sucursal activa</string>
+    <string name="close">Cerrar</string>
+    <string name="change">Cambiar</string>
+    <string name="switching_branch_text">Cambiando de sucursal...</string>
+    <string name="please_wait_text">Por favor espera un momento</string>
+    <string name="delete_branch_text">Eliminar Sucursal</string>
+    <string name="confirm_branch_deletion">¿Estás seguro de que deseas eliminar esta sucursal?</string>
+    <string name="branch_deletion_helper">Esta acción no se puede deshacer. Para confirmar, escribe el nombre completo de la sucursal:</string>
+    <string name="branch_name_label">Nombre de la sucursal</string>
+    <string name="branch_name_validation">El nombre no coincide</string>
+    <string name="delete_branch">Eliminar Sucursal</string>
+    <string name="no_branches_registrared">No hay sucursales registradas</string>
+    <string name="add_branch_helper">Pulsa el botón \"+ Nueva Sucursal\" para agregar una</string>
+    <string name="loading_branches_helper">Cargando sucursales...</string>
+    <string name="unauthorize_error">No autorizado</string>
+    <string name="branch_not_found_error">Sucursal no encontrada</string>
+    <string name="branch_management_text">Gestión de Sucursales</string>
+    <string name="branches_amount_mini_helper">%1$d sucursal%2$s</string>
+    <string name="new_branch_text">Nueva Sucursal</string>
+    <string name="home_menu_text">Inicio</string>
+    <string name="branches_menu_text">Sucursales</string>
+    <string name="settings_menu_text">Ajustes</string>
+    <string name="create_branch_text">Crear Sucursal</string>
+    <string name="edit_branch_text">Editar Sucursal</string>
+    <string name="cash_register_not_found_error">Caja no encontrada.</string>
+    <!-- Agrega estos strings al final de tu archivo strings.xml, antes de </resources> -->
+
+    <!-- Cash Register Management Screen -->
+    <string name="cash_register_back">Volver</string>
+    <string name="cash_register_create_new">Crear caja</string>
+    <string name="cash_register_no_available">No hay cajas disponibles</string>
+
+    <!-- Cash Register Dialogs -->
+    <string name="cash_register_open_dialog_select_register">Seleccionar caja</string>
+    <string name="cash_register_open_dialog_initial_balance">Saldo inicial</string>
+    <string name="cash_register_open_dialog_confirm">Abrir</string>
+    <string name="cash_register_close_dialog_final_balance">Ingresa el saldo final en efectivo:</string>
+    <string name="cash_register_close_dialog_confirm">Cerrar caja</string>
+    <string name="cash_register_dialog_name_label">Nombre de la caja</string>
+    <string name="cash_register_dialog_save">Guardar</string>
+    <string name="cash_register_dialog_error_empty">El nombre no puede estar vacío</string>
+    <string name="cash_register_dialog_error_min_length">Mínimo 3 caracteres</string>
+    <string name="cash_register_dialog_delete_message">¿Estás seguro de eliminar la caja \"%1$s\"?\n\nEsta acción no se puede deshacer.</string>
+
+    <!-- Cash Register Empty States -->
+    <string name="cash_register_empty_title">Aún no hay cajas registradoras</string>
+    <string name="cash_register_empty_description">Presiona el botón + para crear tu primera caja registradora</string>
+    <string name="cash_register_no_open_description">Abre una caja para comenzar a vender</string>
+    <string name="cash_register_open_button">Abrir caja</string>
+
+    <!-- Cash Register History -->
+    <string name="cash_register_history_empty">No hay historial de cajas</string>
+    <string name="cash_register_history_no_data">No hay registros en el historial</string>
+
+    <!-- Cash Register Card -->
+    <string name="cash_register_card_status">Estado</string>
+
+    <!-- Error Messages -->
+    <string name="cash_register_error_invalid_amount">Ingresa un monto válido</string>
+    <string name="cash_register_error_load_failed">Error al cargar las cajas</string>
+    <string name="cash_register_error_operation_failed">Error en la operación</string>
+
+    <!-- General Actions -->
+    <string name="action_retry">Reintentar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_confirm">Confirmar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_create">Crear</string>
+        <!-- Error Content -->
+        <string name="cash_register_error_title">Error</string>
+
+        <!-- Dialogs adicionales -->
+        <string name="cash_register_dialog_error_invalid">Ingresa un monto válido</string>
+
+        <!-- Confirmations y validaciones -->
+        <string name="cash_register_validation_amount">El monto debe ser mayor o igual a 0</string>
+        <string name="cash_register_validation_name_min">El nombre debe tener al menos 3 caracteres</string>
+
+        <!-- Estados de caja -->
+        <string name="cash_register_status_text">Estado: %1$s</string>
+        <string name="cash_register_balance_text">Saldo: %1$s</string>
+
+        <!-- Acciones adicionales -->
+        <string name="cash_register_view_history">Ver Historial</string>
+        <string name="cash_register_refresh">Actualizar</string>
+
+        <!-- Mensajes de éxito -->
+        <string name="cash_register_created_success">Caja creada exitosamente</string>
+        <string name="cash_register_updated_success">Caja actualizada exitosamente</string>
+        <string name="cash_register_deleted_success">Caja eliminada exitosamente</string>
+
+        <!-- Placeholders -->
+        <string name="cash_register_name_placeholder">Ej: Caja Principal, Caja 1</string>
+        <string name="cash_register_amount_placeholder">0.00</string>
+
+        <!-- Información adicional -->
+        <string name="cash_register_info_title">Información de Caja</string>
+        <string name="cash_register_transactions">Transacciones</string>
+        <string name="cash_register_total_sales">Total de Ventas</string>
+        <string name="cash_register_expected_balance">Saldo Esperado</string>
+        <string name="cash_register_actual_balance">Saldo Real</string>
+        <string name="cash_register_difference">Diferencia</string>
+
+        <!-- Ayuda y tooltips -->
+        <string name="cash_register_help_initial_balance">Ingresa el dinero en efectivo con el que cuentas al abrir la caja</string>
+        <string name="cash_register_help_final_balance">Ingresa el dinero en efectivo que hay en la caja al cerrar</string>
+        <string name="cash_register_help_create">Crea cajas registradoras para organizar tus puntos de venta</string>
+
+        <!-- Estados vacíos -->
+        <string name="cash_register_no_transactions">No hay transacciones registradas</string>
+        <string name="cash_register_select_to_open">Selecciona una caja para abrirla</string>
+
+        <!-- Validaciones de formulario -->
+        <string name="cash_register_field_required">Este campo es requerido</string>
+        <string name="cash_register_invalid_number">Ingresa un número válido</string>
+        <string name="cash_register_must_be_positive">El valor debe ser positivo</string>
+    <string name="retry">Reintentar</string>
+
 </resources>

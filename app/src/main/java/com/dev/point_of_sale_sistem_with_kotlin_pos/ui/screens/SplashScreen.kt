@@ -10,44 +10,43 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
-import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
-
+import kotlinx.coroutines.delay
 
 @Composable
 fun Splash(
     navController: NavHostController,
     authSessionViewModel: AuthSessionViewModel
 ) {
-    val state = authSessionViewModel.state.collectAsState()
+    val state by authSessionViewModel.state.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(state.isAuthenticated) {
         delay(1500)
 
-        if (state.value.isAuthenticated) {
-            navController.navigate("home") {
-                popUpTo("splash") { inclusive = true }
-            }
-        } else {
-            navController.navigate("login") {
-                popUpTo("splash") { inclusive = true }
-            }
+        val target = if (state.isAuthenticated) "home" else "login"
+
+        navController.navigate("biometric_auth/$target") {
+            popUpTo("splash") { inclusive = true }
         }
     }
 
     SplashScreen()
 }
 
+
+
+
 @Composable
 fun SplashScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.surface),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -56,6 +55,5 @@ fun SplashScreen() {
             color = MaterialTheme.colorScheme.primary,
             strokeWidth = 4.dp
         )
-
     }
 }

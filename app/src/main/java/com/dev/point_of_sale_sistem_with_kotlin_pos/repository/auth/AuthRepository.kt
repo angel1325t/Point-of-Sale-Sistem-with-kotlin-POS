@@ -11,6 +11,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.UUID
 import android.util.Log
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
+import io.github.jan.supabase.postgrest.from
 
 class AuthRepository(private val supabase: SupabaseClient) {
 
@@ -37,6 +39,25 @@ class AuthRepository(private val supabase: SupabaseClient) {
         Log.e(TAG, "Login failed", e)
         Result.failure(Exception("Login failed: ${e.message}", e))
     }
+
+    suspend fun isUserDisabled(userID: UUID): Boolean {
+
+        val user = supabase.postgrest.from("users")
+            .select {
+                filter { eq("auth_id", userID.toString()) }
+            }
+            .decodeSingleOrNull<UserRepository.UserModel>()
+
+        if (user == null) {
+            Log.d("UserCheck", "User not found for ID: $userID")
+            return false
+        }
+
+        Log.d("UserCheck", "User active = ${user.active}")
+        return !(user.active ?: true)
+    }
+
+
 
     suspend fun register(
         userEmail: String,
@@ -120,7 +141,6 @@ class AuthRepository(private val supabase: SupabaseClient) {
 
         // === 6. Insertar usuario ===
         val userData = UserInsert(
-            user_id = userId,
             username = userName,
             auth_id = authId,
             phone = businessPhone,
@@ -168,7 +188,6 @@ class AuthRepository(private val supabase: SupabaseClient) {
 
     @Serializable
     data class UserInsert(
-        @Contextual val user_id: UUID,
         val username: String,
         @Contextual val auth_id: UUID,
         val phone: String?,

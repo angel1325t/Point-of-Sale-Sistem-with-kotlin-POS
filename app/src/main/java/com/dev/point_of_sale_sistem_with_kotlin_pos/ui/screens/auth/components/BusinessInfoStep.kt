@@ -67,7 +67,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = stringResource(R.string.configura_la_informacion_de_tu_negocio),
+                    text = stringResource(R.string.setup_business_info),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -83,7 +83,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
             isError = businessName.isNotBlank() && !isBusinessNameValid,
             supportingText = {
                 if (businessName.isNotBlank() && !isBusinessNameValid) {
-                    Text(stringResource(R.string.nombre_del_negocio_validacion))
+                    Text(stringResource(R.string.business_name_validation))
                 }
             },
             leadingIcon = { Icon(Icons.Default.Store, contentDescription = null) },
@@ -95,13 +95,13 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
         OutlinedTextField(
             value = businessEmail,
             onValueChange = { businessEmail = it },
-            label = { Text(stringResource(R.string.email_del_negocio)) },
+            label = { Text(stringResource(R.string.business_email)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
             isError = businessEmail.isNotBlank() && !isBusinessEmailValid,
             supportingText = {
                 if (businessEmail.isNotBlank() && !isBusinessEmailValid) {
-                    Text(stringResource(R.string.email_validacion))
+                    Text(stringResource(R.string.email_validation))
                 }
             },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
@@ -113,7 +113,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
         OutlinedTextField(
             value = businessAddress,
             onValueChange = { businessAddress = it },
-            label = { Text(stringResource(R.string.direccion_label)) },
+            label = { Text(stringResource(R.string.address_label)) },
             singleLine = true,
             leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
             modifier = Modifier.fillMaxWidth()
@@ -124,7 +124,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
         OutlinedTextField(
             value = businessPhone,
             onValueChange = { businessPhone = it },
-            label = { Text(stringResource(R.string.telefono_label)) },
+            label = { Text(stringResource(R.string.phone_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
@@ -163,7 +163,7 @@ fun BusinessInfoStep(viewModel: RegisterViewModel) {
             } else {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.boton_crear_cuenta), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.create_account_button), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             }
         }
 
