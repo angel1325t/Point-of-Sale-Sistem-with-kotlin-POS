@@ -32,8 +32,10 @@ class UserRepository(private val supabase: SupabaseClient) {
     }
 
     // Obtener solo usuarios activos
-    suspend fun getAllActiveUsers(): List<UserModel> =
-        supabase.postgrest.from("user_full_info")
+    suspend fun getAllActiveUsers(): List<UserModel> {
+        Log.d(TAG, "Fetching all active users...")
+
+        val users = supabase.postgrest.from("users")
             .select {
                 filter {
                     eq("active", true)
@@ -41,12 +43,19 @@ class UserRepository(private val supabase: SupabaseClient) {
             }
             .decodeList<UserModel>()
 
+        Log.d(TAG, "Found ${users.size} users")
+        users.forEach { user ->
+            Log.d(TAG, "User: ${user.username}, Active: ${user.active}")
+        }
 
-    suspend fun getUserById(userId: String): UserModel? =
-        supabase.postgrest.from("user_full_info")
+        return users
+    }
+
+    suspend fun getUserById(authId: String): UserModel? =
+        supabase.postgrest.from("users")
             .select {
                 filter {
-                    eq("user_id", userId)
+                    eq("auth_id", authId)
                 }
             }
             .decodeList<UserModel>()
@@ -100,12 +109,9 @@ class UserRepository(private val supabase: SupabaseClient) {
 
         Log.d(TAG, "Auth user created: authId=$authId")
 
-        // === UUID para public.user ===
-        val userId = UUID.randomUUID()
 
         // === Insert en public.users ===
         val userData = UserInsert(
-            user_id = userId,
             auth_id = authId,
             role_id = roleId,
             active = true,
@@ -118,19 +124,19 @@ class UserRepository(private val supabase: SupabaseClient) {
         val userResponse = supabase.postgrest.from("users").insert(userData)
         Log.d(TAG, "User insert response: $userResponse")
 
-        return getUserById(userId.toString())
+        return getUserById(authId.toString())
             ?: throw Exception("User created but could not retrieve")
     }
 
 
     suspend fun updateUser(
-        userId: String,
+        authId: String,
         branchId: UUID?,
         roleId: Int?
     ): UserModel {
-        Log.d(TAG, "Updating user: userId=$userId")
+        Log.d(TAG, "Updating user: userId=$authId")
 
-        val currentUser = getUserById(userId)
+        val currentUser = getUserById(authId)
             ?: throw IllegalStateException("User not found")
 
         // 🔹 Crear el objeto con los datos a actualizar
@@ -144,21 +150,21 @@ class UserRepository(private val supabase: SupabaseClient) {
         supabase.postgrest.from("users")
             .update(updateData) {
                 filter {
-                    eq("user_id", userId)
+                    eq("auth_id", authId)
                 }
             }
 
         Log.d(TAG, "User updated successfully")
 
         // 🔹 Retornar el usuario actualizado
-        return getUserById(userId)
+        return getUserById(authId)
             ?: throw IllegalStateException("Error reloading updated user")
     }
 
 
     // Soft delete: solo cambiar active a false
-    suspend fun deleteUser(userId: String) {
-        Log.d(TAG, "Soft deleting user: userId=$userId")
+    suspend fun deleteUser(authId: String) {
+        Log.d(TAG, "Soft deleting user: userId=$authId")
 
         val updateData = buildJsonObject {
             put("active", false)
@@ -168,7 +174,7 @@ class UserRepository(private val supabase: SupabaseClient) {
         supabase.postgrest.from("users")
             .update(updateData) {
                 filter {
-                    eq("user_id", userId)
+                    eq("auth_id", authId)
                 }
             }
 
@@ -210,7 +216,7 @@ class UserRepository(private val supabase: SupabaseClient) {
 
     @Serializable
     data class UserModel(
-        @Contextual val user_id: UUID? = null,
+        @Contextual val auth_id: UUID,
         val phone: String? = null,
         val username: String,
         val role_id: Int? = null,
@@ -218,7 +224,6 @@ class UserRepository(private val supabase: SupabaseClient) {
         val created_at: String? = null,
         val updated_at: String? = null,
         val email: String? = null,
-        @Contextual val auth_id: UUID? = null,
         val profile_image_url: String? = null,
         @Contextual val company_id: UUID? = null,
         @Contextual val branch_id: UUID? = null
@@ -226,14 +231,14 @@ class UserRepository(private val supabase: SupabaseClient) {
 
     @Serializable
     data class UserInsert(
-        @Contextual val user_id: UUID,
         @Contextual val auth_id: UUID,
         val role_id: Int,
         val active: Boolean,
         @Contextual val company_id: UUID,
         @Contextual val branch_id: UUID,
-        val username: String,
+        val username: String
     )
+
 
     @Serializable
     data class RoleModel(

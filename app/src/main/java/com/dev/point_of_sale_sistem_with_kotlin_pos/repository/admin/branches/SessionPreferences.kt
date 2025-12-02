@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -16,7 +17,8 @@ class SessionPreferences(private val context: Context) {
 
     companion object {
         private val BRANCH_ID_KEY = stringPreferencesKey("branch_id")
-        private val USER_DISABLED_KEY = stringPreferencesKey("user_disabled") // ✅ nuevo
+        private val USER_DISABLED_KEY = stringPreferencesKey("user_disabled")
+
     }
 
     // BranchId
@@ -34,13 +36,5 @@ class SessionPreferences(private val context: Context) {
     // Usuario deshabilitado
     suspend fun setUserDisabled(disabled: Boolean) {
         context.dataStore.edit { it[USER_DISABLED_KEY] = disabled.toString() }
-    }
-
-    suspend fun isUserDisabled(): Boolean =
-        context.dataStore.data.map { it[USER_DISABLED_KEY]?.toBoolean() ?: false }.first()
-
-    // Limpiar todo
-    suspend fun clearAll() {
-        context.dataStore.edit { it.clear() }
     }
 }

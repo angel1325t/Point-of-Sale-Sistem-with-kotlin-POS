@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.LoginState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.SessionState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.AuthRepository
 import io.github.jan.supabase.SupabaseClient
@@ -21,7 +20,7 @@ import java.util.UUID
 
 class AuthSessionViewModel(
     private val supabase: SupabaseClient,
-    private val sessionPreferences: SessionPreferences // ✅ Inyectar SessionPreferences
+    private val sessionPreferences: SessionPreferences
 ) : ViewModel() {
 
     private val repository = AuthRepository(supabase)
@@ -58,6 +57,7 @@ class AuthSessionViewModel(
     fun sendIntent(intent: AuthIntent) {
         viewModelScope.launch { _intents.send(intent) }
     }
+
 
     private fun handleCheckSession() {
         viewModelScope.launch {
@@ -108,10 +108,9 @@ class AuthSessionViewModel(
                 isUserDisabled = true,
                 isAuthenticated = false
             )
-            sessionPreferences.setUserDisabled(true) // ✅ guardar estado
+            sessionPreferences.setUserDisabled(true)
         }
     }
-
 
     fun resetState() {
         _state.value = _state.value.copy(
@@ -127,18 +126,14 @@ class AuthSessionViewModel(
         viewModelScope.launch {
             Log.d(TAG, "Changing branch to: $branchId")
 
-            // ✅ Mostrar loading para simular recarga
             _state.value = _state.value.copy(isLoading = true)
 
             try {
-                // ✅ Simular delay de recarga (ajustable según necesites)
                 kotlinx.coroutines.delay(1500)
 
-                // ✅ Guardar el nuevo branchId en las preferencias
                 sessionPreferences.saveBranchId(branchId)
                 Log.d(TAG, "BranchId saved in preferences")
 
-                // ✅ Actualizar el estado con la nueva sucursal
                 _state.value = _state.value.copy(
                     isLoading = false,
                     branchId = branchId,
@@ -148,7 +143,6 @@ class AuthSessionViewModel(
 
                 Log.d(TAG, "Branch changed successfully to: $branchId")
 
-                // ✅ Limpiar el mensaje después de un tiempo
                 kotlinx.coroutines.delay(2000)
                 _state.value = _state.value.copy(successMessage = null)
 
@@ -169,7 +163,6 @@ class AuthSessionViewModel(
 
             val result = repository.logout()
             result.onSuccess {
-                // ✅ Limpiar el branchId al cerrar sesión
                 try {
                     sessionPreferences.clearBranchId()
                     Log.d(TAG, "BranchId cleared from preferences")

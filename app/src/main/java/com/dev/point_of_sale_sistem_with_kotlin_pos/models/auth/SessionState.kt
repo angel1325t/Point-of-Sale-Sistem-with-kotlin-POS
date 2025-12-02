@@ -8,5 +8,6 @@ data class SessionState(
     val isLoading: Boolean = false,
     val error: AuthError? = null,
     val successMessage: String? = null,
-    val isUserDisabled: Boolean = false
+    val isUserDisabled: Boolean = false,
+    val isBiometricEnabled: Boolean = true
 )
