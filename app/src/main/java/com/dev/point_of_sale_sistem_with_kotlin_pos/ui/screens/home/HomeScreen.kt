@@ -39,7 +39,6 @@ fun HomeScreen(
     sessionViewModel: AuthSessionViewModel
 ) {
     val state by sessionViewModel.state.collectAsState()
-    var menuExpanded by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -291,10 +290,13 @@ fun HomeScreen(
                         }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings)) },
-                        label = { Text(stringResource(R.string.settings)) },
+                        icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+                        label = { Text("Perfil") },
                         selected = selectedTab == 2,
-                        onClick = { selectedTab = 2 }
+                        onClick = {
+                            selectedTab = 2
+                            navController.navigate("profile")
+                        }
                     )
                 }
             }
@@ -349,46 +351,19 @@ fun HomeScreen(
                                 }
                             }
 
-                            Box {
-                                AsyncImage(
-                                    model = "https://uhtlmanoxrfdefelpybs.supabase.co/storage/v1/object/public/avatars/default-image.webp",
-                                    contentDescription = stringResource(R.string.user_photo),
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .clickable { menuExpanded = true }
-                                )
-
-                                DropdownMenu(
-                                    expanded = menuExpanded,
-                                    onDismissRequest = { menuExpanded = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.profile)) },
-                                        onClick = { menuExpanded = false },
-                                        leadingIcon = { Icon(Icons.Default.Person, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.notifications)) },
-                                        onClick = { menuExpanded = false },
-                                        leadingIcon = { Icon(Icons.Default.Notifications, null) }
-                                    )
-                                    HorizontalDivider()
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.logout)) },
-                                        onClick = {
-                                            menuExpanded = false
-                                            sessionViewModel.sendIntent(AuthIntent.Logout)
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                Icons.Default.ExitToApp,
-                                                null,
-                                                tint = Color(0xFFD32F2F)
-                                            )
-                                        }
-                                    )
+                            // ✅ Ícono de notificaciones simple (sin dropdown)
+                            IconButton(
+                                onClick = {
+                                    // TODO: Navegar a pantalla de notificaciones
+                                    // navController.navigate("notifications")
                                 }
+                            ) {
+                                Icon(
+                                    Icons.Default.Notifications,
+                                    contentDescription = "Notificaciones",
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(28.dp)
+                                )
                             }
                         }
                     }
