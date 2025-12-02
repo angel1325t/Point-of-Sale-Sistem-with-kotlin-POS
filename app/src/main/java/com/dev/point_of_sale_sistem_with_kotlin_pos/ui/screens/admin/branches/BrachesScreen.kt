@@ -68,6 +68,8 @@ fun BranchesScreen(
         }
     }
 
+    var selectedTab by remember { mutableStateOf(1) } // La pestaña "Branches" es la 1
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -100,24 +102,36 @@ fun BranchesScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp
+            ) {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text(stringResource(R.string.home_menu_text)) },
-                    selected = false,
-                    onClick = { onNavigateToTab(0) }
+                    icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.home)) },
+                    label = { Text(stringResource(R.string.home)) },
+                    selected = selectedTab == 0,
+                    onClick = {
+                        selectedTab = 0
+                        onNavigateToTab(0)
+                    }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Store, null) },
-                    label = { Text(stringResource(R.string.branches_menu_text)) },
-                    selected = true,
-                    onClick = {}
+                    icon = { Icon(Icons.Default.Store, contentDescription = stringResource(R.string.branches)) },
+                    label = { Text(stringResource(R.string.branches)) },
+                    selected = selectedTab == 1,
+                    onClick = {
+                        selectedTab = 1
+                        // Ya estamos en Branches, no hacemos nada adicional
+                    }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Settings, null) },
-                    label = { Text(stringResource(R.string.settings_menu_text)) },
-                    selected = false,
-                    onClick = { onNavigateToTab(2) }
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+                    label = { Text("Perfil") },
+                    selected = selectedTab == 2,
+                    onClick = {
+                        selectedTab = 2
+                        onNavigateToTab(2)
+                    }
                 )
             }
         }

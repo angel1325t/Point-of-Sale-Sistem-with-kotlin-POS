@@ -255,8 +255,12 @@ fun AppNavigation(
                             // Ya estamos en branches, no hacer nada
                         }
                         2 -> {
-                            // TODO: Navegar a ajustes cuando esté implementado
+                            navController.navigate("profile") {
+                                popUpTo("profile") { inclusive = false }
+                                launchSingleTop = true
+                            }
                         }
+
                     }
                 }
             )

@@ -84,6 +84,8 @@ fun CloseCashRegisterDialog(
     var finalBalanceText by remember { mutableStateOf(currentBalance.toString()) }
     var error by remember { mutableStateOf<String?>(null) }
 
+    val invalidAmountText = stringResource(R.string.cash_register_error_invalid_amount)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.cash_register_close_dialog_title)) },
@@ -111,7 +113,7 @@ fun CloseCashRegisterDialog(
                 onClick = {
                     val balance = finalBalanceText.toDoubleOrNull()
                     if (balance == null || balance < 0) {
-                        error = stringResource(R.string.cash_register_error_invalid_amount)
+                        error = invalidAmountText
                     } else {
                         onConfirm(balance)
                     }
@@ -122,6 +124,7 @@ fun CloseCashRegisterDialog(
         }
     )
 }
+
 
 @Composable
 fun CreateCashRegisterDialog(

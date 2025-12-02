@@ -22,6 +22,13 @@ fun CreateEditCashRegisterDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
 
+    // Pre-cargar los strings
+    val errorEmpty = stringResource(R.string.cash_register_dialog_error_empty)
+    val errorMinLength = stringResource(R.string.cash_register_dialog_error_min_length)
+    val labelName = stringResource(R.string.cash_register_dialog_name_label)
+    val saveText = stringResource(R.string.cash_register_dialog_save)
+    val cancelText = stringResource(R.string.cash_register_cancel)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -33,7 +40,7 @@ fun CreateEditCashRegisterDialog(
                         name = it
                         error = null
                     },
-                    label = { Text(stringResource(R.string.cash_register_dialog_name_label)) },
+                    label = { Text(labelName) },
                     singleLine = true,
                     isError = error != null,
                     supportingText = { error?.let { Text(it) } },
@@ -48,18 +55,18 @@ fun CreateEditCashRegisterDialog(
                 onClick = {
                     val trimmed = name.trim()
                     when {
-                        trimmed.isEmpty() -> error = stringResource(R.string.cash_register_dialog_error_empty)
-                        trimmed.length < 3 -> error = stringResource(R.string.cash_register_dialog_error_min_length)
+                        trimmed.isEmpty() -> error = errorEmpty
+                        trimmed.length < 3 -> error = errorMinLength
                         else -> onConfirm(trimmed)
                     }
                 }
             ) {
-                Text(stringResource(R.string.cash_register_dialog_save))
+                Text(saveText)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cash_register_cancel))
+                Text(cancelText)
             }
         }
     )
@@ -69,3 +76,4 @@ fun CreateEditCashRegisterDialog(
         focusRequester.requestFocus()
     }
 }
+
