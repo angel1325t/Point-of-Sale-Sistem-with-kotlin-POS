@@ -30,12 +30,27 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.Users
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UserFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierFormScreen
+
+// AUTH
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.BiometricAuthScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.UserDisabledScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModelFactory
+
+// HOME
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
+
+// INVENTORY
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.inventory.InventoryRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.inventory.InventoryViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.inventory.InventoryScreen
+
+// Cash Register
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterManagementScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterHistoryScreen
 
@@ -54,30 +69,39 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 
 // ViewModels
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.*
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
 
 // Security
 import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserver
 
 class MainActivity : FragmentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLifecycleObserver.start()
+
         setContent {
             AppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surface
                 ) {
+
+                    // ============================================================
+                    //      NAVIGATION CONTROLLER
+                    // ============================================================
                     val navController = rememberNavController()
 
-                    // SESSION PREFS
+                    // ============================================================
+                    //      SESSION PREFS
+                    // ============================================================
                     val sessionPreferences = remember {
                         (application as MyApplication).sessionPreferences
                     }
 
-                    // AUTH
+                    // ============================================================
+                    //      AUTH
+                    // ============================================================
                     val authSessionViewModel = remember {
                         AuthSessionViewModel(supabase, sessionPreferences)
                     }
@@ -86,24 +110,37 @@ class MainActivity : FragmentActivity() {
                         LoginViewModel(supabase, authSessionViewModel)
                     }
 
-                    // REPOSITORIES
+                    // ============================================================
+                    //      REPOSITORIES
+                    // ============================================================
                     val roleRepository = remember { RoleRepository(supabase) }
                     val userRepository = remember { UserRepository(supabase) }
                     val branchRepository = remember { BranchRepository(supabase) }
                     val categoryRepository = remember { CategoryRepository(supabase) }
                     val productsRepository = remember { ProductsRepository(supabase) }
                     val supplierRepository = remember { SupplierRepository(supabase) }
+                    val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
 
-                    // VIEWMODELS
+                    // INVENTORY REPOSITORY
+                    val inventoryRepository = remember { InventoryRepository(supabase) }
+
+                    // ============================================================
+                    //      VIEWMODELS
+                    // ============================================================
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
                     val userViewModel = remember { UserViewModel(userRepository) }
                     val branchViewModel = remember { BranchViewModel(branchRepository) }
                     val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
                     val productsViewModel = remember { ProductsViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
-                    val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
 
+                    // INVENTORY VIEWMODEL
+                    val inventoryViewModel = remember { InventoryViewModel(inventoryRepository) }
+
+                    // ============================================================
+                    //      NAVIGATION GRAPH
+                    // ============================================================
                     AppNavigation(
                         navController = navController,
                         loginViewModel = loginViewModel,
@@ -114,7 +151,8 @@ class MainActivity : FragmentActivity() {
                         categoryViewModel = categoryViewModel,
                         productsViewModel = productsViewModel,
                         supplierViewModel = supplierViewModel,
-                        cashRegisterViewModel = cashRegisterViewModel
+                        cashRegisterViewModel = cashRegisterViewModel,
+                        inventoryViewModel = inventoryViewModel
                     )
                 }
             }
@@ -133,41 +171,57 @@ fun AppNavigation(
     categoryViewModel: CategoryViewModel,
     productsViewModel: ProductsViewModel,
     supplierViewModel: SupplierViewModel,
-    cashRegisterViewModel: CashRegisterViewModel
+    cashRegisterViewModel: CashRegisterViewModel,
+    inventoryViewModel: InventoryViewModel
 ) {
+
     val categoryState by categoryViewModel.state.collectAsState()
+
+    // Seguridad biométrica
     val requireBiometricState = AppLifecycleObserver.requireBiometric.collectAsState()
     val requireBiometric = requireBiometricState.value
 
     LaunchedEffect(requireBiometric) {
         if (requireBiometric) {
-            val currentRoute = navController.currentDestination?.route ?: "home"
-            navController.navigate("biometric_auth/$currentRoute") {
+            val targetRoute = navController.currentDestination?.route ?: "home"
+            navController.navigate("biometric_auth/$targetRoute") {
                 launchSingleTop = true
             }
             AppLifecycleObserver.reset()
         }
     }
 
+    // ============================================================
+    //                  NAVIGATION GRAPH
+    // ============================================================
     NavHost(
         navController = navController,
         startDestination = "splash"
     ) {
+
         // =========================
-        //        AUTENTICACIÓN
+        //          AUTH
         // =========================
-        composable("splash") { Splash(navController, authSessionViewModel) }
+        composable("splash") {
+            Splash(navController, authSessionViewModel)
+        }
 
         composable(
-            route = "biometric_auth/{targetRoute}",
+            "biometric_auth/{targetRoute}",
             arguments = listOf(navArgument("targetRoute") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val targetRoute = backStackEntry.arguments?.getString("targetRoute") ?: "login"
+        ) {
+            val targetRoute = it.arguments?.getString("targetRoute") ?: "home"
             BiometricAuthScreen(navController, targetRoute)
         }
 
-        composable("login") { LoginScreen(navController, loginViewModel, authSessionViewModel) }
-        composable("user_disabled") { UserDisabledScreen(navController, authSessionViewModel) }
+        composable("login") {
+            LoginScreen(navController, loginViewModel, authSessionViewModel)
+        }
+
+        composable("user_disabled") {
+            UserDisabledScreen(navController, authSessionViewModel)
+        }
+
         composable("register") {
             val registerViewModel: RegisterViewModel = viewModel(
                 factory = RegisterViewModelFactory(supabase, authSessionViewModel)
@@ -175,36 +229,51 @@ fun AppNavigation(
             RegisterScreen(navController, registerViewModel, authSessionViewModel)
         }
 
-        composable("home") { HomeScreen(navController, authSessionViewModel) }
-        composable("profile") { ProfileScreen(navController, authSessionViewModel) }
+        // =========================
+        //          HOME
+        // =========================
+        composable("home") {
+            HomeScreen(navController, authSessionViewModel)
+        }
+
+        composable("profile") {
+            ProfileScreen(navController, authSessionViewModel)
+        }
 
         // =========================
-        //        ROLES
+        //           ROLES
         // =========================
-        composable("roles") { RolesListScreen(navController, roleViewModel) }
-        composable("roles/create") { RoleFormScreen(navController, roleViewModel, null) }
+        composable("roles") {
+            RolesListScreen(navController, roleViewModel)
+        }
+
+        composable("roles/create") {
+            RoleFormScreen(navController, roleViewModel, null)
+        }
+
         composable(
             "roles/edit/{roleId}",
             arguments = listOf(navArgument("roleId") { type = NavType.IntType })
         ) {
-            val roleId = it.arguments?.getInt("roleId")
-            RoleFormScreen(navController, roleViewModel, roleId)
+            val id = it.arguments?.getInt("roleId")
+            RoleFormScreen(navController, roleViewModel, id)
         }
+
         composable(
             "roles/{roleId}/permissions",
             arguments = listOf(navArgument("roleId") { type = NavType.IntType })
         ) {
-            val roleId = it.arguments?.getInt("roleId")!!
-            RolePermissionsScreen(navController, roleViewModel, roleId)
+            val id = it.arguments?.getInt("roleId")!!
+            RolePermissionsScreen(navController, roleViewModel, id)
         }
 
         // =========================
-        //        USUARIOS
+        //         USERS
         // =========================
         composable("users") {
             UsersListScreen(
-                navController,
-                userViewModel,
+                navController = navController,
+                viewModel = userViewModel,
                 onNavigateToCreate = { navController.navigate("users/create") },
                 onNavigateToEdit = { id -> navController.navigate("users/edit/$id") }
             )
@@ -218,31 +287,33 @@ fun AppNavigation(
             "users/edit/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) {
-            val userId = it.arguments?.getString("userId")
-            UserFormScreen(userViewModel, userId) { navController.popBackStack() }
+            val id = it.arguments?.getString("userId")
+            UserFormScreen(userViewModel, id) { navController.popBackStack() }
         }
 
         // =========================
-        //        SUCURSALES
+        //         BRANCHES
         // =========================
         composable("branches") {
             BranchesScreen(branchViewModel, authSessionViewModel) { tab ->
                 when (tab) {
-                    0 -> navController.navigate("home") { popUpTo("home") { inclusive = false }; launchSingleTop = true }
-                    1 -> {} // Ya estamos en branches
-                    2 -> navController.navigate("profile") { popUpTo("profile") { inclusive = false }; launchSingleTop = true }
+                    0 -> navController.navigate("home")
+                    1 -> {}
+                    2 -> navController.navigate("profile")
                 }
             }
         }
 
         // =========================
-        //        CATEGORÍAS
+        //        CATEGORIES
         // =========================
         composable("categories") {
-            CategoriesListScreen(categoryViewModel,
+            CategoriesListScreen(
+                viewModel = categoryViewModel,
                 onNavigateToCreate = { navController.navigate("categories/create") },
                 onNavigateToEdit = { id -> navController.navigate("categories/edit/$id") },
-                onNavigateBack = { navController.popBackStack() })
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable("categories/create") {
@@ -258,17 +329,23 @@ fun AppNavigation(
         }
 
         // =========================
-        //        PRODUCTOS
+        //         PRODUCTS
         // =========================
         composable("products") {
-            ProductsListScreen(productsViewModel,
+            ProductsListScreen(
+                viewModel = productsViewModel,
                 onNavigateToCreate = { navController.navigate("products/create") },
                 onNavigateToEdit = { id -> navController.navigate("products/edit/$id") },
-                onNavigateBack = { navController.popBackStack() })
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable("products/create") {
-            ProductFormScreen(productsViewModel, null, categoryState.categories) { navController.popBackStack() }
+            ProductFormScreen(
+                productsViewModel,
+                null,
+                categoryState.categories
+            ) { navController.popBackStack() }
         }
 
         composable(
@@ -276,17 +353,23 @@ fun AppNavigation(
             arguments = listOf(navArgument("productId") { type = NavType.IntType })
         ) {
             val id = it.arguments?.getInt("productId")
-            ProductFormScreen(productsViewModel, id!!, categoryState.categories) { navController.popBackStack() }
+            ProductFormScreen(
+                productsViewModel,
+                id!!,
+                categoryState.categories
+            ) { navController.popBackStack() }
         }
 
         // =========================
-        //        SUPPLIERS
+        //       SUPPLIERS
         // =========================
         composable("suppliers") {
-            SupplierListScreen(supplierViewModel,
+            SupplierListScreen(
+                viewModel = supplierViewModel,
                 onNavigateToCreate = { navController.navigate("suppliers/create") },
                 onNavigateToEdit = { id -> navController.navigate("suppliers/edit/$id") },
-                onNavigateBack = { navController.popBackStack() })
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable("suppliers/create") {
@@ -302,9 +385,24 @@ fun AppNavigation(
         }
 
         // =========================
-        //        CAJAS
+        //        CASH REGISTER
         // =========================
-        composable("cash_register/manage") { CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() } }
-        composable("cash_register/history") { CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() } }
+        composable("cash_register/manage") {
+            CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() }
+        }
+
+        composable("cash_register/history") {
+            CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() }
+        }
+
+        // ============================================================
+        //                    INVENTARIO (AGREGADO)
+        // ============================================================
+        composable("inventory") {
+            InventoryScreen(
+                viewModel = inventoryViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
     }
 }

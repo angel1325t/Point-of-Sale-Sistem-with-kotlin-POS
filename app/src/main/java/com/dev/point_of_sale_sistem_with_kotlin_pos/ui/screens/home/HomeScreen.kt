@@ -219,6 +219,7 @@ fun HomeScreen(
                         icon = Icons.Default.Inventory,
                         title = stringResource(R.string.inventory),
                         onClick = {
+                            navController.navigate(route = "inventory")
                             scope.launch { drawerState.close() }
                         }
                     )
