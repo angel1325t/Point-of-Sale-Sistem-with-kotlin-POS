@@ -1,6 +1,7 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.biometric.BiometricManager
+import kotlinx.coroutines.launch
 
 // Screens
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
@@ -118,7 +121,8 @@ class MainActivity : FragmentActivity() {
                         categoryViewModel = categoryViewModel,
                         productsViewModel = productsViewModel,
                         supplierViewModel = supplierViewModel,
-                        cashRegisterViewModel = cashRegisterViewModel
+                        cashRegisterViewModel = cashRegisterViewModel,
+                        sessionPreferences = sessionPreferences
                     )
                 }
             }
@@ -137,37 +141,63 @@ fun AppNavigation(
     categoryViewModel: CategoryViewModel,
     productsViewModel: ProductViewModel,
     supplierViewModel: SupplierViewModel,
-    cashRegisterViewModel: CashRegisterViewModel
+    cashRegisterViewModel: CashRegisterViewModel,
+    sessionPreferences: com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 ) {
+    val context = LocalContext.current
     val categoryState by categoryViewModel.state.collectAsState()
-    val requireBiometricState = AppLifecycleObserver.requireBiometric.collectAsState()
-    val requireBiometric = requireBiometricState.value
+    val requireBiometric by AppLifecycleObserver.requireBiometric.collectAsState()
+    val scope = rememberCoroutineScope()
 
+    // ELIMINAMOS este LaunchedEffect → no debe desactivar biometría automáticamente
+    // El usuario decide si quiere usarla o no, aunque no tenga huella
+
+    // === CONTROL DEFINITIVO DE BIOMETRÍA AL VOLVER DEL BACKGROUND ===
+    // VERSIÓN FINAL 100% SIN FLASH
     LaunchedEffect(requireBiometric) {
-        if (requireBiometric) {
-            val currentRoute = navController.currentDestination?.route ?: "home"
-            navController.navigate("biometric_auth/$currentRoute") {
-                launchSingleTop = true
+
+        if (!requireBiometric) return@LaunchedEffect
+
+        scope.launch {
+            val biometricEnabled = sessionPreferences.isBiometricEnabled()
+            if (!biometricEnabled) {
+                AppLifecycleObserver.reset()
+                return@launch
             }
+
+            val biometricManager = BiometricManager.from(context)
+            val canAuthenticate = biometricManager.canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
+
+            if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+
+                val currentRoute = navController.currentDestination?.route ?: "home"
+
+                navController.navigate("biometric_auth/$currentRoute") {
+                    launchSingleTop = true
+                    popUpTo(currentRoute) { inclusive = false }
+                }
+            }
+
             AppLifecycleObserver.reset()
         }
     }
+
 
     NavHost(
         navController = navController,
         startDestination = "splash"
     ) {
-        // =========================
-        //        AUTENTICACIÓN
-        // =========================
         composable("splash") { Splash(navController, authSessionViewModel) }
 
         composable(
             route = "biometric_auth/{targetRoute}",
             arguments = listOf(navArgument("targetRoute") { type = NavType.StringType })
         ) { backStackEntry ->
-            val targetRoute = backStackEntry.arguments?.getString("targetRoute") ?: "login"
-            BiometricAuthScreen(navController, targetRoute)
+            val targetRoute = backStackEntry.arguments?.getString("targetRoute") ?: "home"
+            BiometricAuthScreen(navController = navController, targetRoute = targetRoute)
         }
 
         composable("login") { LoginScreen(navController, loginViewModel, authSessionViewModel) }
