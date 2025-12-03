@@ -5,6 +5,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.BuildConfig
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils.AndroidSessionManager
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils.UUIDSerializer
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.serializer.KotlinXSerializer
@@ -33,6 +34,7 @@ fun createSupabaseClient(context: Context) = createSupabaseClient(
             }
         )
     }
+    install(Storage)
 }
 
 // Variable global para usar en los ViewModels

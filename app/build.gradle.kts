@@ -18,7 +18,6 @@ val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: "DEFAULT_KEY"
 android {
     namespace = "com.dev.point_of_sale_sistem_with_kotlin_pos"
     compileSdk = 36
-
     defaultConfig {
         applicationId = "com.dev.point_of_sale_sistem_with_kotlin_pos"
         minSdk = 24
@@ -69,6 +68,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.ui.text)
+    // ZXing para generar códigos de barras
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("com.google.zxing:core:3.5.3")
 
     // Navigation
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")

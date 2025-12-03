@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -45,8 +46,8 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 // Repositories
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories.CategoryRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductsRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
@@ -59,6 +60,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_registe
 
 // Security
 import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserver
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductViewModel
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,7 +93,9 @@ class MainActivity : FragmentActivity() {
                     val userRepository = remember { UserRepository(supabase) }
                     val branchRepository = remember { BranchRepository(supabase) }
                     val categoryRepository = remember { CategoryRepository(supabase) }
-                    val productsRepository = remember { ProductsRepository(supabase) }
+                    val context = LocalContext.current
+                    val productsRepository = remember { ProductRepository(supabase, context) }
+
                     val supplierRepository = remember { SupplierRepository(supabase) }
 
                     // VIEWMODELS
@@ -99,7 +103,7 @@ class MainActivity : FragmentActivity() {
                     val userViewModel = remember { UserViewModel(userRepository) }
                     val branchViewModel = remember { BranchViewModel(branchRepository) }
                     val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
-                    val productsViewModel = remember { ProductsViewModel(productsRepository) }
+                    val productsViewModel = remember { ProductViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
@@ -131,7 +135,7 @@ fun AppNavigation(
     userViewModel: UserViewModel,
     branchViewModel: BranchViewModel,
     categoryViewModel: CategoryViewModel,
-    productsViewModel: ProductsViewModel,
+    productsViewModel: ProductViewModel,
     supplierViewModel: SupplierViewModel,
     cashRegisterViewModel: CashRegisterViewModel
 ) {

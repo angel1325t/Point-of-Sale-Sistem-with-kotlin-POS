@@ -1,360 +1,294 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products
 
+import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
+import androidx.core.graphics.set
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.*
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
+import com.google.zxing.common.BitMatrix
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
-import kotlinx.serialization.json.JsonObject
+import io.github.jan.supabase.storage.storage
+import io.ktor.http.ContentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Objects.isNull
+import java.io.ByteArrayOutputStream
 
-class ProductsRepository(private val supabase: SupabaseClient) {
+class ProductRepository(
+    private val supabase: SupabaseClient,
+    private val context: Context,
+) {
 
     companion object {
-        private const val TABLE_NAME = "products"
+        private const val TAG = "ProductRepository"
     }
 
-    /**
-     * Obtiene todos los productos
-     */
-    suspend fun getAllProducts(): Result<List<Product>> = withContext(Dispatchers.IO) {
-        try {
-            val response = supabase.from(TABLE_NAME)
-                .select()
-                .decodeList<ProductDTO>()
-
-            Result.success(response.map { it.toProduct() })
-
-        } catch (e: Exception) {
-            Result.failure(handleException(e))
-        }
-    }
-
-    /**
-     * Obtiene un producto por ID
-     */
-    suspend fun getProductById(productId: Int): Result<Product> = withContext(Dispatchers.IO) {
-        try {
-            val response = supabase.from(TABLE_NAME)
-                .select {
-                    filter { eq("product_id", productId) }
-                }
-                .decodeSingleOrNull<ProductDTO>()
-
-            response?.let {
-                Result.success(it.toProduct())
-            } ?: Result.failure(ProductsError.RecordNotFound())
-
-        } catch (e: Exception) {
-            Result.failure(handleException(e))
-        }
-    }
-
-    /**
-     * Busca productos por nombre
-     */
-    suspend fun searchProducts(query: String): Result<List<Product>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = supabase.from(TABLE_NAME)
-                    .select {
-                        filter { ilike("name", "%$query%") }
-                    }
-                    .decodeList<ProductDTO>()
-
-                Result.success(response.map { it.toProduct() })
-
-            } catch (e: Exception) {
-                Result.failure(handleException(e))
-            }
-        }
-
-    /**
-     * Filtrar productos por categoría
-     */
-    suspend fun getProductsByCategoryId(categoryId: Int?): Result<List<Product>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = if (categoryId == null) {
-                    supabase.from(TABLE_NAME)
-                        .select {
-                            filter { isNull("category_id") }
-                        }
-                        .decodeList<ProductDTO>()
-                } else {
-                    supabase.from(TABLE_NAME)
-                        .select {
-                            filter { eq("category_id", categoryId) }
-                        }
-                        .decodeList<ProductDTO>()
-                }
-
-                Result.success(response.map { it.toProduct() })
-
-            } catch (e: Exception) {
-                Result.failure(handleException(e))
-            }
-        }
-
-    /**
-     * Crear producto
-     */
+    // ====================== CREAR =====================================
     suspend fun createProduct(
         name: String,
-        description: String?,
+        description: String? = null,
         price: Double,
-        barcode: String?,
         categoryId: Int,
-        image: String?,
-        currentStock: Int,
-        minimumStock: Int
-    ): Result<Product> = withContext(Dispatchers.IO) {
-        try {
-            // Validaciones básicas
-            if (name.isBlank()) {
-                return@withContext Result.failure(
-                    ProductsError.ValidationError(
-                        message = "El nombre no puede estar vacío",
-                        field = "name"
-                    )
-                )
-            }
+        currentStock: Int = 0,
+        minimumStock: Int = 0,
+        discountType: DiscountType = DiscountType.NONE,
+        discountValue: Double = 0.0,
+    ): Result<ProductDTO> {
+        return try {
+            Log.d(TAG, """
+                createProduct: Iniciando creación
+                - name: $name
+                - price: $price
+                - categoryId: $categoryId
+                - currentStock: $currentStock
+                - minimumStock: $minimumStock
+                - discountType: $discountType
+                - discountValue: $discountValue
+            """.trimIndent())
 
-            if (price <= 0) {
-                return@withContext Result.failure(ProductsError.InvalidPriceError())
-            }
+            val barcode = generateEAN13Barcode()
+            Log.d(TAG, "createProduct: Barcode generado: $barcode")
 
-            if (currentStock < 0 || minimumStock < 0) {
-                return@withContext Result.failure(ProductsError.InvalidStockError())
-            }
+            val barcodeBitmap = generateBarcodeBitmap(barcode)
+            Log.d(TAG, "createProduct: Bitmap generado")
 
-            // Validar categoría existente
-            val categoryExists = supabase.from("categories")
-                .select { filter { eq("category_id", categoryId) } }
-                .decodeSingleOrNull<JsonObject>() != null
+            val barcodeImageUrl = uploadBarcodeImage(barcode, barcodeBitmap)
+            Log.d(TAG, "createProduct: Imagen subida: $barcodeImageUrl")
 
-            if (!categoryExists) {
-                return@withContext Result.failure(ProductsError.CategoryNotFoundError())
-            }
-
-            // Duplicado nombre
-            val duplicateName = supabase.from(TABLE_NAME)
-                .select { filter { eq("name", name.trim()) } }
-                .decodeSingleOrNull<ProductDTO>()
-
-            if (duplicateName != null) {
-                return@withContext Result.failure(ProductsError.DuplicateNameError())
-            }
-
-            // Duplicado barcode
-            if (!barcode.isNullOrBlank()) {
-                val duplicateBarcode = supabase.from(TABLE_NAME)
-                    .select { filter { eq("barcode", barcode.trim()) } }
-                    .decodeSingleOrNull<ProductDTO>()
-
-                if (duplicateBarcode != null) {
-                    return@withContext Result.failure(ProductsError.DuplicateBarcodeError())
-                }
-            }
-
-            val newProduct = ProductInsertDTO(
-                name = name.trim(),
-                description = description?.trim(),
+            // ✅ USAR ProductInsertDTO EN LUGAR DE Map
+            val insertData = ProductInsertDTO(
+                name = name,
+                description = description,
                 price = price,
-                barcode = barcode?.trim(),
+                barcode = barcode,
                 categoryId = categoryId,
-                image = image,
+                image = barcodeImageUrl,
                 currentStock = currentStock,
-                minimumStock = minimumStock
+                minimumStock = minimumStock,
+                discountType = discountType.name.lowercase(),
+                discountValue = discountValue
             )
 
-            val response = supabase.from(TABLE_NAME)
-                .insert(newProduct) {
+            Log.d(TAG, "createProduct: Insertando en base de datos: $insertData")
+
+            // ✅ IMPORTANTE: Usar .select() después de .insert() para obtener el registro creado
+            val product = supabase.from("products")
+                .insert(insertData) {
                     select()
                 }
                 .decodeSingle<ProductDTO>()
 
-            Result.success(response.toProduct())
+            Log.d(TAG, "createProduct: Producto creado exitosamente: $product")
+            Result.success(product)
 
         } catch (e: Exception) {
-            Log.e("CREATE_PRODUCT", "Error: $e")
-            Result.failure(handleException(e))
+            Log.e(TAG, "createProduct: Error al crear producto", e)
+            Result.failure(e)
         }
     }
 
-    /**
-     * Actualiza un producto
-     */
-    suspend fun updateProduct(
-        productId: Int,
-        name: String,
-        description: String?,
-        price: Double,
-        barcode: String?,
-        categoryId: Int,
-        image: String?,
-        currentStock: Int,
-        minimumStock: Int
-    ): Result<Product> = withContext(Dispatchers.IO) {
-        try {
-            // Validaciones
-            if (name.isBlank()) {
-                return@withContext Result.failure(
-                    ProductsError.ValidationError(
-                        message = "El nombre no puede estar vacío",
-                        field = "name"
-                    )
-                )
-            }
+    // ====================== UPDATE GENERAL ======================
+    suspend fun updateProduct(productId: Int, updates: ProductUpdateDTO): Result<ProductDTO> {
+        return try {
+            Log.d(TAG, "updateProduct: Actualizando producto ID $productId con: $updates")
 
-            if (price <= 0) {
-                return@withContext Result.failure(ProductsError.InvalidPriceError())
-            }
-
-            if (currentStock < 0 || minimumStock < 0) {
-                return@withContext Result.failure(ProductsError.InvalidStockError())
-            }
-
-            // Validar categoría
-            val categoryExists = supabase.from("categories")
-                .select { filter { eq("category_id", categoryId) } }
-                .decodeSingleOrNull<JsonObject>() != null
-
-            if (!categoryExists) {
-                return@withContext Result.failure(ProductsError.CategoryNotFoundError())
-            }
-
-            // Validar nombre duplicado (excluyendo el mismo producto)
-            val existingNames = supabase.from(TABLE_NAME)
-                .select { filter { eq("name", name.trim()) } }
-                .decodeList<ProductDTO>()
-
-            if (existingNames.any { it.productId != productId }) {
-                return@withContext Result.failure(ProductsError.DuplicateNameError())
-            }
-
-            // Validar barcode duplicado (si existe y no es el mismo)
-            if (!barcode.isNullOrBlank()) {
-                val existingBarcodes = supabase.from(TABLE_NAME)
-                    .select { filter { eq("barcode", barcode.trim()) } }
-                    .decodeList<ProductDTO>()
-
-                if (existingBarcodes.any { it.productId != productId }) {
-                    return@withContext Result.failure(ProductsError.DuplicateBarcodeError())
-                }
-            }
-
-            val updatedData = ProductUpdateDTO(
-                name = name.trim(),
-                description = description?.trim(),
-                price = price,
-                barcode = barcode?.trim(),
-                categoryId = categoryId,
-                image = image,
-                currentStock = currentStock,
-                minimumStock = minimumStock
-            )
-
-            val response = supabase.from(TABLE_NAME)
-                .update(updatedData) {
+            // ✅ IMPORTANTE: Usar .select() después de .update() para obtener el registro actualizado
+            val product = supabase.from("products")
+                .update(updates) {
                     filter { eq("product_id", productId) }
                     select()
                 }
-                .decodeSingleOrNull<ProductDTO>()
+                .decodeSingle<ProductDTO>()
 
-            response?.let {
-                Result.success(it.toProduct())
-            } ?: Result.failure(ProductsError.RecordNotFound())
-
+            Log.d(TAG, "updateProduct: Producto actualizado exitosamente: $product")
+            Result.success(product)
         } catch (e: Exception) {
-            Result.failure(handleException(e))
+            Log.e(TAG, "updateProduct: Error al actualizar producto ID $productId", e)
+            Result.failure(e)
         }
     }
 
-    /**
-     * Elimina un producto
-     */
-    suspend fun deleteProduct(productId: Int): Result<Boolean> = withContext(Dispatchers.IO) {
-        try {
-            val product = supabase.from(TABLE_NAME)
+    // ====================== GET ALL ======================
+    suspend fun getProducts(): Result<List<ProductDTO>> {
+        return try {
+            Log.d(TAG, "getProducts: Obteniendo todos los productos")
+
+            val products = supabase.from("products")
+                .select()
+                .decodeList<ProductDTO>()
+
+            Log.d(TAG, "getProducts: ${products.size} productos obtenidos")
+            Result.success(products)
+        } catch (e: Exception) {
+            Log.e(TAG, "getProducts: Error al obtener productos", e)
+            Result.failure(e)
+        }
+    }
+
+    // ====================== GET BY ID ======================
+    suspend fun getProductById(productId: Int): Result<ProductDTO> {
+        return try {
+            Log.d(TAG, "getProductById: Buscando producto ID: $productId")
+
+            val product = supabase.from("products")
                 .select { filter { eq("product_id", productId) } }
-                .decodeSingleOrNull<ProductDTO>()
+                .decodeSingle<ProductDTO>()
 
-            product ?: return@withContext Result.failure(ProductsError.RecordNotFound())
+            Log.d(TAG, "getProductById: Producto encontrado: $product")
+            Result.success(product)
+        } catch (e: Exception) {
+            Log.e(TAG, "getProductById: Error al buscar producto ID $productId", e)
+            Result.failure(e)
+        }
+    }
 
-            if (product.currentStock > 0) {
-                return@withContext Result.failure(
-                    ProductsError.CannotDeleteProductWithStock(
-                        currentStock = product.currentStock
-                    )
-                )
-            }
+    // ====================== BUSCAR POR NAME ======================
+    suspend fun searchProductsByName(query: String): Result<List<ProductDTO>> {
+        return try {
+            Log.d(TAG, "searchProductsByName: Buscando con query: '$query'")
 
-            supabase.from(TABLE_NAME)
+            val products = supabase.from("products")
+                .select { filter { ilike("name", "%$query%") } }
+                .decodeList<ProductDTO>()
+
+            Log.d(TAG, "searchProductsByName: ${products.size} productos encontrados")
+            Result.success(products)
+        } catch (e: Exception) {
+            Log.e(TAG, "searchProductsByName: Error en búsqueda", e)
+            Result.failure(e)
+        }
+    }
+
+    // ====================== BUSCAR POR BARCODE ======================
+    suspend fun getProductByBarcode(barcode: String): Result<ProductDTO?> {
+        return try {
+            Log.d(TAG, "getProductByBarcode: Buscando barcode: $barcode")
+
+            val products = supabase.from("products")
+                .select { filter { eq("barcode", barcode) } }
+                .decodeList<ProductDTO>()
+
+            Log.d(TAG, "getProductByBarcode: Resultado: ${products.firstOrNull()}")
+            Result.success(products.firstOrNull())
+        } catch (e: Exception) {
+            Log.e(TAG, "getProductByBarcode: Error al buscar barcode", e)
+            Result.failure(e)
+        }
+    }
+
+    // ====================== DELETE ======================
+    suspend fun deleteProduct(productId: Int): Result<Unit> {
+        return try {
+            Log.d(TAG, "deleteProduct: Eliminando producto ID: $productId")
+
+            supabase.from("products")
                 .delete { filter { eq("product_id", productId) } }
 
-            Result.success(true)
-
+            Log.d(TAG, "deleteProduct: Producto eliminado exitosamente")
+            Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(handleException(e))
+            Log.e(TAG, "deleteProduct: Error al eliminar producto ID $productId", e)
+            Result.failure(e)
         }
     }
 
-    /**
-     * Elimina múltiples productos
-     */
-    suspend fun deleteMultipleProducts(productIds: List<Int>): Result<Int> =
-        withContext(Dispatchers.IO) {
-            try {
-                var deletedCount = 0
+    // ====================== UPDATE STOCK ======================
+    suspend fun updateStock(productId: Int, newStock: Int): Result<ProductDTO> {
+        return try {
+            Log.d(TAG, "updateStock: Actualizando stock del producto ID $productId a $newStock")
 
-                productIds.forEach { id ->
-                    val result = deleteProduct(id)
-                    if (result.isSuccess) deletedCount++
+            // ✅ USAR DTO EN LUGAR DE Map
+            val updates = ProductUpdateDTO(currentStock = newStock)
+
+            // ✅ IMPORTANTE: Usar .select() después de .update()
+            val product = supabase.from("products")
+                .update(updates) {
+                    filter { eq("product_id", productId) }
+                    select()
                 }
+                .decodeSingle<ProductDTO>()
 
-                Result.success(deletedCount)
+            Log.d(TAG, "updateStock: Stock actualizado exitosamente")
+            Result.success(product)
+        } catch (e: Exception) {
+            Log.e(TAG, "updateStock: Error al actualizar stock", e)
+            Result.failure(e)
+        }
+    }
 
-            } catch (e: Exception) {
-                Result.failure(handleException(e))
+    // ====================== REGENERAR BARCODE ======================
+    suspend fun regenerateBarcode(productId: Int): Result<ProductDTO> {
+        return try {
+            Log.d(TAG, "regenerateBarcode: Regenerando barcode para producto ID: $productId")
+
+            val barcode = generateEAN13Barcode()
+            val barcodeBitmap = generateBarcodeBitmap(barcode)
+            val barcodeImageUrl = uploadBarcodeImage(barcode, barcodeBitmap)
+
+            val updates = ProductUpdateDTO(
+                barcode = barcode,
+                image = barcodeImageUrl
+            )
+
+            Log.d(TAG, "regenerateBarcode: Nuevo barcode generado: $barcode")
+            updateProduct(productId, updates)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "regenerateBarcode: Error al regenerar barcode", e)
+            Result.failure(e)
+        }
+    }
+
+    // ====================== GENERAR BARCODE ======================
+    private fun generateEAN13Barcode(): String {
+        val randomDigits = (1..12).map { (0..9).random() }
+        val sumOdd = randomDigits.filterIndexed { index, _ -> index % 2 == 0 }.sum()
+        val sumEven = randomDigits.filterIndexed { index, _ -> index % 2 != 0 }.sum() * 3
+        val checkDigit = (10 - (sumOdd + sumEven) % 10) % 10
+        return (randomDigits + checkDigit).joinToString("")
+    }
+
+    // ====================== CREAR BITMAP ======================
+    private suspend fun generateBarcodeBitmap(barcode: String): Bitmap = withContext(Dispatchers.Default) {
+        val width = 600
+        val height = 300
+
+        val bitMatrix: BitMatrix = MultiFormatWriter().encode(
+            barcode,
+            BarcodeFormat.EAN_13,
+            width,
+            height
+        )
+
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                bitmap[x, y] = if (bitMatrix[x, y]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
             }
         }
 
-    /**
-     * Manejo centralizado de errores
-     */
-    private fun handleException(e: Exception): ProductsError {
-        return when {
-            e.message?.contains("network", ignoreCase = true) == true ->
-                ProductsError.NetworkError()
-
-            e.message?.contains("timeout", ignoreCase = true) == true ->
-                ProductsError.TimeoutError()
-
-            e.message?.contains("unauthorized", ignoreCase = true) == true ->
-                ProductsError.UnauthorizedError()
-
-            e.message?.contains("not found", ignoreCase = true) == true ->
-                ProductsError.RecordNotFound()
-
-            else -> ProductsError.UnknownError(exception = e)
-        }
+        bitmap
     }
 
-    /**
-     * Mapper: DTO → Modelo interno
-     */
-    private fun ProductDTO.toProduct() = Product(
-        productId = productId,
-        name = name,
-        description = description,
-        price = price,
-        barcode = barcode,
-        categoryId = categoryId,
-        categoryName = null,
-        image = image,
-        currentStock = currentStock,
-        minimumStock = minimumStock
-    )
+    // ====================== UPLOAD STORAGE ======================
+    private suspend fun uploadBarcodeImage(barcode: String, bitmap: Bitmap): String {
+        return withContext(Dispatchers.IO) {
+            val stream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            val byteArray = stream.toByteArray()
+
+            val fileName = "barcode_${barcode}_${System.currentTimeMillis()}.png"
+
+            val bucket = supabase.storage.from("barcodes")
+
+            bucket.upload(fileName, byteArray) {
+                contentType = ContentType.Image.PNG
+            }
+
+            bucket.publicUrl(fileName)
+        }
+    }
 }
