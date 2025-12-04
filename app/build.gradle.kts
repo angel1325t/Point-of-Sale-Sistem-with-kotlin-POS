@@ -59,6 +59,17 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    // CameraX
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // ML Kit Barcode Scanning
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+    // Accompanist Permissions (para manejar permisos de cámara)
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -78,6 +89,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
     implementation("androidx.biometric:biometric:1.1.0")
+
 
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.6.0")

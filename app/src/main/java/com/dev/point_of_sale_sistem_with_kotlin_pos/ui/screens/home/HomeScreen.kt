@@ -185,6 +185,7 @@ fun HomeScreen(
                         icon = Icons.Default.ShoppingCart,
                         title = stringResource(R.string.sales),
                         onClick = {
+                            navController.navigate("sales")
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -265,7 +266,7 @@ fun HomeScreen(
                     )
 
                     DrawerItem(
-                        icon = Icons.Default.Store,
+                        icon = Icons.Default.Category,
                         title = "Categorias",
                         onClick = {
                             navController.navigate("categories")
@@ -273,7 +274,7 @@ fun HomeScreen(
                         }
                     )
                     DrawerItem(
-                        icon = Icons.Default.Store,
+                        icon = Icons.Default.Inventory2,
                         title = "Productos",
                         onClick = {
                             navController.navigate("products")
@@ -282,7 +283,7 @@ fun HomeScreen(
                     )
 
                     DrawerItem(
-                        icon = Icons.Default.Store,
+                        icon = Icons.Default.LocalShipping,
                         title = "Proveedores",
                         onClick = {
                             navController.navigate("suppliers")

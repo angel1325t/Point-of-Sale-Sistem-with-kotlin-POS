@@ -11,7 +11,6 @@ import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.UUID
-import java.util.stream.IntStream.range
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 

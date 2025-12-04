@@ -518,4 +518,109 @@
     <string name="action_apply">Aplicar</string>
     <string name="processing">Procesando…</string>
 
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - GENERAL -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_title">Ventas</string>
+    <string name="sales_new">Nueva Venta</string>
+    <string name="sales_list">Lista de Ventas</string>
+    <string name="sales_details">Detalles de Venta</string>
+    <string name="sales_history">Historial de Ventas</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - BÚSQUEDA DE PRODUCTOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_search_product">Buscar producto</string>
+    <string name="sales_search_by_name">Buscar por nombre</string>
+    <string name="sales_search_by_barcode">Escanear código de barras</string>
+    <string name="sales_product_not_found">Producto no encontrado</string>
+    <string name="sales_searching">Buscando producto…</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - CARRITO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_cart_title">Carrito de Compras</string>
+    <string name="sales_cart_empty">El carrito está vacío</string>
+    <string name="sales_cart_empty_message">Agrega productos para comenzar la venta</string>
+    <string name="sales_add_to_cart">Agregar al carrito</string>
+    <string name="sales_remove_from_cart">Eliminar del carrito</string>
+    <string name="sales_cart_items">%1$d artículo(s)</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - PRODUCTO EN CARRITO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_quantity">Cantidad</string>
+    <string name="sales_unit_price">Precio unitario</string>
+    <string name="sales_discount_item">Descuento</string>
+    <string name="sales_subtotal">Subtotal</string>
+    <string name="sales_total">Total</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - RESUMEN -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_summary">Resumen de Venta</string>
+    <string name="sales_items_count">Artículos</string>
+    <string name="sales_subtotal_amount">Subtotal</string>
+    <string name="sales_discount_total">Descuento total</string>
+    <string name="sales_total_amount">Total a pagar</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - MÉTODO DE PAGO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_payment_method">Método de pago</string>
+    <string name="sales_payment_cash">Efectivo</string>
+    <string name="sales_payment_card">Tarjeta</string>
+    <string name="sales_payment_transfer">Transferencia</string>
+    <string name="sales_select_payment">Seleccionar método de pago</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - ACCIONES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_process">Procesar Venta</string>
+    <string name="sales_complete">Completar Venta</string>
+    <string name="sales_cancel">Cancelar Venta</string>
+    <string name="sales_continue_shopping">Continuar comprando</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - CONFIRMACIONES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_cancel_confirmation_title">¿Cancelar venta?</string>
+    <string name="sales_cancel_confirmation_message">Se perderán todos los productos del carrito</string>
+    <string name="sales_complete_confirmation_title">Confirmar venta</string>
+    <string name="sales_complete_confirmation_message">¿Deseas completar esta venta?</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - ESTADOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_status_pending">Pendiente</string>
+    <string name="sales_status_completed">Completada</string>
+    <string name="sales_status_cancelled">Cancelada</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - MENSAJES DE ÉXITO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_created_success">Venta creada exitosamente</string>
+    <string name="sales_completed_success">Venta completada exitosamente</string>
+    <string name="sales_cancelled_success">Venta cancelada</string>
+    <string name="sales_product_added">Producto agregado al carrito</string>
+    <string name="sales_product_removed">Producto eliminado del carrito</string>
+    <string name="sales_product_updated">Producto actualizado</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - ERRORES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_error_validation">Error de validación</string>
+    <string name="sales_error_network">Error de conexión</string>
+    <string name="sales_error_empty_cart">El carrito está vacío</string>
+    <string name="sales_error_invalid_quantity">Cantidad inválida</string>
+    <string name="sales_error_stock_insufficient">Stock insuficiente</string>
+    <string name="sales_error_no_payment_method">Selecciona un método de pago</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - FORMATO DE MONEDA -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_price_format">RD$ %1$,.2f</string>
+    <string name="sales_discount_format">-RD$ %1$,.2f</string>
+    <string name="sales_quantity_format">x%1$d</string>
+
 </resources>

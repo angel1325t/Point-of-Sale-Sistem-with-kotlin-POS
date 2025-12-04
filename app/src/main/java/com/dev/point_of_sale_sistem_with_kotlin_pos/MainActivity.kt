@@ -42,6 +42,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterManagementScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterHistoryScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.SalesScreen
 
 // Theme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
@@ -54,12 +55,14 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.Pr
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 
 // ViewModels
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
 
 // Security
 import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserver
@@ -98,8 +101,9 @@ class MainActivity : FragmentActivity() {
                     val categoryRepository = remember { CategoryRepository(supabase) }
                     val context = LocalContext.current
                     val productsRepository = remember { ProductRepository(supabase, context) }
-
                     val supplierRepository = remember { SupplierRepository(supabase) }
+                    val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
+                    val salesRepository = remember { SalesProductRepository(supabase) }
 
                     // VIEWMODELS
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
@@ -108,8 +112,8 @@ class MainActivity : FragmentActivity() {
                     val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
                     val productsViewModel = remember { ProductViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
-                    val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
+                    val salesViewModel = remember { SalesViewModel(salesRepository) }
 
                     AppNavigation(
                         navController = navController,
@@ -122,6 +126,7 @@ class MainActivity : FragmentActivity() {
                         productsViewModel = productsViewModel,
                         supplierViewModel = supplierViewModel,
                         cashRegisterViewModel = cashRegisterViewModel,
+                        salesViewModel = salesViewModel,
                         sessionPreferences = sessionPreferences
                     )
                 }
@@ -142,6 +147,7 @@ fun AppNavigation(
     productsViewModel: ProductViewModel,
     supplierViewModel: SupplierViewModel,
     cashRegisterViewModel: CashRegisterViewModel,
+    salesViewModel: SalesViewModel,
     sessionPreferences: com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 ) {
     val context = LocalContext.current
@@ -149,13 +155,8 @@ fun AppNavigation(
     val requireBiometric by AppLifecycleObserver.requireBiometric.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // ELIMINAMOS este LaunchedEffect → no debe desactivar biometría automáticamente
-    // El usuario decide si quiere usarla o no, aunque no tenga huella
-
     // === CONTROL DEFINITIVO DE BIOMETRÍA AL VOLVER DEL BACKGROUND ===
-    // VERSIÓN FINAL 100% SIN FLASH
     LaunchedEffect(requireBiometric) {
-
         if (!requireBiometric) return@LaunchedEffect
 
         scope.launch {
@@ -172,9 +173,7 @@ fun AppNavigation(
             )
 
             if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
-
                 val currentRoute = navController.currentDestination?.route ?: "home"
-
                 navController.navigate("biometric_auth/$currentRoute") {
                     launchSingleTop = true
                     popUpTo(currentRoute) { inclusive = false }
@@ -184,7 +183,6 @@ fun AppNavigation(
             AppLifecycleObserver.reset()
         }
     }
-
 
     NavHost(
         navController = navController,
@@ -338,7 +336,22 @@ fun AppNavigation(
         // =========================
         //        CAJAS
         // =========================
-        composable("cash_register/manage") { CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() } }
-        composable("cash_register/history") { CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() } }
+        composable("cash_register/manage") {
+            CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() }
+        }
+        composable("cash_register/history") {
+            CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() }
+        }
+
+        // =========================
+        //        VENTAS
+        // =========================
+        composable("sales") {
+            SalesScreen(
+                viewModel = salesViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                authViewModel = authSessionViewModel
+            )
+        }
     }
 }
