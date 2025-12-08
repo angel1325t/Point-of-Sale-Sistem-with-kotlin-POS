@@ -7,7 +7,7 @@ sealed class InventoryError(
     @StringRes val messageRes: Int,
     override val cause: Throwable? = null,
     open val code: String? = null
-) : Exception() {
+) : Exception(null, cause) {
 
     data object NetworkError : InventoryError(
         messageRes = R.string.error_network,
@@ -30,10 +30,10 @@ sealed class InventoryError(
     )
 
     data class ValidationError(
-        @StringRes val res: Int,
+        @StringRes val validationMessageRes: Int,
         val field: String? = null
     ) : InventoryError(
-        messageRes = res,
+        messageRes = validationMessageRes,
         code = "VALIDATION_ERROR"
     )
 

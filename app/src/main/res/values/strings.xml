@@ -422,4 +422,23 @@
     <string name="stock_increased">Stock aumentado</string>
     <string name="stock_decreased">Stock disminuido</string>
 
+    <!-- NOTIFICACIONES -->
+    <string name="notifications_title">Notificaciones</string>
+    <string name="notifications_clear">Limpiar</string>
+    <string name="notifications_empty">No hay notificaciones</string>
+    <string name="notifications_low_stock_title">Stock bajo</string>
+    <string name="notifications_out_stock_title">Producto agotado</string>
+
+    <!-- INVENTARIO -->
+    <string name="inventory_low_stock_msg">El producto %1$s está por agotarse</string>
+    <string name="inventory_out_stock_msg">El producto %1$s se quedó sin stock</string>
+
+    <!-- UI -->
+    <string name="btn_retry">Reintentar</string>
+    <string name="btn_close">Cerrar</string>
+    <string name="btn_back">Volver</string>
+
+    <string name="no_notifications">No tienes notificaciones</string>
+    <string name="low_stock_warning">Stock bajo</string>
+
 </resources>

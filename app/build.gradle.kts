@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
     kotlin("plugin.serialization") version "2.2.20"
 }
 
@@ -90,6 +91,8 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:functions-kt:2.0.5")
+
 
 // Ktor
     implementation("io.ktor:ktor-client-core:3.3.1")
@@ -97,6 +100,16 @@ dependencies {
 
 // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    implementation(platform(libs.firebase.bom))
+
+    // 🔥 Firebase Messaging
+    implementation(libs.firebase.messaging)
+
+    // Required for notifications (compat)
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation(libs.firebase.crashlytics.buildtools)
 
     // Testing
     testImplementation(libs.junit)

@@ -1,6 +1,9 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -15,6 +18,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+
+// Firebase
+import com.google.firebase.messaging.FirebaseMessaging
 
 // Screens
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.Splash
@@ -76,8 +82,16 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserve
 
 class MainActivity : FragmentActivity() {
 
+    companion object {
+        private const val TAG = "FCM_MAIN_ACTIVITY"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "========== MAIN ACTIVITY CREATED ==========")
+
+        askNotificationPermission()
+        setupFirebaseMessaging()
         AppLifecycleObserver.start()
 
         setContent {
@@ -158,7 +172,75 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+    // ============================================================
+    //      SOLICITAR PERMISO DE NOTIFICACIONES
+    // ============================================================
+    private fun askNotificationPermission() {
+        Log.d(TAG, "Verificando permisos de notificación...")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+
+            Log.d(TAG, "Permiso POST_NOTIFICATIONS: ${if (hasPermission) "✅ CONCEDIDO" else "❌ DENEGADO"}")
+
+            if (!hasPermission) {
+                Log.d(TAG, "Solicitando permiso...")
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    1001
+                )
+            }
+        } else {
+            Log.d(TAG, "Android < 13, no requiere permiso en runtime")
+        }
+    }
+
+    // ============================================================
+    //      OBTENER TOKEN FCM
+    // ============================================================
+    private fun setupFirebaseMessaging() {
+        Log.d(TAG, "========== SETUP FIREBASE MESSAGING ==========")
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.e(TAG, "❌ Error obteniendo token FCM", task.exception)
+                return@addOnCompleteListener
+            }
+
+            val token = task.result
+            Log.d(TAG, "✅ TOKEN FCM OBTENIDO")
+            Log.d(TAG, "Token: $token")
+            Log.d(TAG, "Token length: ${token?.length ?: 0}")
+
+            // El token se guardará automáticamente en onNewToken del servicio
+            // cuando haya un usuario autenticado
+        }
+
+        Log.d(TAG, "========== FIREBASE SETUP COMPLETED ==========")
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            1001 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.d(TAG, "✅ Permiso de notificaciones concedido por el usuario")
+                    // Volver a obtener el token ahora que tenemos permiso
+                    setupFirebaseMessaging()
+                } else {
+                    Log.w(TAG, "⚠️ Permiso de notificaciones denegado por el usuario")
+                }
+            }
+        }
+    }
 }
+
 
 @Composable
 fun AppNavigation(

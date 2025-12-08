@@ -2,8 +2,7 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos
 
 import android.app.Application
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.createSupabaseClient
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.initSupabase
 
 class MyApplication : Application() {
 
@@ -15,7 +14,8 @@ class MyApplication : Application() {
         super.onCreate()
 
         try {
-            supabase = createSupabaseClient(applicationContext)
+            // ✅ Usa initSupabase en lugar de createSupabaseClient
+            initSupabase(applicationContext)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -26,5 +26,4 @@ class MyApplication : Application() {
             e.printStackTrace()
         }
     }
-
 }
