@@ -18,6 +18,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.products.ProductsIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.Category
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.utils.toDiscountType
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.components.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductViewModel
@@ -29,6 +30,7 @@ fun ProductFormScreen(
     viewModel: ProductViewModel,
     productId: Int?,
     categories: List<Category>,
+    branches: List<Branch>,
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -41,10 +43,12 @@ fun ProductFormScreen(
     var currentStock by remember { mutableStateOf("") }
     var minimumStock by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf<Int?>(null) }
+    var branchId by remember { mutableStateOf<String?>(null) }
     var discountType by remember { mutableStateOf(DiscountType.NONE) }
     var discountValue by remember { mutableStateOf("") }
 
     var showCategoryPicker by remember { mutableStateOf(false) }
+    var showBranchPicker by remember { mutableStateOf(false) }
     var showDiscountPicker by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -60,15 +64,12 @@ fun ProductFormScreen(
         }
     }
 
-    // Función helper para obtener el mensaje de error (NO @Composable)
+    // Función helper para obtener el mensaje de error
     fun getErrorMessage(error: ProductsError): String {
         return when (error) {
-            // Errores de red
             is ProductsError.NetworkError -> context.getString(R.string.error_network)
             is ProductsError.TimeoutError -> context.getString(R.string.error_timeout)
             is ProductsError.NoInternetConnection -> context.getString(R.string.error_no_internet)
-
-            // Errores de validación
             is ProductsError.ValidationError -> context.getString(R.string.error_validation_generic, error.field, error.message)
             is ProductsError.InvalidProductName -> context.getString(R.string.error_product_name_invalid)
             is ProductsError.ProductNameTooShort -> context.getString(R.string.error_product_name_too_short)
@@ -82,30 +83,20 @@ fun ProductFormScreen(
             is ProductsError.InvalidDiscount -> context.getString(R.string.error_discount_invalid)
             is ProductsError.DiscountValueInvalid -> context.getString(R.string.error_discount_value_invalid)
             is ProductsError.DiscountPercentageExceeded -> context.getString(R.string.error_discount_percentage_exceeded)
-
-            // Errores de base de datos
             is ProductsError.ProductNotFound -> context.getString(R.string.error_product_not_found)
             is ProductsError.DuplicateBarcode -> context.getString(R.string.error_duplicate_barcode, error.barcode)
             is ProductsError.DatabaseError -> context.getString(R.string.error_database)
             is ProductsError.UnauthorizedAccess -> context.getString(R.string.error_unauthorized)
-
-            // Errores de operaciones
             is ProductsError.CreateProductFailed -> context.getString(R.string.error_create_product_failed)
             is ProductsError.UpdateProductFailed -> context.getString(R.string.error_update_product_failed)
             is ProductsError.DeleteProductFailed -> context.getString(R.string.error_delete_product_failed)
             is ProductsError.LoadProductsFailed -> context.getString(R.string.error_load_products_failed)
             is ProductsError.SearchProductsFailed -> context.getString(R.string.error_search_products_failed)
-
-            // Errores de storage
             is ProductsError.ImageUploadFailed -> context.getString(R.string.error_image_upload_failed)
             is ProductsError.BarcodeGenerationFailed -> context.getString(R.string.error_barcode_generation_failed)
             is ProductsError.StorageError -> context.getString(R.string.error_storage)
-
-            // Errores de stock
             is ProductsError.InsufficientStock -> context.getString(R.string.error_insufficient_stock)
             is ProductsError.StockUpdateFailed -> context.getString(R.string.error_stock_update_failed)
-
-            // Error genérico
             is ProductsError.UnknownError -> {
                 if (error.message.isNullOrBlank()) {
                     context.getString(R.string.error_unknown_simple)
@@ -141,6 +132,7 @@ fun ProductFormScreen(
             currentStock = product.currentStock.toString()
             minimumStock = product.minimumStock.toString()
             categoryId = product.categoryId
+            branchId = product.branchId
             discountType = product.discountType.toDiscountType()
             discountValue = if (product.discountValue > 0) product.discountValue.toString() else ""
         }
@@ -322,14 +314,70 @@ fun ProductFormScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        categories.find { it.categoryId == categoryId }?.name
-                            ?: stringResource(R.string.product_select_category),
-                        color = if (categoryId == null)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else LocalContentColor.current
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.product_category),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            categories.find { it.categoryId == categoryId }?.name
+                                ?: stringResource(R.string.product_select_category),
+                            color = if (categoryId == null)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else LocalContentColor.current
+                        )
+                    }
                     Icon(Icons.Default.ArrowDropDown, null)
+                }
+            }
+
+            // Sucursal
+            OutlinedCard(
+                onClick = { showBranchPicker = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = if (branchId == null) {
+                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.product_branch),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (branchId == null) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                        Text(
+                            branches.find { it.branchId == branchId }?.name
+                                ?: stringResource(R.string.product_select_branch),
+                            color = if (branchId == null) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                LocalContentColor.current
+                            }
+                        )
+                    }
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        null,
+                        tint = if (branchId == null) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            LocalContentColor.current
+                        }
+                    )
                 }
             }
 
@@ -367,8 +415,9 @@ fun ProductFormScreen(
                         val stock = currentStock.toIntOrNull() ?: 0
                         val minStock = minimumStock.toIntOrNull() ?: 0
                         val catId = categoryId ?: return@Button
+                        val branch = branchId ?: return@Button
 
-                        if (precio <= 0 || name.isBlank() || name.length < 2 || catId <= 0) return@Button
+                        if (precio <= 0 || name.isBlank() || name.length < 2 || catId <= 0 || branch.isBlank()) return@Button
 
                         if (isEditMode && productId != null) {
                             viewModel.handleIntent(
@@ -381,7 +430,8 @@ fun ProductFormScreen(
                                     categoryId = catId,
                                     image = null,
                                     currentStock = stock,
-                                    minimumStock = minStock
+                                    minimumStock = minStock,
+                                    branchId = branch
                                 )
                             )
                         } else {
@@ -394,7 +444,8 @@ fun ProductFormScreen(
                                     categoryId = catId,
                                     image = null,
                                     currentStock = stock,
-                                    minimumStock = minStock
+                                    minimumStock = minStock,
+                                    branchId = branch
                                 )
                             )
                         }
@@ -405,6 +456,7 @@ fun ProductFormScreen(
                             (currentStock.toIntOrNull() ?: -1) >= 0 &&
                             (minimumStock.toIntOrNull() ?: -1) >= 0 &&
                             categoryId != null &&
+                            branchId != null &&
                             !state.isLoading,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -432,6 +484,15 @@ fun ProductFormScreen(
             selectedCategoryId = categoryId,
             onSelect = { categoryId = it; showCategoryPicker = false },
             onDismiss = { showCategoryPicker = false }
+        )
+    }
+
+    if (showBranchPicker) {
+        BranchPickerDialog(
+            branches = branches,
+            selectedBranchId = branchId,
+            onSelect = { branchId = it; showBranchPicker = false },
+            onDismiss = { showBranchPicker = false }
         )
     }
 

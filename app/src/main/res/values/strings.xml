@@ -572,13 +572,21 @@
     <string name="sales_payment_card">Tarjeta</string>
     <string name="sales_payment_transfer">Transferencia</string>
     <string name="sales_select_payment">Seleccionar método de pago</string>
+    <!-- Branch/Sucursal strings -->
+    <string name="product_branch">Sucursal</string>
+    <string name="product_select_branch">Seleccione una sucursal</string>
+    <string name="error_branch_required">Debe seleccionar una sucursal</string>
+
+    <!-- Filtros -->
+    <string name="filter_by_branch">Filtrar por Sucursal</string>
+    <string name="all_branches">Todas las Sucursales</string>
 
     <!-- ═══════════════════════════════════════════════════ -->
     <!-- VENTAS - ACCIONES -->
     <!-- ═══════════════════════════════════════════════════ -->
     <string name="sales_process">Procesar Venta</string>
     <string name="sales_complete">Completar Venta</string>
-    <string name="sales_cancel">Cancelar Venta</string>
+    <string name="sales_cancel">Cancelar</string>
     <string name="sales_continue_shopping">Continuar comprando</string>
 
     <!-- ═══════════════════════════════════════════════════ -->

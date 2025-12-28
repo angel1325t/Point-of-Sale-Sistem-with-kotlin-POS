@@ -1,627 +1,715 @@
-package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders
-
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.dev.point_of_sale_sistem_with_kotlin_pos.R
-import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.*
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
-import java.util.UUID
-
-@RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SalesScreen(
-    viewModel: SalesViewModel,
-    onNavigateBack: () -> Unit,
-    authViewModel: AuthSessionViewModel
-) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val authState by authViewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    val userId = authState.userId
-    val branchId = authState.branchId
-
-    var searchQuery by remember { mutableStateOf("") }
-    var showPaymentDialog by remember { mutableStateOf(false) }
-    var showCancelDialog by remember { mutableStateOf(false) }
-    var showAddProductDialog by remember { mutableStateOf(false) }
-    var showBarcodeScanner by remember { mutableStateOf(false) }
-    var selectedProduct by remember { mutableStateOf<ProductDTO?>(null) }
-
-    // String resources for error messages
-    val errorNetworkMsg = stringResource(R.string.error_network)
-    val errorValidationMsg = stringResource(R.string.sales_error_validation)
-    val errorUnknownMsg = stringResource(R.string.error_unknown_simple)
-
-    // Initialize sale if not exists
-    LaunchedEffect(state.sale) {
-        if (state.sale == null) {
-            viewModel.handleIntent(
-                SalesIntent.CreateSale(
-                    paymentMethod = "cash",
-                    globalDiscount = 0.0,
-                    userId = UUID.fromString(userId),
-                ),
-            )
-        }
-    }
-
-    // Handle errors
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
-            val message = when (error) {
-                is SaleError.Network -> errorNetworkMsg
-                is SaleError.ValidationFailed -> errorValidationMsg
-                is SaleError.Server -> error.message
-                is SaleError.Unknown -> errorUnknownMsg
-            }
-            snackbarHostState.showSnackbar(message)
-            viewModel.handleIntent(SalesIntent.ClearError)
-        }
-    }
-
-    // Auto-select product when found by barcode
-    LaunchedEffect(state.searchResults, state.lastScannedBarcode) {
-        if (state.searchResults.size == 1 && state.lastScannedBarcode != null) {
-            selectedProduct = state.searchResults.first()
-            showAddProductDialog = true
-            viewModel.handleIntent(SalesIntent.ClearSearchResults)
-        }
-    }
-
-    // Show barcode scanner screen
-    if (showBarcodeScanner) {
-        BarcodeScannerScreen(
-            onBarcodeScanned = { barcode ->
-                viewModel.handleIntent(SalesIntent.SearchProductByBarcode(barcode))
-                showBarcodeScanner = false
-            },
-            onNavigateBack = { showBarcodeScanner = false }
-        )
-        return
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.sales_new)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back)
-                        )
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            if (state.sale != null && state.sale!!.saleDetails.isNotEmpty()) {
-                SalesBottomBar(
-                    onCompleteClick = { showPaymentDialog = true },
-                    onCancelClick = { showCancelDialog = true }
-                )
-            }
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            // Search bar for products
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text("Buscar producto por nombre...")
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null
-                    )
-                },
-                trailingIcon = {
-                    Row {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Limpiar"
-                                )
-                            }
-                        }
-                        IconButton(
-                            onClick = {
-                                showBarcodeScanner = true
-                                keyboardController?.hide()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = "Escanear código"
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Search
-                ),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        if (searchQuery.isNotBlank()) {
-                            viewModel.handleIntent(
-                                SalesIntent.SearchProductByName(searchQuery)
-                            )
-                            keyboardController?.hide()
-                        }
-                    }
-                )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Search results or add button
-            if (state.searchResults.isNotEmpty() && searchQuery.isNotBlank()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 300.dp)
-                    ) {
-                        items(
-                            items = state.searchResults,
-                            key = { it.productId }
-                        ) { product ->
-                            ProductSearchResultItem(
-                                product = product,
-                                onClick = {
-                                    selectedProduct = product
-                                    showAddProductDialog = true
-                                    searchQuery = ""
-                                    viewModel.handleIntent(SalesIntent.ClearSearchResults)
-                                }
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Sale content
-            if (state.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                state.sale?.let { sale ->
-                    if (sale.saleDetails.isEmpty()) {
-                        EmptySaleState(
-                            modifier = Modifier.weight(1f)
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(
-                                items = sale.saleDetails,
-                                key = { it.saleDetailId }
-                            ) { detail ->
-                                SaleItemCard(
-                                    saleDetail = detail,
-                                    productName = "Producto ${detail.productId}",
-                                    onQuantityChange = { newQuantity ->
-                                        viewModel.handleIntent(
-                                            SalesIntent.UpdateSaleDetail(
-                                                productId = detail.productId,
-                                                quantity = newQuantity,
-                                                unitPrice = detail.unitPrice,
-                                                discount = detail.discount
-                                            )
-                                        )
-                                    },
-                                    onRemove = {
-                                        viewModel.handleIntent(
-                                            SalesIntent.RemoveSaleDetail(detail.productId)
-                                        )
-                                    }
-                                )
-                            }
-
-                            item {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                SalesSummaryCard(
-                                    itemsCount = sale.saleDetails.size,
-                                    subtotal = sale.saleDetails.sumOf {
-                                        it.unitPrice * it.quantity
-                                    },
-                                    discount = sale.saleDetails.sumOf { it.discount },
-                                    total = sale.total
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Add product to sale dialog
-    selectedProduct?.let { product ->
-        if (showAddProductDialog) {
-            AddProductToSaleDialog(
-                product = product,
-                onDismiss = {
-                    showAddProductDialog = false
-                    selectedProduct = null
-                },
-                onConfirm = { quantity, discount ->
-                    viewModel.handleIntent(
-                        SalesIntent.AddSaleDetail(
-                            productId = product.productId,
-                            quantity = quantity,
-                            unitPrice = product.price,
-                            discount = discount
-                        )
-                    )
-                    showAddProductDialog = false
-                    selectedProduct = null
-                }
-            )
-        }
-    }
-
-    // Payment dialog
-    if (showPaymentDialog) {
-        PaymentDialog(
-            currentMethod = state.sale?.paymentMethod ?: "cash",
-            onDismiss = { showPaymentDialog = false },
-            onConfirm = { paymentMethod ->
-                viewModel.handleIntent(SalesIntent.CompleteSale)
-                showPaymentDialog = false
-            }
-        )
-    }
-
-    // Cancel confirmation dialog
-    if (showCancelDialog) {
-        CancelSaleDialog(
-            onDismiss = { showCancelDialog = false },
-            onConfirm = {
-                viewModel.handleIntent(SalesIntent.CancelSale)
-                showCancelDialog = false
-                onNavigateBack()
-            }
-        )
-    }
-}
-
-// ... resto del código igual (ProductSearchResultItem, EmptySaleState, etc.)
-
-@Composable
-private fun ProductSearchResultItem(
-    product: ProductDTO,
-    onClick: () -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(product.name) },
-        supportingContent = {
-            Column {
-                product.barcode?.let { barcode ->
-                    Text("Código: $barcode", style = MaterialTheme.typography.bodySmall)
-                }
-                Text(
-                    "Stock: ${product.currentStock}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (product.currentStock > product.minimumStock)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.error
-                )
-            }
-        },
-        trailingContent = {
-            Text(
-                text = "$${product.price}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        },
-        modifier = Modifier.clickable(onClick = onClick)
-    )
-}
-
-@Composable
-private fun EmptySaleState(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders
+    
+    import android.os.Build
+    import androidx.annotation.RequiresApi
+    import androidx.compose.animation.*
+    import androidx.compose.animation.core.*
+    import androidx.compose.foundation.background
+    import androidx.compose.foundation.clickable
+    import androidx.compose.foundation.interaction.MutableInteractionSource
+    import androidx.compose.foundation.layout.*
+    import androidx.compose.foundation.lazy.LazyColumn
+    import androidx.compose.foundation.lazy.items
+    import androidx.compose.foundation.shape.RoundedCornerShape
+    import androidx.compose.foundation.text.KeyboardOptions
+    import androidx.compose.material.icons.Icons
+    import androidx.compose.material.icons.filled.*
+    import androidx.compose.material.icons.outlined.Inventory2
+    import androidx.compose.material3.*
+    import androidx.compose.runtime.*
+    import androidx.compose.ui.Alignment
+    import androidx.compose.ui.Modifier
+    import androidx.compose.ui.draw.clip
+    import androidx.compose.ui.draw.shadow
+    import androidx.compose.ui.focus.onFocusChanged
+    import androidx.compose.ui.graphics.Color
+    import androidx.compose.ui.platform.LocalFocusManager
+    import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+    import androidx.compose.ui.res.stringResource
+    import androidx.compose.ui.text.font.FontWeight
+    import androidx.compose.ui.text.input.ImeAction
+    import androidx.compose.ui.text.style.TextOverflow
+    import androidx.compose.ui.unit.dp
+    import androidx.compose.ui.unit.sp
+    import androidx.compose.ui.window.Popup
+    import androidx.compose.ui.window.PopupProperties
+    import androidx.lifecycle.compose.collectAsStateWithLifecycle
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetail
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleError
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.BarcodeScannerScreen
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.PaymentMethodSelector
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+    import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
+    import kotlinx.coroutines.delay
+    import java.util.UUID
+    
+    @RequiresApi(Build.VERSION_CODES.O)
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun SalesScreen(
+        viewModel: SalesViewModel,
+        onNavigateBack: () -> Unit,
+        authViewModel: AuthSessionViewModel
     ) {
-        Icon(
-            imageVector = Icons.Default.ShoppingBag,
-            contentDescription = null,
-            modifier = Modifier.size(120.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Venta vacía",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Busca productos para agregar a la venta",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun AddProductToSaleDialog(
-    product: ProductDTO,
-    onDismiss: () -> Unit,
-    onConfirm: (quantity: Int, discount: Double) -> Unit
-) {
-    var quantity by remember { mutableStateOf("1") }
-    var discount by remember { mutableStateOf("0") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("Agregar a la venta")
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "Precio: $${product.price}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                HorizontalDivider()
-
-                OutlinedTextField(
-                    value = quantity,
-                    onValueChange = {
-                        quantity = it.filter { char -> char.isDigit() }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Cantidad") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Next
+        val state by viewModel.state.collectAsStateWithLifecycle()
+        val authState by authViewModel.state.collectAsState()
+        val snackbarHostState = remember { SnackbarHostState() }
+        val keyboardController = LocalSoftwareKeyboardController.current
+        val focusManager = LocalFocusManager.current
+    
+        val userId = authState.userId
+    
+        var searchQuery by remember { mutableStateOf("") }
+        var isSearchFocused by remember { mutableStateOf(false) }
+        var showPaymentDialog by remember { mutableStateOf(false) }
+        var showCancelDialog by remember { mutableStateOf(false) }
+        var showBarcodeScanner by remember { mutableStateOf(false) }
+    
+        // String resources
+        val errorNetworkMsg = stringResource(R.string.error_network)
+        val errorValidationMsg = stringResource(R.string.sales_error_validation)
+        val errorUnknownMsg = stringResource(R.string.error_unknown_simple)
+    
+        // Initialize sale
+        LaunchedEffect(state.sale) {
+            if (state.sale == null) {
+                viewModel.handleIntent(
+                    SalesIntent.CreateSale(
+                        paymentMethod = "cash",
+                        globalDiscount = 0.0,
+                        userId = UUID.fromString(userId),
                     ),
-                    singleLine = true
                 )
-
-                OutlinedTextField(
-                    value = discount,
-                    onValueChange = {
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            discount = it
+            }
+        }
+    
+        // Debounced search - searches as user types
+        LaunchedEffect(searchQuery) {
+            if (searchQuery.isNotBlank() && searchQuery.length >= 2) {
+                delay(300) // Debounce 300ms
+                viewModel.handleIntent(SalesIntent.SearchProductByName(searchQuery))
+            } else if (searchQuery.isBlank()) {
+                viewModel.handleIntent(SalesIntent.ClearSearchResults)
+            }
+        }
+    
+        // Handle errors
+        LaunchedEffect(state.error) {
+            state.error?.let { error ->
+                val message = when (error) {
+                    is SaleError.Network -> errorNetworkMsg
+                    is SaleError.ValidationFailed -> errorValidationMsg
+                    is SaleError.Server -> error.message
+                    is SaleError.Unknown -> errorUnknownMsg
+                }
+                snackbarHostState.showSnackbar(message)
+                viewModel.handleIntent(SalesIntent.ClearError)
+            }
+        }
+    
+        // Auto-add product when scanned by barcode
+        LaunchedEffect(state.searchResults, state.lastScannedBarcode) {
+            if (state.searchResults.size == 1 && state.lastScannedBarcode != null) {
+                val product = state.searchResults.first()
+                viewModel.handleIntent(
+                    SalesIntent.AddSaleDetail(
+                        productId = product.productId,
+                        quantity = 1,
+                        unitPrice = product.price,
+                        discount = 0.0
+                    )
+                )
+                viewModel.handleIntent(SalesIntent.ClearSearchResults)
+            }
+        }
+    
+        // Barcode scanner screen
+        if (showBarcodeScanner) {
+            BarcodeScannerScreen(
+                onBarcodeScanned = { barcode ->
+                    viewModel.handleIntent(SalesIntent.SearchProductByBarcode(barcode))
+                    showBarcodeScanner = false
+                },
+                onNavigateBack = { showBarcodeScanner = false }
+            )
+            return
+        }
+    
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.sales_new)) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.action_back))
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Descuento ($)") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Done
-                    ),
-                    singleLine = true
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-
-                val qty = quantity.toIntOrNull() ?: 0
-                val disc = discount.toDoubleOrNull() ?: 0.0
-                val subtotal = (product.price * qty) - disc
-
-                if (qty > 0) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                state.sale?.let { sale ->
+                    if (sale.saleDetails.isNotEmpty()) {
+                        SalesBottomBar(
+                            total = sale.total,
+                            itemCount = sale.saleDetails.sumOf { it.quantity },
+                            onCompleteClick = { showPaymentDialog = true },
+                            onCancelClick = { showCancelDialog = true }
                         )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
                     ) {
-                        Row(
+                        focusManager.clearFocus()
+                        isSearchFocused = false
+                    }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+    
+                    // Search bar
+                    Box {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .onFocusChanged { isSearchFocused = it.isFocused },
+                            placeholder = { Text("Buscar producto...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingIcon = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = {
+                                            searchQuery = ""
+                                            viewModel.handleIntent(SalesIntent.ClearSearchResults)
+                                        }) {
+                                            Icon(
+                                                Icons.Default.Clear,
+                                                contentDescription = "Limpiar",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    IconButton(onClick = {
+                                        showBarcodeScanner = true
+                                        keyboardController?.hide()
+                                        focusManager.clearFocus()
+                                    }) {
+                                        Icon(
+                                            Icons.Default.QrCodeScanner,
+                                            contentDescription = "Escanear",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                        )
+    
+                        // Floating search results dropdown
+                        if (isSearchFocused && state.searchResults.isNotEmpty() && searchQuery.isNotBlank()) {
+                            Popup(
+                                alignment = Alignment.TopStart,
+                                properties = PopupProperties(focusable = false)
+                            ) {
+                                Surface(
+                                    modifier = Modifier
+                                        .padding(top = 60.dp)
+                                        .fillMaxWidth(0.92f)
+                                        .heightIn(max = 280.dp)
+                                        .shadow(8.dp, RoundedCornerShape(12.dp)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    tonalElevation = 4.dp
+                                ) {
+                                    LazyColumn(
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    ) {
+                                        items(
+                                            items = state.searchResults,
+                                            key = { it.productId }
+                                        ) { product ->
+                                            SearchResultItem(
+                                                product = product,
+                                                onClick = {
+                                                    viewModel.handleIntent(
+                                                        SalesIntent.AddSaleDetail(
+                                                            productId = product.productId,
+                                                            quantity = 1,
+                                                            unitPrice = product.price,
+                                                            discount = 0.0
+                                                        )
+                                                    )
+                                                    searchQuery = ""
+                                                    viewModel.handleIntent(SalesIntent.ClearSearchResults)
+                                                    focusManager.clearFocus()
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+    
+                    Spacer(modifier = Modifier.height(12.dp))
+    
+                    // Sale content
+                    if (state.isLoading && state.sale?.saleDetails.isNullOrEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Subtotal",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "$${"%.2f".format(subtotal)}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            CircularProgressIndicator(modifier = Modifier.size(40.dp))
+                        }
+                    } else {
+                        state.sale?.let { sale ->
+                            if (sale.saleDetails.isEmpty()) {
+                                EmptySaleState(modifier = Modifier.weight(1f))
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    contentPadding = PaddingValues(bottom = 8.dp)
+                                ) {
+                                    items(
+                                        items = sale.saleDetails,
+                                        key = { it.saleDetailId }
+                                    ) { detail ->
+                                        val product = state.searchResults.find { it.productId == detail.productId }
+                                        CompactSaleItemRow(
+                                            saleDetail = detail,
+                                            productName = product?.name ?: "Producto",
+                                            onQuantityChange = { newQuantity ->
+                                                viewModel.handleIntent(
+                                                    SalesIntent.UpdateSaleDetail(
+                                                        productId = detail.productId,
+                                                        quantity = newQuantity,
+                                                        unitPrice = detail.unitPrice,
+                                                        discount = detail.discount
+                                                    )
+                                                )
+                                            },
+                                            onRemove = {
+                                                viewModel.handleIntent(
+                                                    SalesIntent.RemoveSaleDetail(detail.productId)
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val qty = quantity.toIntOrNull() ?: 1
-                    val disc = discount.toDoubleOrNull() ?: 0.0
-                    if (qty > 0 && qty <= product.currentStock) {
-                        onConfirm(qty, disc)
-                    }
-                },
-                enabled = (quantity.toIntOrNull() ?: 0) > 0 &&
-                        (quantity.toIntOrNull() ?: 0) <= product.currentStock
-            ) {
-                Text("Agregar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
         }
-    )
-}
-
-@Composable
-private fun SalesBottomBar(
-    onCompleteClick: () -> Unit,
-    onCancelClick: () -> Unit
-) {
-    Surface(
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp
+    
+        // Payment dialog
+        if (showPaymentDialog) {
+            PaymentDialog(
+                currentMethod = state.sale?.paymentMethod ?: "cash",
+                onDismiss = { showPaymentDialog = false },
+                onConfirm = {
+                    viewModel.handleIntent(SalesIntent.CompleteSale)
+                    showPaymentDialog = false
+                }
+            )
+        }
+    
+        // Cancel confirmation dialog
+        if (showCancelDialog) {
+            CancelSaleDialog(
+                onDismiss = { showCancelDialog = false },
+                onConfirm = {
+                    viewModel.handleIntent(SalesIntent.CancelSale)
+                    showCancelDialog = false
+                    onNavigateBack()
+                }
+            )
+        }
+    }
+    
+    @Composable
+    private fun SearchResultItem(
+        product: ProductDTO,
+        onClick: () -> Unit
     ) {
+        val isLowStock = product.currentStock <= product.minimumStock
+    
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedButton(
-                onClick = onCancelClick,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.sales_cancel))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    product.barcode?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                    Text(
+                        text = "Stock: ${product.currentStock}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
             }
-
-            Button(
-                onClick = onCompleteClick,
-                modifier = Modifier.weight(1f)
+            Text(
+                text = "$${String.format("%.2f", product.price)}",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+    
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun CompactSaleItemRow(
+        saleDetail: SaleDetail,
+        productName: String,
+        onQuantityChange: (Int) -> Unit,
+        onRemove: () -> Unit
+    ) {
+        val dismissState = rememberSwipeToDismissBoxState(
+            confirmValueChange = { dismissValue ->
+                if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                    onRemove()
+                    true
+                } else {
+                    false
+                }
+            }
+        )
+    
+        SwipeToDismissBox(
+            state = dismissState,
+            backgroundContent = {
+                val color by animateColorAsState(
+                    when (dismissState.targetValue) {
+                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
+                        else -> Color.Transparent
+                    },
+                    label = "swipe_color"
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(color, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Eliminar",
+                            tint = Color.White
+                        )
+                    }
+                }
+            },
+            enableDismissFromStartToEnd = false,
+            enableDismissFromEndToStart = true
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 1.dp
             ) {
-                Text(stringResource(R.string.sales_complete))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Product info
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = productName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "$${String.format("%.2f", saleDetail.unitPrice)} c/u",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+    
+                    // Quantity controls
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (saleDetail.quantity > 1) {
+                                    onQuantityChange(saleDetail.quantity - 1)
+                                }
+                            },
+                            modifier = Modifier.size(28.dp),
+                            enabled = saleDetail.quantity > 1
+                        ) {
+                            Icon(
+                                Icons.Default.Remove,
+                                contentDescription = "Disminuir",
+                                modifier = Modifier.size(16.dp),
+                                tint = if (saleDetail.quantity > 1)
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            )
+                        }
+    
+                        Text(
+                            text = saleDetail.quantity.toString(),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.widthIn(min = 24.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+    
+                        IconButton(
+                            onClick = { onQuantityChange(saleDetail.quantity + 1) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Aumentar",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+    
+                    // Subtotal
+                    Text(
+                        text = "$${String.format("%.2f", saleDetail.finalPrice)}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.widthIn(min = 70.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End
+                    )
+                }
             }
         }
     }
-}
-
-@Composable
-private fun PaymentDialog(
-    currentMethod: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var selectedMethod by remember { mutableStateOf(currentMethod) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(stringResource(R.string.sales_complete_confirmation_title))
-        },
-        text = {
-            Column {
-                Text(
-                    text = stringResource(R.string.sales_complete_confirmation_message),
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                PaymentMethodSelector(
-                    selectedMethod = selectedMethod,
-                    onMethodSelected = { selectedMethod = it }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(selectedMethod) },
-                enabled = selectedMethod.isNotBlank()
-            ) {
-                Text(stringResource(R.string.action_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        }
-    )
-}
-
-@Composable
-private fun CancelSaleDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
+    
+    @Composable
+    private fun EmptySaleState(modifier: Modifier = Modifier) {
+        Column(
+            modifier = modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Icon(
-                imageVector = Icons.Default.Warning,
+                imageVector = Icons.Outlined.Inventory2,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
             )
-        },
-        title = {
-            Text(stringResource(R.string.sales_cancel_confirmation_title))
-        },
-        text = {
-            Text(stringResource(R.string.sales_cancel_confirmation_message))
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Sin productos",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Busca o escanea para agregar",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
+    }
+    
+    @Composable
+    private fun SalesBottomBar(
+        total: Double,
+        itemCount: Int,
+        onCompleteClick: () -> Unit,
+        onCancelClick: () -> Unit
+    ) {
+        Surface(
+            tonalElevation = 8.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                Text(stringResource(R.string.action_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "$itemCount ${if (itemCount == 1) "producto" else "productos"}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Total",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = "$${String.format("%.2f", total)}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+    
+                Spacer(modifier = Modifier.height(12.dp))
+    
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onCancelClick,
+                        modifier = Modifier.weight(0.4f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(stringResource(R.string.sales_cancel))
+                    }
+                    Button(
+                        onClick = onCompleteClick,
+                        modifier = Modifier.weight(0.6f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(stringResource(R.string.sales_complete))
+                    }
+                }   
             }
         }
-    )
-}
+    }
+    
+    @Composable
+    private fun PaymentDialog(
+        currentMethod: String,
+        onDismiss: () -> Unit,
+        onConfirm: (String) -> Unit
+    ) {
+        var selectedMethod by remember { mutableStateOf(currentMethod) }
+    
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.sales_complete_confirmation_title)) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(R.string.sales_complete_confirmation_message),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    PaymentMethodSelector(
+                        selectedMethod = selectedMethod,
+                        onMethodSelected = { selectedMethod = it }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { onConfirm(selectedMethod) },
+                    enabled = selectedMethod.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.action_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+    
+    @Composable
+    private fun CancelSaleDialog(
+        onDismiss: () -> Unit,
+        onConfirm: () -> Unit
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text(stringResource(R.string.sales_cancel_confirmation_title)) },
+            text = { Text(stringResource(R.string.sales_cancel_confirmation_message)) },
+            confirmButton = {
+                Button(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.action_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }

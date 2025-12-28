@@ -9,6 +9,7 @@ sealed class ProductsIntent {
     data class LoadProductById(val productId: Int) : ProductsIntent()
     data class SearchProducts(val query: String) : ProductsIntent()
     data class FilterByCategory(val categoryId: Int?) : ProductsIntent()
+    data class FilterByBranch(val branchId: String?) : ProductsIntent()
     data object LoadLowStockProducts : ProductsIntent()
 
 
@@ -23,7 +24,10 @@ sealed class ProductsIntent {
         val categoryId: Int,
         val image: String?,
         val currentStock: Int,
-        val minimumStock: Int
+        val minimumStock: Int,
+        val branchId: String,
+        val discountType: String = "none",
+        val discountValue: Double = 0.0
     ) : ProductsIntent()
 
 
@@ -39,7 +43,10 @@ sealed class ProductsIntent {
         val categoryId: Int,
         val image: String?,
         val currentStock: Int,
-        val minimumStock: Int
+        val minimumStock: Int,
+        val branchId: String,
+        val discountType: String = "none",
+        val discountValue: Double = 0.0
     ) : ProductsIntent()
 
 
@@ -66,4 +73,5 @@ sealed class ProductsIntent {
     data class ValidatePrice(val price: Double) : ProductsIntent()
     data class ValidateStock(val stock: Int) : ProductsIntent()
     data class ValidateBarcode(val barcode: String?) : ProductsIntent()
+    data class ValidateBranch(val branchId: String?) : ProductsIntent()
 }

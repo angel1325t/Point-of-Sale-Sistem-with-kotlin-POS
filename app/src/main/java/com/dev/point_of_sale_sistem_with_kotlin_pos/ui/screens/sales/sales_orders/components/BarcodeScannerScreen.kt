@@ -5,7 +5,9 @@ import android.util.Log
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlashlightOff
@@ -20,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
@@ -46,23 +48,26 @@ fun BarcodeScannerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Escanear código de barras") },
+                title = { Text("Escanear código") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
                     if (hasFlash) {
                         IconButton(onClick = { isFlashOn = !isFlashOn }) {
                             Icon(
-                                imageVector = if (isFlashOn) Icons.Default.FlashlightOn
-                                else Icons.Default.FlashlightOff,
-                                contentDescription = "Flash"
+                                imageVector = if (isFlashOn) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff,
+                                contentDescription = "Flash",
+                                tint = if (isFlashOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                )
             )
         }
     ) { paddingValues ->
@@ -86,33 +91,36 @@ fun BarcodeScannerScreen(
                 }
             }
 
-            // Overlay with scanning frame
             ScanningOverlay()
         }
     }
 }
 
 @Composable
-private fun PermissionDeniedContent(
-    onRequestPermission: () -> Unit
-) {
+private fun PermissionDeniedContent(onRequestPermission: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "Se necesita permiso de cámara",
-            style = MaterialTheme.typography.titleLarge
+            text = "Permiso de cámara requerido",
+            style = MaterialTheme.typography.titleMedium
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "Para escanear códigos de barras necesitamos acceso a la cámara",
-            style = MaterialTheme.typography.bodyMedium
+            text = "Para escanear códigos necesitamos acceso a la cámara",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onRequestPermission) {
-            Text("Otorgar permiso")
+        Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = onRequestPermission,
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Text("Permitir acceso")
         }
     }
 }
@@ -163,22 +171,19 @@ private fun CameraPreview(
                         )
                     }
 
-                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
                 try {
                     cameraProvider.unbindAll()
                     camera = cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
                         imageAnalyzer
                     )
-
                     camera?.let { cam ->
                         onFlashAvailable(cam.cameraInfo.hasFlashUnit())
                     }
                 } catch (e: Exception) {
-                    Log.e("CameraPreview", "Error al iniciar cámara", e)
+                    Log.e("CameraPreview", "Error starting camera", e)
                 }
             }, executor)
 
@@ -194,31 +199,31 @@ private fun ScanningOverlay() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+        // Scanning frame
         Surface(
-            modifier = Modifier.size(280.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-            shape = MaterialTheme.shapes.medium,
-            border = androidx.compose.foundation.BorderStroke(
-                3.dp,
-                MaterialTheme.colorScheme.primary
-            )
+            modifier = Modifier.size(260.dp, 160.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
         ) {}
 
+        // Instructions
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 100.dp)
+                .padding(bottom = 80.dp)
                 .align(Alignment.BottomCenter),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                shape = MaterialTheme.shapes.medium
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Text(
-                    text = "Coloca el código de barras dentro del marco",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "Coloca el código dentro del marco",
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -235,10 +240,7 @@ private class BarcodeAnalyzer(
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(
-                mediaImage,
-                imageProxy.imageInfo.rotationDegrees
-            )
+            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
@@ -247,15 +249,13 @@ private class BarcodeAnalyzer(
                             when (barcode.valueType) {
                                 Barcode.TYPE_PRODUCT,
                                 Barcode.TYPE_TEXT,
-                                Barcode.TYPE_ISBN -> {
-                                    onBarcodeDetected(value)
-                                }
+                                Barcode.TYPE_ISBN -> onBarcodeDetected(value)
                             }
                         }
                     }
                 }
                 .addOnFailureListener { e ->
-                    Log.e("BarcodeAnalyzer", "Error al escanear", e)
+                    Log.e("BarcodeAnalyzer", "Scan error", e)
                 }
                 .addOnCompleteListener {
                     imageProxy.close()

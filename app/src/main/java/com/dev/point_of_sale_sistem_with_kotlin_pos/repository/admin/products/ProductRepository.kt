@@ -31,6 +31,7 @@ class ProductRepository(
         description: String? = null,
         price: Double,
         categoryId: Int,
+        branchId: String,
         currentStock: Int = 0,
         minimumStock: Int = 0,
         discountType: DiscountType = DiscountType.NONE,
@@ -42,6 +43,7 @@ class ProductRepository(
                 - name: $name
                 - price: $price
                 - categoryId: $categoryId
+                - branchId: $branchId
                 - currentStock: $currentStock
                 - minimumStock: $minimumStock
                 - discountType: $discountType
@@ -57,13 +59,13 @@ class ProductRepository(
             val barcodeImageUrl = uploadBarcodeImage(barcode, barcodeBitmap)
             Log.d(TAG, "createProduct: Imagen subida: $barcodeImageUrl")
 
-            // ✅ USAR ProductInsertDTO EN LUGAR DE Map
             val insertData = ProductInsertDTO(
                 name = name,
                 description = description,
                 price = price,
                 barcode = barcode,
                 categoryId = categoryId,
+                branchId = branchId,
                 image = barcodeImageUrl,
                 currentStock = currentStock,
                 minimumStock = minimumStock,
@@ -73,7 +75,6 @@ class ProductRepository(
 
             Log.d(TAG, "createProduct: Insertando en base de datos: $insertData")
 
-            // ✅ IMPORTANTE: Usar .select() después de .insert() para obtener el registro creado
             val product = supabase.from("products")
                 .insert(insertData) {
                     select()
@@ -94,7 +95,6 @@ class ProductRepository(
         return try {
             Log.d(TAG, "updateProduct: Actualizando producto ID $productId con: $updates")
 
-            // ✅ IMPORTANTE: Usar .select() después de .update() para obtener el registro actualizado
             val product = supabase.from("products")
                 .update(updates) {
                     filter { eq("product_id", productId) }
@@ -123,6 +123,23 @@ class ProductRepository(
             Result.success(products)
         } catch (e: Exception) {
             Log.e(TAG, "getProducts: Error al obtener productos", e)
+            Result.failure(e)
+        }
+    }
+
+    // ====================== GET BY BRANCH ======================
+    suspend fun getProductsByBranch(branchId: String): Result<List<ProductDTO>> {
+        return try {
+            Log.d(TAG, "getProductsByBranch: Obteniendo productos de sucursal: $branchId")
+
+            val products = supabase.from("products")
+                .select { filter { eq("branch_id", branchId) } }
+                .decodeList<ProductDTO>()
+
+            Log.d(TAG, "getProductsByBranch: ${products.size} productos encontrados")
+            Result.success(products)
+        } catch (e: Exception) {
+            Log.e(TAG, "getProductsByBranch: Error al obtener productos", e)
             Result.failure(e)
         }
     }
@@ -199,10 +216,8 @@ class ProductRepository(
         return try {
             Log.d(TAG, "updateStock: Actualizando stock del producto ID $productId a $newStock")
 
-            // ✅ USAR DTO EN LUGAR DE Map
             val updates = ProductUpdateDTO(currentStock = newStock)
 
-            // ✅ IMPORTANTE: Usar .select() después de .update()
             val product = supabase.from("products")
                 .update(updates) {
                     filter { eq("product_id", productId) }

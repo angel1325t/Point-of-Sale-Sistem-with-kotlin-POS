@@ -13,15 +13,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.time.Instant
 import java.util.UUID
 
 data class SaleState(
     val isLoading: Boolean = false,
     val sale: Sale? = null,
     val searchResults: List<ProductDTO> = emptyList(),
+    val productsCache: Map<Int, ProductDTO> = emptyMap(),
     val error: SaleError? = null,
     val lastScannedBarcode: String? = null
 )
@@ -41,15 +42,14 @@ class SalesViewModel(
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun currentUtcDateTime(): LocalDateTime {
-        val millis = System.currentTimeMillis()
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneOffset.UTC)
+        return LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(System.currentTimeMillis()),
+            ZoneOffset.UTC
+        )
     }
 
     private fun setError(error: SaleError) {
-        _state.value = _state.value.copy(
-            isLoading = false,
-            error = error
-        )
+        _state.value = _state.value.copy(isLoading = false, error = error)
     }
 
     private fun mapExceptionToSaleError(throwable: Throwable): SaleError {
@@ -66,11 +66,9 @@ class SalesViewModel(
             is SalesIntent.SearchProductByName -> searchByName(intent.query)
             is SalesIntent.SearchProductByBarcode -> searchByBarcode(intent.barcode)
             SalesIntent.ClearSearchResults -> clearSearchResults()
-
             is SalesIntent.AddSaleDetail -> addProductToSale(intent)
             is SalesIntent.RemoveSaleDetail -> removeProductFromSale(intent.productId)
             is SalesIntent.UpdateSaleDetail -> updateProductInSale(intent)
-
             is SalesIntent.CreateSale -> createSale(intent.paymentMethod, intent.globalDiscount, intent.userId)
             SalesIntent.CompleteSale -> completeSale()
             SalesIntent.CancelSale -> cancelSale()
@@ -87,16 +85,17 @@ class SalesViewModel(
             return
         }
 
-        Log.d(TAG, "searchByName: Buscando '$query'")
+        Log.d(TAG, "searchByName: Searching '$query'")
         _state.value = _state.value.copy(isLoading = true)
 
-        viewModelScope.launch {
+        viewModelScope.launch { 
             repository.searchProductsByName(query)
                 .onSuccess { products ->
-                    Log.d(TAG, "searchByName: Encontrados ${products.size} productos")
+                    Log.d(TAG, "searchByName: Found ${products.size} products")
+                    val validProducts = products.filterNotNull()
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        searchResults = products.filterNotNull()
+                        searchResults = validProducts
                     )
                 }
                 .onFailure { e ->
@@ -113,43 +112,34 @@ class SalesViewModel(
             return
         }
 
-        Log.d(TAG, "searchByBarcode: Buscando '$barcode'")
-        _state.value = _state.value.copy(
-            isLoading = true,
-            lastScannedBarcode = barcode
-        )
+        Log.d(TAG, "searchByBarcode: Searching '$barcode'")
+        _state.value = _state.value.copy(isLoading = true, lastScannedBarcode = barcode)
 
         viewModelScope.launch {
             repository.getProductByBarcode(barcode)
                 .onSuccess { product ->
                     if (product != null) {
-                        Log.d(TAG, "searchByBarcode: Producto encontrado: ${product.name}")
+                        Log.d(TAG, "searchByBarcode: Found product: ${product.name}")
                         _state.value = _state.value.copy(
                             isLoading = false,
                             searchResults = listOf(product)
                         )
                     } else {
-                        Log.d(TAG, "searchByBarcode: No se encontró producto con código '$barcode'")
-                        setError(SaleError.Server("No se encontró producto con código: $barcode"))
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            searchResults = emptyList()
-                        )
+                        Log.d(TAG, "searchByBarcode: No product found with code '$barcode'")
+                        setError(SaleError.Server("Producto no encontrado: $barcode"))
+                        _state.value = _state.value.copy(isLoading = false, searchResults = emptyList())
                     }
                 }
                 .onFailure { e ->
                     Log.e(TAG, "searchByBarcode: Error", e)
-                    setError(SaleError.Server("Error al buscar producto por código"))
+                    setError(SaleError.Server("Error al buscar producto"))
                     _state.value = _state.value.copy(isLoading = false)
                 }
         }
     }
 
     private fun clearSearchResults() {
-        _state.value = _state.value.copy(
-            searchResults = emptyList(),
-            lastScannedBarcode = null
-        )
+        _state.value = _state.value.copy(searchResults = emptyList(), lastScannedBarcode = null)
     }
 
     // =====================================================
@@ -162,42 +152,42 @@ class SalesViewModel(
             return
         }
 
-        val currentSale = _state.value.sale
-        if (currentSale == null) {
+        val currentSale = _state.value.sale ?: run {
             setError(SaleError.ValidationFailed)
             return
         }
 
+        // Cache the product info for display
+        val productFromSearch = _state.value.searchResults.find { it.productId == intent.productId }
+        productFromSearch?.let { product ->
+            val updatedCache = _state.value.productsCache.toMutableMap()
+            updatedCache[product.productId] = product
+            _state.value = _state.value.copy(productsCache = updatedCache)
+        }
+
         val nowUtc = currentUtcDateTime()
-        val existingItemIndex = saleItems.indexOfFirst { it.productId == intent.productId }
+        val existingIndex = saleItems.indexOfFirst { it.productId == intent.productId }
 
-        if (existingItemIndex != -1) {
-            val existingItem = saleItems[existingItemIndex]
-            val newQuantity = existingItem.quantity + intent.quantity
-
-            saleItems[existingItemIndex] = SaleDetail(
-                saleDetailId = existingItem.saleDetailId,
-                saleId = currentSale.saleId.toString(),
-                productId = intent.productId,
+        if (existingIndex != -1) {
+            val existing = saleItems[existingIndex]
+            val newQuantity = existing.quantity + intent.quantity
+            saleItems[existingIndex] = existing.copy(
                 quantity = newQuantity,
-                unitPrice = intent.unitPrice,
-                discount = intent.discount,
-                finalPrice = (intent.unitPrice * newQuantity) - intent.discount,
-                createdAt = existingItem.createdAt
+                finalPrice = (intent.unitPrice * newQuantity) - intent.discount
             )
         } else {
-            val newDetail = SaleDetail(
-                saleDetailId = (saleItems.maxOfOrNull { it.saleDetailId } ?: 0) + 1,
-                saleId = currentSale.saleId.toString(),
-                productId = intent.productId,
-                quantity = intent.quantity,
-                unitPrice = intent.unitPrice,
-                discount = intent.discount,
-                finalPrice = (intent.unitPrice * intent.quantity) - intent.discount,
-                createdAt = nowUtc
+            saleItems.add(
+                SaleDetail(
+                    saleDetailId = (saleItems.maxOfOrNull { it.saleDetailId } ?: 0) + 1,
+                    saleId = currentSale.saleId.toString(),
+                    productId = intent.productId,
+                    quantity = intent.quantity,
+                    unitPrice = intent.unitPrice,
+                    discount = intent.discount,
+                    finalPrice = (intent.unitPrice * intent.quantity) - intent.discount,
+                    createdAt = nowUtc
+                )
             )
-
-            saleItems.add(newDetail)
         }
 
         updateSaleState()
@@ -222,17 +212,12 @@ class SalesViewModel(
             return
         }
 
-        val existingItem = saleItems[index]
-
-        saleItems[index] = SaleDetail(
-            saleDetailId = existingItem.saleDetailId,
-            saleId = _state.value.sale?.saleId.toString(),
-            productId = intent.productId,
+        val existing = saleItems[index]
+        saleItems[index] = existing.copy(
             quantity = intent.quantity,
             unitPrice = intent.unitPrice,
             discount = intent.discount,
-            finalPrice = (intent.unitPrice * intent.quantity) - intent.discount,
-            createdAt = existingItem.createdAt
+            finalPrice = (intent.unitPrice * intent.quantity) - intent.discount
         )
 
         updateSaleState()
@@ -254,12 +239,11 @@ class SalesViewModel(
     }
 
     // =====================================================
-    // 💵 CREATE / COMPLETE / CANCEL SALE
+    // 💵 SALE LIFECYCLE
     // =====================================================
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createSale(paymentMethod: String, globalDiscount: Double, userId: UUID) {
         val nowUtc = currentUtcDateTime()
-
         saleItems.clear()
 
         _state.value = _state.value.copy(
@@ -274,7 +258,8 @@ class SalesViewModel(
                 globalDiscount = globalDiscount,
                 saleDetails = emptyList()
             ),
-            searchResults = emptyList()
+            searchResults = emptyList(),
+            productsCache = emptyMap()
         )
     }
 
@@ -286,14 +271,10 @@ class SalesViewModel(
             return
         }
 
-        _state.value = _state.value.copy(
-            isLoading = true
-        )
+        _state.value = _state.value.copy(isLoading = true)
 
         viewModelScope.launch {
-            // TODO: Call repository to save sale
-            // repository.createSale(sale)
-
+            // TODO: repository.createSale(sale)
             _state.value = _state.value.copy(
                 sale = sale.copy(status = "completed"),
                 isLoading = false
@@ -308,5 +289,10 @@ class SalesViewModel(
 
     private fun clearError() {
         _state.value = _state.value.copy(error = null)
+    }
+
+    // Helper to get product name from cache
+    fun getProductName(productId: Int): String {
+        return _state.value.productsCache[productId]?.name ?: "Producto $productId"
     }
 }

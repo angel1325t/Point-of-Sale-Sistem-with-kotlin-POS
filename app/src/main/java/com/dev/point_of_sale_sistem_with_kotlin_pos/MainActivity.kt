@@ -1,8 +1,10 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -69,6 +71,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserve
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductViewModel
 
 class MainActivity : FragmentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLifecycleObserver.start()
@@ -135,6 +138,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavigation(
     navController: NavHostController,
@@ -152,8 +156,16 @@ fun AppNavigation(
 ) {
     val context = LocalContext.current
     val categoryState by categoryViewModel.state.collectAsState()
+    val branchState by branchViewModel.state.collectAsState() // ← AGREGADO
     val requireBiometric by AppLifecycleObserver.requireBiometric.collectAsState()
     val scope = rememberCoroutineScope()
+
+    // ← CARGAR BRANCHES AL INICIAR
+    LaunchedEffect(Unit) {
+        branchViewModel.handleIntent(
+            com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.braches.BranchIntent.LoadBranches
+        )
+    }
 
     // === CONTROL DEFINITIVO DE BIOMETRÍA AL VOLVER DEL BACKGROUND ===
     LaunchedEffect(requireBiometric) {
@@ -299,16 +311,30 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() })
         }
 
+        // ✅ CORREGIDO: Agregado branchState.branches
         composable("products/create") {
-            ProductFormScreen(productsViewModel, null, categoryState.categories) { navController.popBackStack() }
+            ProductFormScreen(
+                viewModel = productsViewModel,
+                productId = null,
+                categories = categoryState.categories,
+                branches = branchState.branches, // ← AGREGADO
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
+        // ✅ CORREGIDO: Agregado branchState.branches
         composable(
             "products/edit/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.IntType })
         ) {
             val id = it.arguments?.getInt("productId")
-            ProductFormScreen(productsViewModel, id!!, categoryState.categories) { navController.popBackStack() }
+            ProductFormScreen(
+                viewModel = productsViewModel,
+                productId = id,
+                categories = categoryState.categories,
+                branches = branchState.branches, // ← AGREGADO
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         // =========================
