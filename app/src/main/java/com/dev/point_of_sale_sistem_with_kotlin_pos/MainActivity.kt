@@ -103,10 +103,10 @@ class MainActivity : FragmentActivity() {
                     val branchRepository = remember { BranchRepository(supabase) }
                     val categoryRepository = remember { CategoryRepository(supabase) }
                     val context = LocalContext.current
-                    val productsRepository = remember { ProductRepository(supabase, context) }
+                    val productsRepository = remember { ProductRepository(supabase, sessionPreferences) }
                     val supplierRepository = remember { SupplierRepository(supabase) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
-                    val salesRepository = remember { SalesProductRepository(supabase) }
+                    val salesRepository = remember { SalesProductRepository(supabase, sessionPreferences) }
 
                     // VIEWMODELS
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
@@ -311,13 +311,11 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() })
         }
 
-        // ✅ CORREGIDO: Agregado branchState.branches
         composable("products/create") {
             ProductFormScreen(
                 viewModel = productsViewModel,
                 productId = null,
                 categories = categoryState.categories,
-                branches = branchState.branches, // ← AGREGADO
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -332,7 +330,6 @@ fun AppNavigation(
                 viewModel = productsViewModel,
                 productId = id,
                 categories = categoryState.categories,
-                branches = branchState.branches, // ← AGREGADO
                 onNavigateBack = { navController.popBackStack() }
             )
         }

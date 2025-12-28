@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.core.graphics.set
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
@@ -18,46 +19,31 @@ import java.io.ByteArrayOutputStream
 
 class ProductRepository(
     private val supabase: SupabaseClient,
-    private val context: Context,
+    private val sessionPreferences: SessionPreferences,
 ) {
 
     companion object {
         private const val TAG = "ProductRepository"
     }
 
-    // ====================== CREAR =====================================
+    // ====================== CREAR ======================
     suspend fun createProduct(
         name: String,
         description: String? = null,
         price: Double,
         categoryId: Int,
-        branchId: String,
         currentStock: Int = 0,
         minimumStock: Int = 0,
         discountType: DiscountType = DiscountType.NONE,
         discountValue: Double = 0.0,
     ): Result<ProductDTO> {
         return try {
-            Log.d(TAG, """
-                createProduct: Iniciando creación
-                - name: $name
-                - price: $price
-                - categoryId: $categoryId
-                - branchId: $branchId
-                - currentStock: $currentStock
-                - minimumStock: $minimumStock
-                - discountType: $discountType
-                - discountValue: $discountValue
-            """.trimIndent())
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             val barcode = generateEAN13Barcode()
-            Log.d(TAG, "createProduct: Barcode generado: $barcode")
-
             val barcodeBitmap = generateBarcodeBitmap(barcode)
-            Log.d(TAG, "createProduct: Bitmap generado")
-
             val barcodeImageUrl = uploadBarcodeImage(barcode, barcodeBitmap)
-            Log.d(TAG, "createProduct: Imagen subida: $barcodeImageUrl")
 
             val insertData = ProductInsertDTO(
                 name = name,
@@ -73,73 +59,56 @@ class ProductRepository(
                 discountValue = discountValue
             )
 
-            Log.d(TAG, "createProduct: Insertando en base de datos: $insertData")
-
             val product = supabase.from("products")
-                .insert(insertData) {
-                    select()
-                }
+                .insert(insertData) { select() }
                 .decodeSingle<ProductDTO>()
 
-            Log.d(TAG, "createProduct: Producto creado exitosamente: $product")
             Result.success(product)
 
         } catch (e: Exception) {
-            Log.e(TAG, "createProduct: Error al crear producto", e)
+            Log.e(TAG, "createProduct error", e)
             Result.failure(e)
         }
     }
 
-    // ====================== UPDATE GENERAL ======================
+    // ====================== UPDATE ======================
     suspend fun updateProduct(productId: Int, updates: ProductUpdateDTO): Result<ProductDTO> {
         return try {
-            Log.d(TAG, "updateProduct: Actualizando producto ID $productId con: $updates")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             val product = supabase.from("products")
                 .update(updates) {
-                    filter { eq("product_id", productId) }
+                    filter {
+                        eq("product_id", productId)
+                        eq("branch_id", branchId)
+                    }
                     select()
                 }
                 .decodeSingle<ProductDTO>()
 
-            Log.d(TAG, "updateProduct: Producto actualizado exitosamente: $product")
             Result.success(product)
+
         } catch (e: Exception) {
-            Log.e(TAG, "updateProduct: Error al actualizar producto ID $productId", e)
+            Log.e(TAG, "updateProduct error", e)
             Result.failure(e)
         }
     }
 
-    // ====================== GET ALL ======================
+    // ====================== GET ALL (BRANCH) ======================
     suspend fun getProducts(): Result<List<ProductDTO>> {
         return try {
-            Log.d(TAG, "getProducts: Obteniendo todos los productos")
-
-            val products = supabase.from("products")
-                .select()
-                .decodeList<ProductDTO>()
-
-            Log.d(TAG, "getProducts: ${products.size} productos obtenidos")
-            Result.success(products)
-        } catch (e: Exception) {
-            Log.e(TAG, "getProducts: Error al obtener productos", e)
-            Result.failure(e)
-        }
-    }
-
-    // ====================== GET BY BRANCH ======================
-    suspend fun getProductsByBranch(branchId: String): Result<List<ProductDTO>> {
-        return try {
-            Log.d(TAG, "getProductsByBranch: Obteniendo productos de sucursal: $branchId")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             val products = supabase.from("products")
                 .select { filter { eq("branch_id", branchId) } }
                 .decodeList<ProductDTO>()
 
-            Log.d(TAG, "getProductsByBranch: ${products.size} productos encontrados")
             Result.success(products)
+
         } catch (e: Exception) {
-            Log.e(TAG, "getProductsByBranch: Error al obtener productos", e)
+            Log.e(TAG, "getProducts error", e)
             Result.failure(e)
         }
     }
@@ -147,50 +116,68 @@ class ProductRepository(
     // ====================== GET BY ID ======================
     suspend fun getProductById(productId: Int): Result<ProductDTO> {
         return try {
-            Log.d(TAG, "getProductById: Buscando producto ID: $productId")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             val product = supabase.from("products")
-                .select { filter { eq("product_id", productId) } }
+                .select {
+                    filter {
+                        eq("product_id", productId)
+                        eq("branch_id", branchId)
+                    }
+                }
                 .decodeSingle<ProductDTO>()
 
-            Log.d(TAG, "getProductById: Producto encontrado: $product")
             Result.success(product)
+
         } catch (e: Exception) {
-            Log.e(TAG, "getProductById: Error al buscar producto ID $productId", e)
+            Log.e(TAG, "getProductById error", e)
             Result.failure(e)
         }
     }
 
-    // ====================== BUSCAR POR NAME ======================
+    // ====================== SEARCH BY NAME ======================
     suspend fun searchProductsByName(query: String): Result<List<ProductDTO>> {
         return try {
-            Log.d(TAG, "searchProductsByName: Buscando con query: '$query'")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             val products = supabase.from("products")
-                .select { filter { ilike("name", "%$query%") } }
+                .select {
+                    filter {
+                        ilike("name", "%$query%")
+                        eq("branch_id", branchId)
+                    }
+                }
                 .decodeList<ProductDTO>()
 
-            Log.d(TAG, "searchProductsByName: ${products.size} productos encontrados")
             Result.success(products)
+
         } catch (e: Exception) {
-            Log.e(TAG, "searchProductsByName: Error en búsqueda", e)
+            Log.e(TAG, "searchProductsByName error", e)
             Result.failure(e)
         }
     }
 
-    // ====================== BUSCAR POR BARCODE ======================
+    // ====================== GET BY BARCODE ======================
     suspend fun getProductByBarcode(barcode: String): Result<ProductDTO?> {
         return try {
-            Log.d(TAG, "getProductByBarcode: Buscando barcode: $barcode")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             val products = supabase.from("products")
-                .select { filter { eq("barcode", barcode) } }
+                .select {
+                    filter {
+                        eq("barcode", barcode)
+                        eq("branch_id", branchId)
+                    }
+                }
                 .decodeList<ProductDTO>()
 
-            Log.d(TAG, "getProductByBarcode: Resultado: ${products.firstOrNull()}")
             Result.success(products.firstOrNull())
+
         } catch (e: Exception) {
-            Log.e(TAG, "getProductByBarcode: Error al buscar barcode", e)
+            Log.e(TAG, "getProductByBarcode error", e)
             Result.failure(e)
         }
     }
@@ -198,15 +185,21 @@ class ProductRepository(
     // ====================== DELETE ======================
     suspend fun deleteProduct(productId: Int): Result<Unit> {
         return try {
-            Log.d(TAG, "deleteProduct: Eliminando producto ID: $productId")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             supabase.from("products")
-                .delete { filter { eq("product_id", productId) } }
+                .delete {
+                    filter {
+                        eq("product_id", productId)
+                        eq("branch_id", branchId)
+                    }
+                }
 
-            Log.d(TAG, "deleteProduct: Producto eliminado exitosamente")
             Result.success(Unit)
+
         } catch (e: Exception) {
-            Log.e(TAG, "deleteProduct: Error al eliminar producto ID $productId", e)
+            Log.e(TAG, "deleteProduct error", e)
             Result.failure(e)
         }
     }
@@ -214,96 +207,94 @@ class ProductRepository(
     // ====================== UPDATE STOCK ======================
     suspend fun updateStock(productId: Int, newStock: Int): Result<ProductDTO> {
         return try {
-            Log.d(TAG, "updateStock: Actualizando stock del producto ID $productId a $newStock")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
             val updates = ProductUpdateDTO(currentStock = newStock)
 
             val product = supabase.from("products")
                 .update(updates) {
-                    filter { eq("product_id", productId) }
+                    filter {
+                        eq("product_id", productId)
+                        eq("branch_id", branchId)
+                    }
                     select()
                 }
                 .decodeSingle<ProductDTO>()
 
-            Log.d(TAG, "updateStock: Stock actualizado exitosamente")
             Result.success(product)
+
         } catch (e: Exception) {
-            Log.e(TAG, "updateStock: Error al actualizar stock", e)
+            Log.e(TAG, "updateStock error", e)
             Result.failure(e)
         }
     }
 
-    // ====================== REGENERAR BARCODE ======================
+    // ====================== REGENERATE BARCODE ======================
     suspend fun regenerateBarcode(productId: Int): Result<ProductDTO> {
         return try {
-            Log.d(TAG, "regenerateBarcode: Regenerando barcode para producto ID: $productId")
-
             val barcode = generateEAN13Barcode()
-            val barcodeBitmap = generateBarcodeBitmap(barcode)
-            val barcodeImageUrl = uploadBarcodeImage(barcode, barcodeBitmap)
+            val bitmap = generateBarcodeBitmap(barcode)
+            val imageUrl = uploadBarcodeImage(barcode, bitmap)
 
             val updates = ProductUpdateDTO(
                 barcode = barcode,
-                image = barcodeImageUrl
+                image = imageUrl
             )
 
-            Log.d(TAG, "regenerateBarcode: Nuevo barcode generado: $barcode")
             updateProduct(productId, updates)
 
         } catch (e: Exception) {
-            Log.e(TAG, "regenerateBarcode: Error al regenerar barcode", e)
+            Log.e(TAG, "regenerateBarcode error", e)
             Result.failure(e)
         }
     }
 
-    // ====================== GENERAR BARCODE ======================
+    // ====================== BARCODE UTILS ======================
     private fun generateEAN13Barcode(): String {
         val randomDigits = (1..12).map { (0..9).random() }
-        val sumOdd = randomDigits.filterIndexed { index, _ -> index % 2 == 0 }.sum()
-        val sumEven = randomDigits.filterIndexed { index, _ -> index % 2 != 0 }.sum() * 3
+        val sumOdd = randomDigits.filterIndexed { i, _ -> i % 2 == 0 }.sum()
+        val sumEven = randomDigits.filterIndexed { i, _ -> i % 2 != 0 }.sum() * 3
         val checkDigit = (10 - (sumOdd + sumEven) % 10) % 10
         return (randomDigits + checkDigit).joinToString("")
     }
 
-    // ====================== CREAR BITMAP ======================
-    private suspend fun generateBarcodeBitmap(barcode: String): Bitmap = withContext(Dispatchers.Default) {
-        val width = 600
-        val height = 300
+    private suspend fun generateBarcodeBitmap(barcode: String): Bitmap =
+        withContext(Dispatchers.Default) {
+            val width = 600
+            val height = 300
 
-        val bitMatrix: BitMatrix = MultiFormatWriter().encode(
-            barcode,
-            BarcodeFormat.EAN_13,
-            width,
-            height
-        )
+            val bitMatrix: BitMatrix = MultiFormatWriter().encode(
+                barcode,
+                BarcodeFormat.EAN_13,
+                width,
+                height
+            )
 
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
 
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                bitmap[x, y] = if (bitMatrix[x, y]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    bitmap[x, y] =
+                        if (bitMatrix[x, y]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+                }
             }
+            bitmap
         }
 
-        bitmap
-    }
-
-    // ====================== UPLOAD STORAGE ======================
-    private suspend fun uploadBarcodeImage(barcode: String, bitmap: Bitmap): String {
-        return withContext(Dispatchers.IO) {
+    private suspend fun uploadBarcodeImage(barcode: String, bitmap: Bitmap): String =
+        withContext(Dispatchers.IO) {
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            val byteArray = stream.toByteArray()
+            val bytes = stream.toByteArray()
 
             val fileName = "barcode_${barcode}_${System.currentTimeMillis()}.png"
-
             val bucket = supabase.storage.from("barcodes")
 
-            bucket.upload(fileName, byteArray) {
+            bucket.upload(fileName, bytes) {
                 contentType = ContentType.Image.PNG
             }
 
             bucket.publicUrl(fileName)
         }
-    }
 }

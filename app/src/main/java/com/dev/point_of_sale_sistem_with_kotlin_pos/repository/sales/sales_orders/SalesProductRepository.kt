@@ -3,11 +3,13 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orde
 import android.util.Log
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductUpdateDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 
 class SalesProductRepository(
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val sessionPreferences: SessionPreferences
 ) {
 
     companion object {
@@ -15,14 +17,22 @@ class SalesProductRepository(
     }
 
     // ============================================
-    // 🔍 SEARCH BY NAME
+    // 🔍 SEARCH PRODUCTS BY NAME (BRANCH SAFE)
     // ============================================
     suspend fun searchProductsByName(query: String): Result<List<ProductDTO>> {
         return try {
-            Log.d(TAG, "searchProductsByName: Buscando → '$query'")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
+
+            Log.d(TAG, "searchProductsByName → '$query' | branch=$branchId")
 
             val products = supabase.from("products")
-                .select { filter { ilike("name", "%$query%") } }
+                .select {
+                    filter {
+                        ilike("name", "%$query%")
+                        eq("branch_id", branchId)
+                    }
+                }
                 .decodeList<ProductDTO>()
 
             Result.success(products)
@@ -34,14 +44,22 @@ class SalesProductRepository(
     }
 
     // ============================================
-    // 📌 GET PRODUCT BY BARCODE
+    // 📌 GET PRODUCT BY BARCODE (BRANCH SAFE)
     // ============================================
     suspend fun getProductByBarcode(barcode: String): Result<ProductDTO?> {
         return try {
-            Log.d(TAG, "getProductByBarcode: $barcode")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
+
+            Log.d(TAG, "getProductByBarcode → $barcode | branch=$branchId")
 
             val products = supabase.from("products")
-                .select { filter { eq("barcode", barcode) } }
+                .select {
+                    filter {
+                        eq("barcode", barcode)
+                        eq("branch_id", branchId)
+                    }
+                }
                 .decodeList<ProductDTO>()
 
             Result.success(products.firstOrNull())
@@ -53,29 +71,45 @@ class SalesProductRepository(
     }
 
     // ============================================
-    // ⚠️ REDUCE STOCK
+    // ⚠️ REDUCE PRODUCT STOCK (BRANCH SAFE)
     // ============================================
     suspend fun reduceStock(productId: Int, quantity: Int): Result<ProductDTO> {
         return try {
-            Log.d(TAG, "reduceStock: Restando $quantity a productId: $productId")
+            val branchId = sessionPreferences.getBranchId()
+                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
 
-            // Obtener producto actual
+            Log.d(
+                TAG,
+                "reduceStock → productId=$productId | qty=$quantity | branch=$branchId"
+            )
+
+            // Obtener producto de la sucursal actual
             val product = supabase.from("products")
-                .select { filter { eq("product_id", productId) } }
+                .select {
+                    filter {
+                        eq("product_id", productId)
+                        eq("branch_id", branchId)
+                    }
+                }
                 .decodeSingle<ProductDTO>()
 
             val newStock = (product.currentStock - quantity).coerceAtLeast(0)
 
-            val updates = ProductUpdateDTO(currentStock = newStock)
+            val updates = ProductUpdateDTO(
+                currentStock = newStock
+            )
 
-            val updated = supabase.from("products")
+            val updatedProduct = supabase.from("products")
                 .update(updates) {
-                    filter { eq("product_id", productId) }
+                    filter {
+                        eq("product_id", productId)
+                        eq("branch_id", branchId)
+                    }
                     select()
                 }
                 .decodeSingle<ProductDTO>()
 
-            Result.success(updated)
+            Result.success(updatedProduct)
 
         } catch (e: Exception) {
             Log.e(TAG, "reduceStock error", e)

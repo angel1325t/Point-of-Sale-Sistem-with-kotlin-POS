@@ -25,7 +25,6 @@ sealed class ProductsIntent {
         val image: String?,
         val currentStock: Int,
         val minimumStock: Int,
-        val branchId: String,
         val discountType: String = "none",
         val discountValue: Double = 0.0
     ) : ProductsIntent()
@@ -44,7 +43,6 @@ sealed class ProductsIntent {
         val image: String?,
         val currentStock: Int,
         val minimumStock: Int,
-        val branchId: String,
         val discountType: String = "none",
         val discountValue: Double = 0.0
     ) : ProductsIntent()

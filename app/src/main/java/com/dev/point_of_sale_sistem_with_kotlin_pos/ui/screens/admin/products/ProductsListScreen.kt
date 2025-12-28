@@ -112,11 +112,9 @@ fun ProductsListScreen(
     LaunchedEffect(state.successMessage, state.error) {
         state.successMessage?.let { messageKey ->
             snackbarHostState.showSnackbar(getSuccessMessage(messageKey))
-            viewModel.clearMessages()
         }
         state.error?.let { error ->
             snackbarHostState.showSnackbar(getErrorMessage(error))
-            viewModel.clearMessages()
         }
     }
 
