@@ -2,7 +2,7 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos
 
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,6 +58,8 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.S
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 
 // ViewModels
@@ -74,7 +76,15 @@ class MainActivity : FragmentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 🔒 BLOQUEAR SCREENSHOTS (SEGURIDAD)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
+
         AppLifecycleObserver.start()
+
         setContent {
             AppTheme {
                 Surface(
@@ -102,11 +112,12 @@ class MainActivity : FragmentActivity() {
                     val userRepository = remember { UserRepository(supabase) }
                     val branchRepository = remember { BranchRepository(supabase) }
                     val categoryRepository = remember { CategoryRepository(supabase) }
-                    val context = LocalContext.current
                     val productsRepository = remember { ProductRepository(supabase, sessionPreferences) }
                     val supplierRepository = remember { SupplierRepository(supabase) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
-                    val salesRepository = remember { SalesProductRepository(supabase, sessionPreferences) }
+                    val salesProductRepository = remember { SalesProductRepository(supabase, sessionPreferences) }
+                    val salesRepository = remember { SalesRepository(supabase, salesProductRepository) }
+                    val paymentProofRepository = remember { PaymentProofRepository(supabase) } // ← NUEVO
 
                     // VIEWMODELS
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
@@ -116,7 +127,9 @@ class MainActivity : FragmentActivity() {
                     val productsViewModel = remember { ProductViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
-                    val salesViewModel = remember { SalesViewModel(salesRepository) }
+                    val salesViewModel = remember {
+                        SalesViewModel(salesRepository, salesProductRepository, paymentProofRepository) // ← ACTUALIZADO
+                    }
 
                     AppNavigation(
                         navController = navController,
@@ -156,18 +169,18 @@ fun AppNavigation(
 ) {
     val context = LocalContext.current
     val categoryState by categoryViewModel.state.collectAsState()
-    val branchState by branchViewModel.state.collectAsState() // ← AGREGADO
+    val branchState by branchViewModel.state.collectAsState()
     val requireBiometric by AppLifecycleObserver.requireBiometric.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // ← CARGAR BRANCHES AL INICIAR
+    // Cargar branches al iniciar
     LaunchedEffect(Unit) {
         branchViewModel.handleIntent(
             com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.braches.BranchIntent.LoadBranches
         )
     }
 
-    // === CONTROL DEFINITIVO DE BIOMETRÍA AL VOLVER DEL BACKGROUND ===
+    // Control de biometría al volver del background
     LaunchedEffect(requireBiometric) {
         if (!requireBiometric) return@LaunchedEffect
 
@@ -222,9 +235,7 @@ fun AppNavigation(
         composable("home") { HomeScreen(navController, authSessionViewModel) }
         composable("profile") { ProfileScreen(navController, authSessionViewModel) }
 
-        // =========================
-        //        ROLES
-        // =========================
+        // ROLES
         composable("roles") { RolesListScreen(navController, roleViewModel) }
         composable("roles/create") { RoleFormScreen(navController, roleViewModel, null) }
         composable(
@@ -242,9 +253,7 @@ fun AppNavigation(
             RolePermissionsScreen(navController, roleViewModel, roleId)
         }
 
-        // =========================
-        //        USUARIOS
-        // =========================
+        // USUARIOS
         composable("users") {
             UsersListScreen(
                 navController,
@@ -253,11 +262,9 @@ fun AppNavigation(
                 onNavigateToEdit = { id -> navController.navigate("users/edit/$id") }
             )
         }
-
         composable("users/create") {
             UserFormScreen(userViewModel) { navController.popBackStack() }
         }
-
         composable(
             "users/edit/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -266,9 +273,7 @@ fun AppNavigation(
             UserFormScreen(userViewModel, userId) { navController.popBackStack() }
         }
 
-        // =========================
-        //        SUCURSALES
-        // =========================
+        // SUCURSALES
         composable("branches") {
             BranchesScreen(branchViewModel, authSessionViewModel) { tab ->
                 when (tab) {
@@ -279,20 +284,16 @@ fun AppNavigation(
             }
         }
 
-        // =========================
-        //        CATEGORÍAS
-        // =========================
+        // CATEGORÍAS
         composable("categories") {
             CategoriesListScreen(categoryViewModel,
                 onNavigateToCreate = { navController.navigate("categories/create") },
                 onNavigateToEdit = { id -> navController.navigate("categories/edit/$id") },
                 onNavigateBack = { navController.popBackStack() })
         }
-
         composable("categories/create") {
             CategoryFormScreen(categoryViewModel, null) { navController.popBackStack() }
         }
-
         composable(
             "categories/edit/{categoryId}",
             arguments = listOf(navArgument("categoryId") { type = NavType.IntType })
@@ -301,16 +302,13 @@ fun AppNavigation(
             CategoryFormScreen(categoryViewModel, id) { navController.popBackStack() }
         }
 
-        // =========================
-        //        PRODUCTOS
-        // =========================
+        // PRODUCTOS
         composable("products") {
             ProductsListScreen(productsViewModel,
                 onNavigateToCreate = { navController.navigate("products/create") },
                 onNavigateToEdit = { id -> navController.navigate("products/edit/$id") },
                 onNavigateBack = { navController.popBackStack() })
         }
-
         composable("products/create") {
             ProductFormScreen(
                 viewModel = productsViewModel,
@@ -319,8 +317,6 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
-        // ✅ CORREGIDO: Agregado branchState.branches
         composable(
             "products/edit/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.IntType })
@@ -334,20 +330,16 @@ fun AppNavigation(
             )
         }
 
-        // =========================
-        //        SUPPLIERS
-        // =========================
+        // SUPPLIERS
         composable("suppliers") {
             SupplierListScreen(supplierViewModel,
                 onNavigateToCreate = { navController.navigate("suppliers/create") },
                 onNavigateToEdit = { id -> navController.navigate("suppliers/edit/$id") },
                 onNavigateBack = { navController.popBackStack() })
         }
-
         composable("suppliers/create") {
             SupplierFormScreen(supplierViewModel, null) { navController.popBackStack() }
         }
-
         composable(
             "suppliers/edit/{supplierId}",
             arguments = listOf(navArgument("supplierId") { type = NavType.IntType })
@@ -356,9 +348,7 @@ fun AppNavigation(
             SupplierFormScreen(supplierViewModel, id) { navController.popBackStack() }
         }
 
-        // =========================
-        //        CAJAS
-        // =========================
+        // CAJAS
         composable("cash_register/manage") {
             CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() }
         }
@@ -366,9 +356,7 @@ fun AppNavigation(
             CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() }
         }
 
-        // =========================
-        //        VENTAS
-        // =========================
+        // VENTAS
         composable("sales") {
             SalesScreen(
                 viewModel = salesViewModel,

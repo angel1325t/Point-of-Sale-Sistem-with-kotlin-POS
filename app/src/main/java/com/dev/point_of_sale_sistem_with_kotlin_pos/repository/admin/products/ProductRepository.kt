@@ -159,28 +159,6 @@ class ProductRepository(
         }
     }
 
-    // ====================== GET BY BARCODE ======================
-    suspend fun getProductByBarcode(barcode: String): Result<ProductDTO?> {
-        return try {
-            val branchId = sessionPreferences.getBranchId()
-                ?: return Result.failure(Exception("Branch ID no encontrado en sesión"))
-
-            val products = supabase.from("products")
-                .select {
-                    filter {
-                        eq("barcode", barcode)
-                        eq("branch_id", branchId)
-                    }
-                }
-                .decodeList<ProductDTO>()
-
-            Result.success(products.firstOrNull())
-
-        } catch (e: Exception) {
-            Log.e(TAG, "getProductByBarcode error", e)
-            Result.failure(e)
-        }
-    }
 
     // ====================== DELETE ======================
     suspend fun deleteProduct(productId: Int): Result<Unit> {

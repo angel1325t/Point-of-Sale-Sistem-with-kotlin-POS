@@ -11,6 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.UUID
 import android.util.Log
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.UserFullInfoDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import io.github.jan.supabase.postgrest.from
 
@@ -56,6 +57,21 @@ class AuthRepository(private val supabase: SupabaseClient) {
         Log.d("UserCheck", "User active = ${user.active}")
         return !(user.active ?: true)
     }
+
+    suspend fun getUserByAuthId(authId: UUID): UserFullInfoDTO {
+        return supabase
+            .from("user_full_info")
+            .select {
+                filter {
+                    eq("auth_id", authId.toString())
+                }
+            }
+            .decodeSingle<UserFullInfoDTO>()
+    }
+
+
+
+
 
 
 

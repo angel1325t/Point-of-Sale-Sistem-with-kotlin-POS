@@ -6,29 +6,24 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 
-data class SaleState(
-    val isLoading: Boolean = false,
-    val sale: Sale? = null,
-    val searchResults: List<ProductDTO> = emptyList(),
-    val productsCache: Map<Int, ProductDTO> = emptyMap(),
-    val error: SaleError? = null,
-    val lastScannedBarcode: String? = null
-)
-
 class SalesViewModel(
-    private val repository: SalesProductRepository
+    private val salesRepository: SalesRepository,           // ← Manejo de ventas completas
+    private val salesProductRepository: SalesProductRepository, // ← Búsqueda de productos
+    private val paymentProofRepository: PaymentProofRepository  // ← Evidencias de pago
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SaleState())
@@ -49,7 +44,11 @@ class SalesViewModel(
     }
 
     private fun setError(error: SaleError) {
-        _state.value = _state.value.copy(isLoading = false, error = error)
+        _state.value = _state.value.copy(
+            isLoading = false,
+            error = error,
+            paymentFlowState = PaymentFlowState.Error(error.toString())
+        )
     }
 
     private fun mapExceptionToSaleError(throwable: Throwable): SaleError {
@@ -70,15 +69,19 @@ class SalesViewModel(
             is SalesIntent.RemoveSaleDetail -> removeProductFromSale(intent.productId)
             is SalesIntent.UpdateSaleDetail -> updateProductInSale(intent)
             is SalesIntent.CreateSale -> createSale(intent.paymentMethod, intent.globalDiscount, intent.userId)
-            SalesIntent.CompleteSale -> completeSale()
-            SalesIntent.CancelSale -> cancelSale()
+            is SalesIntent.UpdatePaymentMethod -> updatePaymentMethod(intent.method)
+            SalesIntent.CompleteSale -> initiateSaleCompletion()
+            is SalesIntent.ConfirmCashPayment -> processCashPayment(intent.amountReceived)
+            is SalesIntent.CaptureTransferEvidence -> captureTransferEvidence()
+            is SalesIntent.SubmitTransferEvidence -> submitTransferEvidence(intent.imageFile, intent.referenceNumber)
+            SalesIntent.ClearSale -> clearSale()
             SalesIntent.ClearError -> clearError()
         }
     }
 
-    // =====================================================
-    // 🔍 SEARCH PRODUCTS
-    // =====================================================
+    // ═══════════════════════════════════════════════════
+    // 🔍 BÚSQUEDA DE PRODUCTOS
+    // ═══════════════════════════════════════════════════
     private fun searchByName(query: String) {
         if (query.isBlank()) {
             _state.value = _state.value.copy(searchResults = emptyList())
@@ -88,8 +91,8 @@ class SalesViewModel(
         Log.d(TAG, "searchByName: Searching '$query'")
         _state.value = _state.value.copy(isLoading = true)
 
-        viewModelScope.launch { 
-            repository.searchProductsByName(query)
+        viewModelScope.launch {
+            salesProductRepository.searchProductsByName(query)
                 .onSuccess { products ->
                     Log.d(TAG, "searchByName: Found ${products.size} products")
                     val validProducts = products.filterNotNull()
@@ -116,7 +119,7 @@ class SalesViewModel(
         _state.value = _state.value.copy(isLoading = true, lastScannedBarcode = barcode)
 
         viewModelScope.launch {
-            repository.getProductByBarcode(barcode)
+            salesProductRepository.getProductByBarcode(barcode)
                 .onSuccess { product ->
                     if (product != null) {
                         Log.d(TAG, "searchByBarcode: Found product: ${product.name}")
@@ -142,9 +145,9 @@ class SalesViewModel(
         _state.value = _state.value.copy(searchResults = emptyList(), lastScannedBarcode = null)
     }
 
-    // =====================================================
-    // 🛍️ SALE ITEMS MANAGEMENT
-    // =====================================================
+    // ═══════════════════════════════════════════════════
+    // 🛍️ GESTIÓN DE PRODUCTOS EN LA VENTA
+    // ═══════════════════════════════════════════════════
     @RequiresApi(Build.VERSION_CODES.O)
     private fun addProductToSale(intent: SalesIntent.AddSaleDetail) {
         if (intent.quantity <= 0) {
@@ -157,7 +160,6 @@ class SalesViewModel(
             return
         }
 
-        // Cache the product info for display
         val productFromSearch = _state.value.searchResults.find { it.productId == intent.productId }
         productFromSearch?.let { product ->
             val updatedCache = _state.value.productsCache.toMutableMap()
@@ -238,9 +240,182 @@ class SalesViewModel(
         )
     }
 
-    // =====================================================
-    // 💵 SALE LIFECYCLE
-    // =====================================================
+    // ═══════════════════════════════════════════════════
+    // 💳 GESTIÓN DE MÉTODOS DE PAGO
+    // ═══════════════════════════════════════════════════
+    private fun updatePaymentMethod(method: String) {
+        val currentSale = _state.value.sale ?: return
+        _state.value = _state.value.copy(
+            sale = currentSale.copy(paymentMethod = method)
+        )
+        Log.d(TAG, "Payment method updated to: $method")
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 🚀 INICIO DEL PROCESO DE PAGO
+    // ═══════════════════════════════════════════════════
+    private fun initiateSaleCompletion() {
+        val sale = _state.value.sale
+
+        if (sale == null || saleItems.isEmpty()) {
+            setError(SaleError.ValidationFailed)
+            return
+        }
+
+        Log.d(TAG, "Initiating sale completion with method: ${sale.paymentMethod}")
+
+        when (sale.paymentMethod) {
+            "cash" -> {
+                _state.value = _state.value.copy(
+                    paymentFlowState = PaymentFlowState.CashPayment(sale.total)
+                )
+            }
+            "card" -> {
+                finalizeSale()
+            }
+            "transfer" -> {
+                _state.value = _state.value.copy(
+                    paymentFlowState = PaymentFlowState.TransferPayment(sale.total)
+                )
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 💵 PAGO EN EFECTIVO
+    // ═══════════════════════════════════════════════════
+    private fun processCashPayment(amountReceived: Double) {
+        val sale = _state.value.sale ?: return
+
+        if (amountReceived < sale.total) {
+            setError(SaleError.ValidationFailed)
+            return
+        }
+
+        val change = amountReceived - sale.total
+        Log.d(TAG, "Cash payment: Received $amountReceived, Change: $change")
+
+        finalizeSale()
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 🏦 PAGO POR TRANSFERENCIA CON EVIDENCIA
+    // ═══════════════════════════════════════════════════
+    private fun captureTransferEvidence() {
+        val sale = _state.value.sale ?: return
+
+        _state.value = _state.value.copy(
+            paymentFlowState = PaymentFlowState.CapturingEvidence(
+                saleId = sale.saleId.toString(),
+                total = sale.total
+            )
+        )
+    }
+
+    private fun submitTransferEvidence(imageFile: File, referenceNumber: String) {
+        val sale = _state.value.sale ?: return
+
+        if (referenceNumber.isBlank()) {
+            setError(SaleError.ValidationFailed)
+            return
+        }
+
+        _state.value = _state.value.copy(
+            isLoading = true,
+            paymentFlowState = PaymentFlowState.ProcessingPayment("transfer")
+        )
+
+        viewModelScope.launch {
+            // 1. Validar referencia
+            paymentProofRepository.validateReferenceNumber(referenceNumber)
+                .onSuccess { isValid ->
+                    if (!isValid) {
+                        setError(SaleError.Server("Número de referencia duplicado"))
+                        return@launch
+                    }
+
+                    // 2. PRIMERO crear la venta en la BD
+                    val saleToCreate = sale.copy(status = "completed")
+                    salesRepository.createSale(saleToCreate)
+                        .onSuccess { saleId ->
+                            Log.d(TAG, "Sale created in database: $saleId")
+
+                            // 3. LUEGO subir la evidencia
+                            paymentProofRepository.uploadVoucherImage(
+                                saleId = saleId,
+                                imageFile = imageFile
+                            ).onSuccess { voucherPath ->
+
+                                // 4. Crear registro de evidencia
+                                paymentProofRepository.createPaymentProof(
+                                    saleId = saleId,
+                                    paymentMethod = "transfer",
+                                    voucherPath = voucherPath,
+                                    referenceNumber = referenceNumber,
+                                    amount = sale.total,
+                                    capturedBy = sale.userId.toString()
+                                ).onSuccess { proof ->
+                                    Log.d(TAG, "Payment proof created: ${proof.proofId}")
+
+                                    _state.value = _state.value.copy(
+                                        sale = saleToCreate,
+                                        isLoading = false,
+                                        paymentFlowState = PaymentFlowState.Success(saleId)
+                                    )
+
+                                }.onFailure { e ->
+                                    Log.e(TAG, "Error creating proof", e)
+                                    setError(SaleError.Server("Error al registrar evidencia"))
+                                }
+
+                            }.onFailure { e ->
+                                Log.e(TAG, "Error uploading voucher", e)
+                                setError(SaleError.Server("Error al subir comprobante"))
+                            }
+
+                        }.onFailure { e ->
+                            Log.e(TAG, "Error creating sale", e)
+                            setError(SaleError.Server("Error al crear la venta"))
+                        }
+
+                }.onFailure { e ->
+                    Log.e(TAG, "Error validating reference", e)
+                    setError(SaleError.Server("Error al validar referencia"))
+                }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // ✅ FINALIZACIÓN DE VENTA
+    // ═══════════════════════════════════════════════════
+    private fun finalizeSale() {
+        val sale = _state.value.sale ?: return
+
+        _state.value = _state.value.copy(isLoading = true)
+
+        viewModelScope.launch {
+            val saleToCreate = sale.copy(status = "completed")
+
+            salesRepository.createSale(saleToCreate)
+                .onSuccess { saleId ->
+                    Log.d(TAG, "Sale created successfully: $saleId")
+
+                    _state.value = _state.value.copy(
+                        sale = saleToCreate,
+                        isLoading = false,
+                        paymentFlowState = PaymentFlowState.Success(saleId)
+                    )
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Error finalizing sale", e)
+                    setError(SaleError.Server("Error al crear la venta"))
+                }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 🔄 CICLO DE VIDA
+    // ═══════════════════════════════════════════════════
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createSale(paymentMethod: String, globalDiscount: Double, userId: UUID) {
         val nowUtc = currentUtcDateTime()
@@ -259,30 +434,12 @@ class SalesViewModel(
                 saleDetails = emptyList()
             ),
             searchResults = emptyList(),
-            productsCache = emptyMap()
+            productsCache = emptyMap(),
+            paymentFlowState = PaymentFlowState.Idle
         )
     }
 
-    private fun completeSale() {
-        val sale = _state.value.sale
-
-        if (sale == null || saleItems.isEmpty()) {
-            setError(SaleError.ValidationFailed)
-            return
-        }
-
-        _state.value = _state.value.copy(isLoading = true)
-
-        viewModelScope.launch {
-            // TODO: repository.createSale(sale)
-            _state.value = _state.value.copy(
-                sale = sale.copy(status = "completed"),
-                isLoading = false
-            )
-        }
-    }
-
-    private fun cancelSale() {
+    private fun clearSale() {
         saleItems.clear()
         _state.value = SaleState()
     }
@@ -291,7 +448,6 @@ class SalesViewModel(
         _state.value = _state.value.copy(error = null)
     }
 
-    // Helper to get product name from cache
     fun getProductName(productId: Int): String {
         return _state.value.productsCache[productId]?.name ?: "Producto $productId"
     }
