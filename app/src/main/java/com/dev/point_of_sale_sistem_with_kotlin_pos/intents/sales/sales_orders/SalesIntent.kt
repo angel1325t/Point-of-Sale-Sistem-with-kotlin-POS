@@ -1,27 +1,17 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders
 
+import androidx.activity.ComponentActivity
 import java.io.File
 import java.util.UUID
 
 sealed class SalesIntent {
-    // ═══════════════════════════════════════════════════
-    // 🔍 BÚSQUEDA DE PRODUCTOS
-    // ═══════════════════════════════════════════════════
+    // Búsqueda
     data class SearchProductByName(val query: String) : SalesIntent()
     data class SearchProductByBarcode(val barcode: String) : SalesIntent()
     object ClearSearchResults : SalesIntent()
 
-    // ═══════════════════════════════════════════════════
-    // 🛍️ GESTIÓN DE PRODUCTOS EN VENTA
-    // ═══════════════════════════════════════════════════
+    // Gestión de productos
     data class AddSaleDetail(
-        val productId: Int,
-        val quantity: Int,
-        val unitPrice: Double,
-        val discount: Double
-    ) : SalesIntent()
-
-    data class UpdateSaleDetail(
         val productId: Int,
         val quantity: Int,
         val unitPrice: Double,
@@ -30,9 +20,14 @@ sealed class SalesIntent {
 
     data class RemoveSaleDetail(val productId: Int) : SalesIntent()
 
-    // ═══════════════════════════════════════════════════
-    // 💳 GESTIÓN DE VENTA Y MÉTODOS DE PAGO
-    // ═══════════════════════════════════════════════════
+    data class UpdateSaleDetail(
+        val productId: Int,
+        val quantity: Int,
+        val unitPrice: Double,
+        val discount: Double
+    ) : SalesIntent()
+
+    // Venta
     data class CreateSale(
         val paymentMethod: String,
         val globalDiscount: Double,
@@ -43,14 +38,14 @@ sealed class SalesIntent {
 
     object CompleteSale : SalesIntent()
 
-    // ═══════════════════════════════════════════════════
-    // 💵 PAGO EN EFECTIVO
-    // ═══════════════════════════════════════════════════
+    // Pagos
     data class ConfirmCashPayment(val amountReceived: Double) : SalesIntent()
 
-    // ═══════════════════════════════════════════════════
-    // 🏦 PAGO POR TRANSFERENCIA CON EVIDENCIA
-    // ═══════════════════════════════════════════════════
+    object InitiateCardPayment : SalesIntent()
+
+
+    data class ProcessStripeResult(val paymentIntentId: String) : SalesIntent()
+
     object CaptureTransferEvidence : SalesIntent()
 
     data class SubmitTransferEvidence(
@@ -58,9 +53,7 @@ sealed class SalesIntent {
         val referenceNumber: String
     ) : SalesIntent()
 
-    // ═══════════════════════════════════════════════════
-    // 🔄 CONTROL DE FLUJO
-    // ═══════════════════════════════════════════════════
+    // Control
     object ClearSale : SalesIntent()
     object ClearError : SalesIntent()
 }

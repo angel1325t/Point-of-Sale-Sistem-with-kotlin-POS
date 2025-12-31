@@ -2,6 +2,7 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_order
 
 import android.os.Build
 import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +11,9 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.StripeCanceledException
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.StripePaymentRepository
+import com.stripe.android.paymentsheet.PaymentSheetResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,9 +25,10 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 class SalesViewModel(
-    private val salesRepository: SalesRepository,           // ← Manejo de ventas completas
-    private val salesProductRepository: SalesProductRepository, // ← Búsqueda de productos
-    private val paymentProofRepository: PaymentProofRepository  // ← Evidencias de pago
+    private val salesRepository: SalesRepository,
+    private val salesProductRepository: SalesProductRepository,
+    private val paymentProofRepository: PaymentProofRepository,
+    private val stripePaymentRepository: StripePaymentRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SaleState())
@@ -72,7 +77,9 @@ class SalesViewModel(
             is SalesIntent.UpdatePaymentMethod -> updatePaymentMethod(intent.method)
             SalesIntent.CompleteSale -> initiateSaleCompletion()
             is SalesIntent.ConfirmCashPayment -> processCashPayment(intent.amountReceived)
-            is SalesIntent.CaptureTransferEvidence -> captureTransferEvidence()
+            SalesIntent.InitiateCardPayment -> initiateCardPayment()
+            is SalesIntent.ProcessStripeResult -> processStripeResult(intent.paymentIntentId)
+            SalesIntent.CaptureTransferEvidence -> captureTransferEvidence()
             is SalesIntent.SubmitTransferEvidence -> submitTransferEvidence(intent.imageFile, intent.referenceNumber)
             SalesIntent.ClearSale -> clearSale()
             SalesIntent.ClearError -> clearError()
@@ -271,7 +278,7 @@ class SalesViewModel(
                 )
             }
             "card" -> {
-                finalizeSale()
+                initiateCardPayment()
             }
             "transfer" -> {
                 _state.value = _state.value.copy(
@@ -296,6 +303,140 @@ class SalesViewModel(
         Log.d(TAG, "Cash payment: Received $amountReceived, Change: $change")
 
         finalizeSale()
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 💳 PAGO CON TARJETA (STRIPE)
+    // ═══════════════════════════════════════════════════
+    private fun initiateCardPayment() {
+        val sale = _state.value.sale ?: return
+
+        _state.value = _state.value.copy(
+            isLoading = true,
+            paymentFlowState = PaymentFlowState.CardPayment(
+                total = sale.total,
+                paymentIntentId = null,
+                clientSecret = null
+            )
+        )
+
+        viewModelScope.launch {
+            stripePaymentRepository.createPaymentIntent(
+                amount = sale.total,
+                currency = "USD",
+                saleId = sale.saleId.toString()
+            ).onSuccess { intent ->
+                Log.d(TAG, "Stripe Payment Intent created: ${intent.paymentIntentId}")
+
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    paymentFlowState = PaymentFlowState.CardPayment(
+                        total = sale.total,
+                        paymentIntentId = intent.paymentIntentId,
+                        clientSecret = intent.clientSecret
+                    )
+                )
+
+            }.onFailure { e ->
+                Log.e(TAG, "Error creating Stripe Payment Intent", e)
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    paymentFlowState = PaymentFlowState.Error("Error al iniciar pago: ${e.message}")
+                )
+            }
+        }
+    }
+
+    fun onStripePaymentComplete(result: com.stripe.android.paymentsheet.PaymentSheetResult) {
+        when (result) {
+            is com.stripe.android.paymentsheet.PaymentSheetResult.Completed -> {
+                val paymentIntentId = _state.value.paymentFlowState.let {
+                    (it as? PaymentFlowState.CardPayment)?.paymentIntentId
+                } ?: return
+                processStripeResult(paymentIntentId)
+            }
+            is com.stripe.android.paymentsheet.PaymentSheetResult.Canceled -> {
+                Log.d(TAG, "Stripe payment cancelled by user")
+                val sale = _state.value.sale ?: return
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    paymentFlowState = PaymentFlowState.CardPayment(
+                        total = sale.total,
+                        errorMessage = "Pago cancelado"
+                    )
+                )
+            }
+            is com.stripe.android.paymentsheet.PaymentSheetResult.Failed -> {
+                Log.e(TAG, "Stripe payment failed: ${result.error.message}")
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    paymentFlowState = PaymentFlowState.Error("Error en el pago: ${result.error.localizedMessage}")
+                )
+            }
+        }
+    }
+
+    private fun processStripeResult(paymentIntentId: String) {
+        val sale = _state.value.sale ?: return
+
+        _state.value = _state.value.copy(
+            isLoading = true,
+            paymentFlowState = PaymentFlowState.ProcessingPayment("card")
+        )
+
+        viewModelScope.launch {
+            stripePaymentRepository.confirmPayment(paymentIntentId)
+                .onSuccess { confirmation ->
+                    if (confirmation.status == "succeeded") {
+                        Log.d(TAG, "Stripe payment confirmed: ${confirmation.paymentIntentId}")
+
+                        val saleToCreate = sale.copy(status = "completed")
+                        salesRepository.createSale(saleToCreate)
+                            .onSuccess { saleId ->
+                                Log.d(TAG, "Sale created in database: $saleId")
+
+                                paymentProofRepository.createPaymentProof(
+                                    saleId = saleId,
+                                    paymentMethod = "card",
+                                    voucherPath = "stripe_${confirmation.chargeId ?: confirmation.paymentIntentId}",
+                                    referenceNumber = paymentIntentId,
+                                    amount = sale.total,
+                                    capturedBy = sale.userId.toString()
+                                ).onSuccess {
+                                    Log.d(TAG, "Stripe payment proof created")
+                                }.onFailure { e ->
+                                    Log.w(TAG, "Could not create payment proof (non-critical)", e)
+                                }
+
+                                _state.value = _state.value.copy(
+                                    sale = saleToCreate,
+                                    isLoading = false,
+                                    paymentFlowState = PaymentFlowState.Success(saleId)
+                                )
+
+                            }.onFailure { e ->
+                                Log.e(TAG, "Error creating sale after Stripe payment", e)
+                                _state.value = _state.value.copy(
+                                    isLoading = false,
+                                    paymentFlowState = PaymentFlowState.Error("Pago procesado pero error al guardar venta")
+                                )
+                            }
+
+                    } else {
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            paymentFlowState = PaymentFlowState.Error("Pago no completado: ${confirmation.status}")
+                        )
+                    }
+
+                }.onFailure { e ->
+                    Log.e(TAG, "Error confirming Stripe payment", e)
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        paymentFlowState = PaymentFlowState.Error("Error al confirmar pago: ${e.message}")
+                    )
+                }
+        }
     }
 
     // ═══════════════════════════════════════════════════
@@ -326,7 +467,6 @@ class SalesViewModel(
         )
 
         viewModelScope.launch {
-            // 1. Validar referencia
             paymentProofRepository.validateReferenceNumber(referenceNumber)
                 .onSuccess { isValid ->
                     if (!isValid) {
@@ -334,19 +474,16 @@ class SalesViewModel(
                         return@launch
                     }
 
-                    // 2. PRIMERO crear la venta en la BD
                     val saleToCreate = sale.copy(status = "completed")
                     salesRepository.createSale(saleToCreate)
                         .onSuccess { saleId ->
                             Log.d(TAG, "Sale created in database: $saleId")
 
-                            // 3. LUEGO subir la evidencia
                             paymentProofRepository.uploadVoucherImage(
                                 saleId = saleId,
                                 imageFile = imageFile
                             ).onSuccess { voucherPath ->
 
-                                // 4. Crear registro de evidencia
                                 paymentProofRepository.createPaymentProof(
                                     saleId = saleId,
                                     paymentMethod = "transfer",

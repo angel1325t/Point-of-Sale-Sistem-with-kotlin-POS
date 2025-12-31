@@ -14,10 +14,12 @@ val localProperties = rootProject.file("local.properties").takeIf { it.exists() 
 
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: "DEFAULT_URL"
 val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: "DEFAULT_KEY"
+val stripePublishableKey = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") ?: "DEFAULT_KEY"
 
 android {
     namespace = "com.dev.point_of_sale_sistem_with_kotlin_pos"
     compileSdk = 36
+
     defaultConfig {
         applicationId = "com.dev.point_of_sale_sistem_with_kotlin_pos"
         minSdk = 24
@@ -25,8 +27,13 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 🔹 Supabase
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+
+        // 🔹 Stripe
+        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
     buildTypes {
@@ -59,6 +66,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
     // CameraX
     val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
@@ -68,7 +76,7 @@ dependencies {
     // ML Kit Barcode Scanning
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
-    // Accompanist Permissions (para manejar permisos de cámara)
+    // Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // Compose
@@ -79,6 +87,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.ui.text)
+
     // ZXing para generar códigos de barras
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.google.zxing:core:3.5.3")
@@ -90,7 +99,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
     implementation("androidx.biometric:biometric:1.1.0")
 
-
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
@@ -99,20 +107,33 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // SUPABASE - BOM + MÓDULOS
+    // ═══════════════════════════════════════════════════
+    // STRIPE SDK
+    // ═══════════════════════════════════════════════════
+    implementation("com.stripe:stripe-android:20.49.0")
+
+    // ═══════════════════════════════════════════════════
+    // SUPABASE - VERSIONES CORRECTAS
+    // ═══════════════════════════════════════════════════
     implementation(platform("io.github.jan-tennert.supabase:bom:3.2.4"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:functions-kt")
 
-// Ktor
+    // ═══════════════════════════════════════════════════
+    // KTOR (Necesario para Supabase)
+    // ═══════════════════════════════════════════════════
     implementation("io.ktor:ktor-client-core:3.3.1")
     implementation("io.ktor:ktor-client-android:3.3.1")
+    implementation("io.ktor:ktor-client-content-negotiation:3.3.1")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.1")
 
-// Serialization
+    // ═══════════════════════════════════════════════════
+    // SERIALIZATION
+    // ═══════════════════════════════════════════════════
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
-    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

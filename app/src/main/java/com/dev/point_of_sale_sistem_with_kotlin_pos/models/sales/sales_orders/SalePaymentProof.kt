@@ -32,20 +32,7 @@ data class SalePaymentProof(
     val capturedAt: String
 )
 
-// ═══════════════════════════════════════════════════
-// ESTADOS PARA LA UI
-// ═══════════════════════════════════════════════════
 
-sealed class PaymentFlowState {
-    object Idle : PaymentFlowState()
-    object SelectingMethod : PaymentFlowState()
-    data class CashPayment(val total: Double) : PaymentFlowState()
-    data class TransferPayment(val total: Double) : PaymentFlowState()
-    data class CapturingEvidence(val saleId: String, val total: Double) : PaymentFlowState()
-    data class ProcessingPayment(val method: String) : PaymentFlowState()
-    data class Success(val saleId: String) : PaymentFlowState()
-    data class Error(val message: String) : PaymentFlowState()
-}
 
 data class TransferEvidenceData(
     val imageFile: java.io.File?,

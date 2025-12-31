@@ -14,17 +14,18 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // 🔹 Supabase
         try {
             supabase = createSupabaseClient(applicationContext)
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
+        // 🔹 Session Preferences
         try {
             sessionPreferences = SessionPreferences(applicationContext)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-
 }

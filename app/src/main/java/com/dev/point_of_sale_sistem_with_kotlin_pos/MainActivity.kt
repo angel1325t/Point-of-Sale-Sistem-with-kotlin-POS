@@ -1,7 +1,9 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -60,6 +62,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_regist
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.StripePaymentRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 
 // ViewModels
@@ -72,12 +75,14 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders
 import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserver
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductViewModel
 
+
+
 class MainActivity : FragmentActivity() {
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 🔒 BLOQUEAR SCREENSHOTS (SEGURIDAD)
         window.setFlags(
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE
@@ -117,7 +122,16 @@ class MainActivity : FragmentActivity() {
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val salesProductRepository = remember { SalesProductRepository(supabase, sessionPreferences) }
                     val salesRepository = remember { SalesRepository(supabase, salesProductRepository) }
-                    val paymentProofRepository = remember { PaymentProofRepository(supabase) } // ← NUEVO
+                    val paymentProofRepository = remember { PaymentProofRepository(supabase) }
+
+                    // Stripe Repository
+                    val stripePaymentRepository = remember {
+                        StripePaymentRepository(
+                            context = applicationContext,
+                            publishableKey = BuildConfig.STRIPE_PUBLISHABLE_KEY,
+                            supabase = supabase
+                        )
+                    }
 
                     // VIEWMODELS
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
@@ -127,8 +141,14 @@ class MainActivity : FragmentActivity() {
                     val productsViewModel = remember { ProductViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
+
                     val salesViewModel = remember {
-                        SalesViewModel(salesRepository, salesProductRepository, paymentProofRepository) // ← ACTUALIZADO
+                        SalesViewModel(
+                            salesRepository,
+                            salesProductRepository,
+                            paymentProofRepository,
+                            stripePaymentRepository
+                        )
                     }
 
                     AppNavigation(

@@ -1,6 +1,10 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders
 
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalContext
 import android.os.Build
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -46,10 +50,14 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_order
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.CashPaymentDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.PaymentMethodSelector
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.ReferenceNumberDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.StripePaymentDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.TransferPaymentDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.utils.toUserMessage
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
+import com.stripe.android.paymentsheet.PaymentSheet
+import com.stripe.android.paymentsheet.PaymentSheetContract
+import com.stripe.android.paymentsheet.rememberPaymentSheet
 import kotlinx.coroutines.delay
 import java.util.UUID
 
@@ -63,12 +71,19 @@ fun SalesScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val authState by authViewModel.state.collectAsState()
+    val context = LocalContext.current
 
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
     val userId = authState.userId
+
+    // 🔥 REGISTRAR PAYMENT SHEET LAUNCHER AQUÍ
+    val paymentSheet = rememberPaymentSheet { paymentResult ->
+        viewModel.onStripePaymentComplete(paymentResult)
+    }
+
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearchFocused by remember { mutableStateOf(false) }
@@ -108,7 +123,6 @@ fun SalesScreen(
         }
     }
 
-
     /* ---------------- PAYMENT FLOW DIALOGS ---------------- */
     when (val flow = state.paymentFlowState) {
         is PaymentFlowState.CashPayment -> {
@@ -117,6 +131,42 @@ fun SalesScreen(
                 onDismiss = { viewModel.handleIntent(SalesIntent.ClearError) },
                 onConfirm = {
                     viewModel.handleIntent(SalesIntent.ConfirmCashPayment(it))
+                }
+            )
+        }
+
+        is PaymentFlowState.CardPayment -> {
+            // 🔥 LANZAR STRIPE PAYMENT SHEET CUANDO TENGAMOS EL CLIENT SECRET
+            LaunchedEffect(flow.clientSecret, flow.paymentIntentId) {
+                if (flow.clientSecret != null && flow.paymentIntentId != null) {
+                    try {
+                        val configuration = PaymentSheet.Configuration(
+                            merchantDisplayName = "Mi POS",
+                            allowsDelayedPaymentMethods = false
+                        )
+
+                        paymentSheet.presentWithPaymentIntent(
+                            paymentIntentClientSecret = flow.clientSecret,
+                            configuration = PaymentSheet.Configuration(
+                                merchantDisplayName = "Mi POS",
+                                allowsDelayedPaymentMethods = false
+                            )
+                        )
+                    } catch (e: Exception) {
+                        Log.e("SalesScreen", "Error launching payment sheet", e)
+                    }
+                }
+            }
+
+            StripePaymentDialog(
+                total = flow.total,
+                isProcessing = flow.clientSecret != null,
+                errorMessage = flow.errorMessage,
+                onDismiss = {
+                    viewModel.handleIntent(SalesIntent.ClearError)
+                },
+                onRetry = {
+                    viewModel.handleIntent(SalesIntent.InitiateCardPayment)
                 }
             )
         }
@@ -135,7 +185,7 @@ fun SalesScreen(
             LaunchedEffect(Unit) {
                 snackbarHostState.showSnackbar("Venta completada")
                 delay(800)
-                viewModel.handleIntent(SalesIntent.ClearSale) // Limpiar la venta
+                viewModel.handleIntent(SalesIntent.ClearSale)
                 onNavigateBack()
             }
         }
@@ -307,7 +357,7 @@ fun SalesScreen(
         }
     }
 
-    /* ---------------- CAMERA OVERLAY (CLAVE) ---------------- */
+    /* ---------------- CAMERA OVERLAY ---------------- */
     if (state.paymentFlowState is PaymentFlowState.CapturingEvidence) {
         val flow = state.paymentFlowState as PaymentFlowState.CapturingEvidence
 
