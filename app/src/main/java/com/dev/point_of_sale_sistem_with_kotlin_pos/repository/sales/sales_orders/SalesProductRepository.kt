@@ -1,6 +1,8 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders
 
 import android.util.Log
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductUpdateDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
@@ -69,6 +71,32 @@ class SalesProductRepository(
             Result.failure(e)
         }
     }
+    /**
+     * Obtiene el nombre de un producto por su ID
+     * Útil para generar facturas
+     */
+    suspend fun getProductName(productId: String): String? {
+        return try {
+            val product = supabase.from("products")
+                .select {
+                    filter {
+                        eq("product_id", productId)
+                    }
+                }
+                .decodeSingleOrNull<ProductNameDTO>()
+
+            product?.name
+        } catch (e: Exception) {
+            Log.e("SalesProductRepository", "Error getting product name", e)
+            null
+        }
+    }
+
+    // DTO simple para obtener solo el nombre
+    @Serializable
+    data class ProductNameDTO(
+        @SerialName("name") val name: String
+    )
 
     // ============================================
     // ⚠️ REDUCE PRODUCT STOCK (BRANCH SAFE)

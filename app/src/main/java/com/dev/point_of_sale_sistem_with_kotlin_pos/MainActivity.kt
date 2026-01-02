@@ -83,10 +83,6 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
 
         AppLifecycleObserver.start()
 
@@ -121,7 +117,7 @@ class MainActivity : FragmentActivity() {
                     val supplierRepository = remember { SupplierRepository(supabase) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val salesProductRepository = remember { SalesProductRepository(supabase, sessionPreferences) }
-                    val salesRepository = remember { SalesRepository(supabase, salesProductRepository) }
+                    val salesRepository = remember { SalesRepository(supabase, salesProductRepository, context = applicationContext) }
                     val paymentProofRepository = remember { PaymentProofRepository(supabase) }
 
                     // Stripe Repository
@@ -141,15 +137,16 @@ class MainActivity : FragmentActivity() {
                     val productsViewModel = remember { ProductViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
-
                     val salesViewModel = remember {
                         SalesViewModel(
                             salesRepository,
                             salesProductRepository,
                             paymentProofRepository,
-                            stripePaymentRepository
+                            stripePaymentRepository,
+                            this
                         )
                     }
+
 
                     AppNavigation(
                         navController = navController,

@@ -1,5 +1,7 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalContext
 import android.os.Build
@@ -33,6 +35,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +48,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.Produc
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.PaymentFlowState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetail
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.utils.InvoicePrinter
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.BarcodeScannerScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.CameraEvidenceScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.CashPaymentDialog
@@ -56,11 +60,11 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_order
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
 import com.stripe.android.paymentsheet.PaymentSheet
-import com.stripe.android.paymentsheet.PaymentSheetContract
 import com.stripe.android.paymentsheet.rememberPaymentSheet
 import kotlinx.coroutines.delay
 import java.util.UUID
 
+@SuppressLint("ContextCastToActivity")
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,17 +77,18 @@ fun SalesScreen(
     val authState by authViewModel.state.collectAsState()
     val context = LocalContext.current
 
+
+
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
     val userId = authState.userId
 
-    // 🔥 REGISTRAR PAYMENT SHEET LAUNCHER AQUÍ
+    // 🔥 REGISTRAR PAYMENT SHEET LAUNCHER
     val paymentSheet = rememberPaymentSheet { paymentResult ->
         viewModel.onStripePaymentComplete(paymentResult)
     }
-
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearchFocused by remember { mutableStateOf(false) }
@@ -124,6 +129,9 @@ fun SalesScreen(
     }
 
     /* ---------------- PAYMENT FLOW DIALOGS ---------------- */
+    val lastInvoiceFile by viewModel.lastInvoiceFile.collectAsStateWithLifecycle()
+    val activity = context as? Activity
+ 
     when (val flow = state.paymentFlowState) {
         is PaymentFlowState.CashPayment -> {
             CashPaymentDialog(
@@ -136,15 +144,10 @@ fun SalesScreen(
         }
 
         is PaymentFlowState.CardPayment -> {
-            // 🔥 LANZAR STRIPE PAYMENT SHEET CUANDO TENGAMOS EL CLIENT SECRET
+            // 🔥 LANZAR STRIPE PAYMENT SHEET
             LaunchedEffect(flow.clientSecret, flow.paymentIntentId) {
                 if (flow.clientSecret != null && flow.paymentIntentId != null) {
                     try {
-                        val configuration = PaymentSheet.Configuration(
-                            merchantDisplayName = "Mi POS",
-                            allowsDelayedPaymentMethods = false
-                        )
-
                         paymentSheet.presentWithPaymentIntent(
                             paymentIntentClientSecret = flow.clientSecret,
                             configuration = PaymentSheet.Configuration(
@@ -181,27 +184,50 @@ fun SalesScreen(
             )
         }
 
+        // 🔥 NUEVO: Diálogo de éxito con opción de reimprimir
         is PaymentFlowState.Success -> {
-            LaunchedEffect(Unit) {
-                snackbarHostState.showSnackbar("Venta completada")
-                delay(800)
-                viewModel.handleIntent(SalesIntent.ClearSale)
-                onNavigateBack()
-            }
+            SaleSuccessDialog(
+                onDismiss = {
+                    viewModel.handleIntent(SalesIntent.ClearSale)
+                    onNavigateBack()
+                },
+                onReprintInvoice = {
+                    val file = lastInvoiceFile
+                    if (file != null && activity != null) {
+                        InvoicePrinter(activity).printInvoice(
+                            pdfFile = file,
+                            jobName = "Factura #${file.name.takeLast(8)}"
+                        )
+                    }
+                }
+            )
         }
+
 
         else -> Unit
     }
 
+    LaunchedEffect(lastInvoiceFile) {
+        val file = lastInvoiceFile
+        if (file != null && activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            InvoicePrinter(activity).printInvoice(
+                pdfFile = file,
+                jobName = "Factura #${file.name.takeLast(8)}"
+            )
+        }
+    }
+
+
     /* ---------------- LOADING DIALOG ---------------- */
-    if (state.isLoading && state.paymentFlowState !is PaymentFlowState.Idle &&
+    if (state.isLoading &&
+        state.paymentFlowState !is PaymentFlowState.Idle &&
         state.paymentFlowState !is PaymentFlowState.CashPayment &&
         state.paymentFlowState !is PaymentFlowState.TransferPayment &&
         state.paymentFlowState !is PaymentFlowState.CapturingEvidence) {
         ProcessingPaymentDialog()
     }
 
-    /* ---------------- BARCODE ---------------- */
+    /* ---------------- BARCODE SCANNER ---------------- */
     if (showBarcodeScanner) {
         BarcodeScannerScreen(
             onBarcodeScanned = {
@@ -407,6 +433,75 @@ fun SalesScreen(
             }
         )
     }
+}
+
+// 🔥 NUEVO: Diálogo de venta exitosa con reimpresión
+@Composable
+fun SaleSuccessDialog(
+    onDismiss: () -> Unit,
+    onReprintInvoice: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = Color(0xFF4CAF50),
+                modifier = Modifier.size(48.dp)
+            )
+        },
+        title = {
+            Text(
+                "¡Venta Completada!",
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "La venta se ha registrado exitosamente.",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "La factura se ha enviado a imprimir.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Finalizar")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onReprintInvoice,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(
+                    Icons.Default.Print,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text("Reimprimir")
+            }
+        }
+    )
 }
 
 @Composable
