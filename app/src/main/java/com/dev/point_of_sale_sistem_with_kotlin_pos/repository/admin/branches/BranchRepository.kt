@@ -3,6 +3,9 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches
 import android.util.Log
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository.UserModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.BusinessInfo
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.CompanyResponse
+
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
@@ -66,6 +69,7 @@ class BranchRepository(private val supabase: SupabaseClient) {
             null
         }
     }
+
 
     // ---------------------------------------------------------------------
     // 🔍 GET BRANCHES
@@ -236,6 +240,43 @@ class BranchRepository(private val supabase: SupabaseClient) {
             Result.failure(e)
         }
     }
+
+    suspend fun getBusinessInfo(): BusinessInfo? {
+        return try {
+            val companyId = getCurrentUserCompanyId() ?: return null
+
+            // --- COMPANY ---
+            val company = supabase.from("companies")
+                .select {
+                    filter { eq("company_id", companyId.toString()) }
+                    limit(1)
+                }
+                .decodeSingleOrNull<CompanyResponse>()
+                ?: return null
+
+            // --- BRANCH (opcional) ---
+            val branch = supabase.from("branches")
+                .select {
+                    filter { eq("company_id", companyId.toString()) }
+                    filter { eq("active", true) }
+                    limit(1)
+                }
+                .decodeSingleOrNull<BranchResponse>()
+
+            BusinessInfo(
+                name = branch?.name ?: company.name,
+                address = branch?.address ?: company.address,
+                phone = branch?.phone ?: company.phone,
+                city = branch?.city,
+                email = company.email,
+                taxId = company.taxId
+            )
+        } catch (e: Exception) {
+            Log.e("BranchRepository", "Error getting BusinessInfo", e)
+            null
+        }
+    }
+
 
     // ---------------------------------------------------------------------
     // 🔄 TOGGLE ACTIVE STATUS

@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductUpdateDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.ProductNameDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
@@ -92,11 +93,6 @@ class SalesProductRepository(
         }
     }
 
-    // DTO simple para obtener solo el nombre
-    @Serializable
-    data class ProductNameDTO(
-        @SerialName("name") val name: String
-    )
 
     // ============================================
     // ⚠️ REDUCE PRODUCT STOCK (BRANCH SAFE)

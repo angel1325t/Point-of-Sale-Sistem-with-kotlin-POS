@@ -1,15 +1,10 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import androidx.activity.ComponentActivity
-import androidx.compose.ui.platform.LocalContext
 import android.os.Build
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,7 +13,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Inventory2
@@ -26,38 +20,37 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.AppliedCreditNote
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.PaymentFlowState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetail
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.utils.InvoicePrinter
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.credit_notes.AppliedCreditNotesCard
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.credit_notes.CreditNoteUsageScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.BarcodeScannerScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.CameraEvidenceScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.CashPaymentDialog
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.PaymentMethodSelector
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.ReferenceNumberDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.SaleSuccessDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.StripePaymentDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.TransferPaymentDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.utils.toUserMessage
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.credit_notes.CreditNoteViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.rememberPaymentSheet
@@ -69,15 +62,13 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalesScreen(
-    viewModel: SalesViewModel,
+    viewModel: SalesViewModel?,
     onNavigateBack: () -> Unit,
-    authViewModel: AuthSessionViewModel
+    authViewModel: AuthSessionViewModel,
+    creditNoteViewModel: CreditNoteViewModel // Pasar desde navegación
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val state = viewModel?.state?.collectAsStateWithLifecycle()
     val authState by authViewModel.state.collectAsState()
-    val context = LocalContext.current
-
-
 
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -87,7 +78,7 @@ fun SalesScreen(
 
     // 🔥 REGISTRAR PAYMENT SHEET LAUNCHER
     val paymentSheet = rememberPaymentSheet { paymentResult ->
-        viewModel.onStripePaymentComplete(paymentResult)
+        viewModel?.onStripePaymentComplete(paymentResult)
     }
 
     var searchQuery by remember { mutableStateOf("") }
@@ -97,10 +88,20 @@ fun SalesScreen(
     var showReferenceDialog by remember { mutableStateOf(false) }
     var pendingImageFile by remember { mutableStateOf<java.io.File?>(null) }
 
+    // 🎫 ESTADO LOCAL PARA NOTAS DE CRÉDITO (sin modificar SalesViewModel)
+    var showCreditNoteScanner by remember { mutableStateOf(false) }
+    var appliedCreditNotes by remember { mutableStateOf<List<AppliedCreditNote>>(emptyList()) }
+
+    // Cálculos derivados de créditos
+    val totalCreditApplied = appliedCreditNotes.sumOf { it.amountApplied }
+    val saleTotal = state?.value?.sale?.total ?: 0.0
+    val remainingToPay = maxOf(0.0, saleTotal - totalCreditApplied)
+    val isCoveredByCredit = remainingToPay <= 0.0
+
     /* ---------------- INIT SALE ---------------- */
-    LaunchedEffect(state.sale) {
-        if (state.sale == null) {
-            viewModel.handleIntent(
+    LaunchedEffect(state?.value?.sale) {
+        if (state?.value?.sale == null) {
+            viewModel?.handleIntent(
                 SalesIntent.CreateSale(
                     paymentMethod = "cash",
                     globalDiscount = 0.0,
@@ -114,28 +115,46 @@ fun SalesScreen(
     LaunchedEffect(searchQuery) {
         if (searchQuery.length >= 2) {
             delay(300)
-            viewModel.handleIntent(SalesIntent.SearchProductByName(searchQuery))
+            viewModel?.handleIntent(SalesIntent.SearchProductByName(searchQuery))
         } else if (searchQuery.isBlank()) {
-            viewModel.handleIntent(SalesIntent.ClearSearchResults)
+            viewModel?.handleIntent(SalesIntent.ClearSearchResults)
         }
     }
 
     /* ---------------- ERRORS ---------------- */
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
+    LaunchedEffect(state?.value?.error) {
+        state?.value?.error?.let { error ->
             snackbarHostState.showSnackbar(error.toUserMessage())
             viewModel.handleIntent(SalesIntent.ClearError)
         }
     }
 
-    /* ---------------- PAYMENT FLOW DIALOGS ---------------- */
-    val lastInvoiceFile by viewModel.lastInvoiceFile.collectAsStateWithLifecycle()
-    val activity = context as? Activity
- 
-    when (val flow = state.paymentFlowState) {
+    /* ---------------- CREDIT NOTE SCANNER ---------------- */
+    if (showCreditNoteScanner) {
+        CreditNoteUsageScreen(
+            viewModel = creditNoteViewModel,
+            saleTotal = remainingToPay, // Pasar el saldo restante
+            onCreditApplied = { creditNoteId, amountApplied ->
+                // Agregar crédito aplicado a la lista local
+                appliedCreditNotes = appliedCreditNotes + AppliedCreditNote(
+                    creditNoteId = creditNoteId,
+                    invoiceNumber = "", // Opcional: puedes guardarlo si lo necesitas
+                    amountApplied = amountApplied
+                )
+                showCreditNoteScanner = false
+            },
+            onNavigateBack = {
+                showCreditNoteScanner = false
+            }
+        )
+        return // Salir del composable para mostrar solo el scanner
+    }
+
+    /* ---------------- PAYMENT FLOWS ---------------- */
+    when (val flow = state?.value?.paymentFlowState) {
         is PaymentFlowState.CashPayment -> {
             CashPaymentDialog(
-                total = flow.total,
+                total = remainingToPay, // Usar saldo restante
                 onDismiss = { viewModel.handleIntent(SalesIntent.ClearError) },
                 onConfirm = {
                     viewModel.handleIntent(SalesIntent.ConfirmCashPayment(it))
@@ -144,7 +163,6 @@ fun SalesScreen(
         }
 
         is PaymentFlowState.CardPayment -> {
-            // 🔥 LANZAR STRIPE PAYMENT SHEET
             LaunchedEffect(flow.clientSecret, flow.paymentIntentId) {
                 if (flow.clientSecret != null && flow.paymentIntentId != null) {
                     try {
@@ -162,7 +180,7 @@ fun SalesScreen(
             }
 
             StripePaymentDialog(
-                total = flow.total,
+                total = remainingToPay, // Usar saldo restante
                 isProcessing = flow.clientSecret != null,
                 errorMessage = flow.errorMessage,
                 onDismiss = {
@@ -176,7 +194,7 @@ fun SalesScreen(
 
         is PaymentFlowState.TransferPayment -> {
             TransferPaymentDialog(
-                total = flow.total,
+                total = remainingToPay, // Usar saldo restante
                 onDismiss = { viewModel.handleIntent(SalesIntent.ClearError) },
                 onCaptureEvidence = {
                     viewModel.handleIntent(SalesIntent.CaptureTransferEvidence)
@@ -184,46 +202,25 @@ fun SalesScreen(
             )
         }
 
-        // 🔥 NUEVO: Diálogo de éxito con opción de reimprimir
         is PaymentFlowState.Success -> {
             SaleSuccessDialog(
-                onDismiss = {
+                onConfirm = {
                     viewModel.handleIntent(SalesIntent.ClearSale)
+                    appliedCreditNotes = emptyList() // Limpiar créditos
                     onNavigateBack()
-                },
-                onReprintInvoice = {
-                    val file = lastInvoiceFile
-                    if (file != null && activity != null) {
-                        InvoicePrinter(activity).printInvoice(
-                            pdfFile = file,
-                            jobName = "Factura #${file.name.takeLast(8)}"
-                        )
-                    }
                 }
             )
         }
 
-
         else -> Unit
     }
 
-    LaunchedEffect(lastInvoiceFile) {
-        val file = lastInvoiceFile
-        if (file != null && activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            InvoicePrinter(activity).printInvoice(
-                pdfFile = file,
-                jobName = "Factura #${file.name.takeLast(8)}"
-            )
-        }
-    }
-
-
     /* ---------------- LOADING DIALOG ---------------- */
-    if (state.isLoading &&
-        state.paymentFlowState !is PaymentFlowState.Idle &&
-        state.paymentFlowState !is PaymentFlowState.CashPayment &&
-        state.paymentFlowState !is PaymentFlowState.TransferPayment &&
-        state.paymentFlowState !is PaymentFlowState.CapturingEvidence) {
+    if (state?.value?.isLoading == true &&
+        state.value.paymentFlowState !is PaymentFlowState.Idle &&
+        state.value.paymentFlowState !is PaymentFlowState.CashPayment &&
+        state.value.paymentFlowState !is PaymentFlowState.TransferPayment &&
+        state.value.paymentFlowState !is PaymentFlowState.CapturingEvidence) {
         ProcessingPaymentDialog()
     }
 
@@ -231,7 +228,7 @@ fun SalesScreen(
     if (showBarcodeScanner) {
         BarcodeScannerScreen(
             onBarcodeScanned = {
-                viewModel.handleIntent(SalesIntent.SearchProductByBarcode(it))
+                viewModel?.handleIntent(SalesIntent.SearchProductByBarcode(it))
                 showBarcodeScanner = false
             },
             onNavigateBack = { showBarcodeScanner = false }
@@ -248,14 +245,49 @@ fun SalesScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, null)
                     }
+                },
+                actions = {
+                    // Botón para aplicar notas de crédito
+                    state?.value?.sale?.let { sale ->
+                        if (sale.saleDetails.isNotEmpty()) {
+                            IconButton(
+                                onClick = { showCreditNoteScanner = true }
+                            ) {
+                                if (appliedCreditNotes.isNotEmpty()) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge {
+                                                Text("${appliedCreditNotes.size}")
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Receipt,
+                                            contentDescription = "Aplicar nota de crédito"
+                                        )
+                                    }
+                                } else {
+                                    Icon(
+                                        Icons.Default.Receipt,
+                                        contentDescription = "Aplicar nota de crédito"
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             )
         },
         bottomBar = {
-            state.sale?.let { sale ->
+            state?.value?.sale?.let { sale ->
                 if (sale.saleDetails.isNotEmpty()) {
                     SalesBottomBar(
+                        subtotal = sale.subtotal,
+                        itbis = sale.itbis,
                         total = sale.total,
+                        creditApplied = totalCreditApplied,
+                        remainingToPay = remainingToPay,
+                        isCoveredByCredit = isCoveredByCredit,
                         itemCount = sale.saleDetails.sumOf { it.quantity },
                         selectedPaymentMethod = sale.paymentMethod,
                         onPaymentMethodSelected = {
@@ -283,6 +315,19 @@ fun SalesScreen(
                 }
         ) {
             Column(Modifier.padding(16.dp)) {
+                // Mostrar créditos aplicados
+                if (appliedCreditNotes.isNotEmpty()) {
+                    AppliedCreditNotesCard(
+                        appliedCredits = appliedCreditNotes,
+                        onRemoveCredit = { creditNote ->
+                            appliedCreditNotes = appliedCreditNotes.filter {
+                                it.creditNoteId != creditNote.creditNoteId
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+
                 // Search bar con Popup
                 Box {
                     OutlinedTextField(
@@ -303,7 +348,7 @@ fun SalesScreen(
                     )
 
                     // Popup con resultados de búsqueda
-                    if (isSearchFocused && state.searchResults.isNotEmpty() && searchQuery.isNotBlank()) {
+                    if (isSearchFocused && state?.value?.searchResults?.isNotEmpty() == true && searchQuery.isNotBlank()) {
                         Popup(
                             alignment = Alignment.TopStart,
                             properties = PopupProperties(focusable = false)
@@ -322,7 +367,7 @@ fun SalesScreen(
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 ) {
                                     items(
-                                        items = state.searchResults,
+                                        items = state.value.searchResults,
                                         key = { it.productId }
                                     ) { product ->
                                         SearchResultItem(
@@ -350,7 +395,7 @@ fun SalesScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                state.sale?.let { sale ->
+                state?.value?.sale?.let { sale ->
                     if (sale.saleDetails.isEmpty()) {
                         EmptySaleState(Modifier.fillMaxSize())
                     } else {
@@ -358,7 +403,7 @@ fun SalesScreen(
                             items(sale.saleDetails) { detail ->
                                 CompactSaleItemRow(
                                     saleDetail = detail,
-                                    productName = state.productsCache[detail.productId]?.name ?: "",
+                                    productName = state.value.productsCache[detail.productId]?.name ?: "",
                                     onQuantityChange = {
                                         viewModel.handleIntent(
                                             SalesIntent.UpdateSaleDetail(
@@ -384,8 +429,8 @@ fun SalesScreen(
     }
 
     /* ---------------- CAMERA OVERLAY ---------------- */
-    if (state.paymentFlowState is PaymentFlowState.CapturingEvidence) {
-        val flow = state.paymentFlowState as PaymentFlowState.CapturingEvidence
+    if (state?.value?.paymentFlowState is PaymentFlowState.CapturingEvidence) {
+        val flow = state.value.paymentFlowState as PaymentFlowState.CapturingEvidence
 
         CameraEvidenceScreen(
             saleId = flow.saleId,
@@ -410,7 +455,7 @@ fun SalesScreen(
                 pendingImageFile = null
             },
             onConfirm = {
-                viewModel.handleIntent(
+                viewModel?.handleIntent(
                     SalesIntent.SubmitTransferEvidence(
                         pendingImageFile!!,
                         it.trim()
@@ -427,7 +472,8 @@ fun SalesScreen(
         CancelSaleDialog(
             onDismiss = { showCancelDialog = false },
             onConfirm = {
-                viewModel.handleIntent(SalesIntent.ClearSale)
+                viewModel?.handleIntent(SalesIntent.ClearSale)
+                appliedCreditNotes = emptyList() // Limpiar créditos
                 showCancelDialog = false
                 onNavigateBack()
             }
@@ -435,75 +481,8 @@ fun SalesScreen(
     }
 }
 
-// 🔥 NUEVO: Diálogo de venta exitosa con reimpresión
-@Composable
-fun SaleSuccessDialog(
-    onDismiss: () -> Unit,
-    onReprintInvoice: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = Color(0xFF4CAF50),
-                modifier = Modifier.size(48.dp)
-            )
-        },
-        title = {
-            Text(
-                "¡Venta Completada!",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
-            )
-        },
-        text = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    "La venta se ha registrado exitosamente.",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "La factura se ha enviado a imprimir.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text("Finalizar")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onReprintInvoice,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(
-                    Icons.Default.Print,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Reimprimir")
-            }
-        }
-    )
-}
 
+@SuppressLint("DefaultLocale")
 @Composable
 private fun SearchResultItem(
     product: ProductDTO,
@@ -554,6 +533,7 @@ private fun SearchResultItem(
     }
 }
 
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CompactSaleItemRow(
@@ -720,8 +700,13 @@ private fun EmptySaleState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SalesBottomBar(
+fun SalesBottomBar(
+    subtotal: Double,
+    itbis: Double,
     total: Double,
+    creditApplied: Double = 0.0, // NUEVO
+    remainingToPay: Double = total, // NUEVO
+    isCoveredByCredit: Boolean = false, // NUEVO
     itemCount: Int,
     selectedPaymentMethod: String,
     onPaymentMethodSelected: (String) -> Unit,
@@ -729,108 +714,286 @@ private fun SalesBottomBar(
     onCancelClick: () -> Unit
 ) {
     Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp,
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface
+        shadowElevation = 8.dp
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
-            // Total Section
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Resumen de montos
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(12.dp)
             ) {
-                Column {
+                // Cantidad de items
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
-                        text = "$itemCount ${if (itemCount == 1) "producto" else "productos"}",
-                        style = MaterialTheme.typography.labelMedium,
+                        text = "Items:",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Total",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "$itemCount",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Text(
-                    text = "$${String.format("%.2f", total)}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Subtotal
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Subtotal:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${"%.2f".format(subtotal)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // ITBIS
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "ITBIS (18%):",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${"%.2f".format(itbis)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Divider()
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Total
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "TOTAL:",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "$${"%.2f".format(total)}",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // NUEVO: Mostrar crédito aplicado
+                if (creditApplied > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Receipt,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "Crédito aplicado:",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Text(
+                                text = "-$${"%.2f".format(creditApplied)}",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Divider()
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Saldo a pagar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isCoveredByCredit) "Cubierto:" else "Saldo a pagar:",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = if (isCoveredByCredit)
+                                MaterialTheme.colorScheme.tertiary
+                            else
+                                MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = "$${"%.2f".format(remainingToPay)}",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = if (isCoveredByCredit)
+                                MaterialTheme.colorScheme.tertiary
+                            else
+                                MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Payment Method Selector
-            Text(
-                text = "Método de pago",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            // Métodos de pago (solo si no está cubierto por crédito)
+            if (!isCoveredByCredit) {
+                Text(
+                    text = "Método de pago ${if (creditApplied > 0) "(saldo restante)" else ""}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                PaymentMethodChip(
-                    icon = Icons.Default.Payments,
-                    label = "Efectivo",
-                    value = "cash",
-                    isSelected = selectedPaymentMethod == "cash",
-                    onClick = { onPaymentMethodSelected("cash") },
-                    modifier = Modifier.weight(1f)
-                )
-                PaymentMethodChip(
-                    icon = Icons.Default.CreditCard,
-                    label = "Tarjeta",
-                    value = "card",
-                    isSelected = selectedPaymentMethod == "card",
-                    onClick = { onPaymentMethodSelected("card") },
-                    modifier = Modifier.weight(1f)
-                )
-                PaymentMethodChip(
-                    icon = Icons.Default.AccountBalance,
-                    label = "Transfer.",
-                    value = "transfer",
-                    isSelected = selectedPaymentMethod == "transfer",
-                    onClick = { onPaymentMethodSelected("transfer") },
-                    modifier = Modifier.weight(1f)
-                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PaymentMethodButton(
+                        icon = Icons.Default.Payments,
+                        label = "Efectivo",
+                        isSelected = selectedPaymentMethod == "cash",
+                        onClick = { onPaymentMethodSelected("cash") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    PaymentMethodButton(
+                        icon = Icons.Default.CreditCard,
+                        label = "Tarjeta",
+                        isSelected = selectedPaymentMethod == "card",
+                        onClick = { onPaymentMethodSelected("card") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    PaymentMethodButton(
+                        icon = Icons.Default.AccountBalance,
+                        label = "Transfer.",
+                        isSelected = selectedPaymentMethod == "transfer",
+                        onClick = { onPaymentMethodSelected("transfer") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            } else {
+                // Mensaje de cubierto por crédito
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Text(
+                            text = "Venta cubierta con nota de crédito",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Action Buttons
+            // Botones de acción
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
                     onClick = onCancelClick,
-                    modifier = Modifier.weight(0.4f),
-                    shape = RoundedCornerShape(10.dp)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(stringResource(R.string.sales_cancel))
+                    Icon(Icons.Default.Cancel, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Cancelar")
                 }
+
                 Button(
                     onClick = onCompleteClick,
-                    modifier = Modifier.weight(0.6f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isCoveredByCredit)
+                            MaterialTheme.colorScheme.tertiary
+                        else
+                            MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.sales_complete))
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (isCoveredByCredit) "Finalizar" else "Completar")
                 }
             }
         }
@@ -838,94 +1001,31 @@ private fun SalesBottomBar(
 }
 
 @Composable
-private fun PaymentMethodChip(
+private fun PaymentMethodButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    value: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    FilterChip(
+        selected = isSelected,
         onClick = onClick,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(10.dp),
-        color = if (isSelected)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.surfaceVariant,
-        border = if (isSelected)
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else
-            null
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = if (isSelected)
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected)
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-        }
-    }
-}
-
-@Composable
-private fun PaymentDialog(
-    currentMethod: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var selectedMethod by remember { mutableStateOf(currentMethod) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.sales_complete_confirmation_title)) },
-        text = {
-            Column {
-                Text(
-                    text = stringResource(R.string.sales_complete_confirmation_message),
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                PaymentMethodSelector(
-                    selectedMethod = selectedMethod,
-                    onMethodSelected = { selectedMethod = it }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(selectedMethod) },
-                enabled = selectedMethod.isNotBlank()
+        label = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.action_confirm))
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(label, style = MaterialTheme.typography.labelSmall)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        }
+        modifier = modifier.height(70.dp)
     )
 }
 

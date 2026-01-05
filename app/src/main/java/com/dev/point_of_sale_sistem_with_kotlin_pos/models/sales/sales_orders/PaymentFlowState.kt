@@ -1,5 +1,7 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders
 
+import java.util.UUID
+
 sealed class PaymentFlowState {
     object Idle : PaymentFlowState()
 
@@ -21,7 +23,7 @@ sealed class PaymentFlowState {
 
     data class ProcessingPayment(val method: String) : PaymentFlowState()
 
-    data class Success(val saleId: String) : PaymentFlowState()
+    data class Success(val saleId: UUID) : PaymentFlowState()
 
     data class Error(val message: String) : PaymentFlowState()
 }

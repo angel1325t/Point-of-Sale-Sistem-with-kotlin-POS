@@ -1,298 +1,379 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.utils
 
-
 import android.content.Context
-import android.graphics.Paint
-import android.graphics.Typeface
+import android.graphics.*
 import android.graphics.pdf.PdfDocument
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.BusinessInfo
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Sale
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetail
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.time.format.DateTimeFormatter
 
-/**
- * Generador de facturas en PDF
- * Crea PDFs profesionales con información completa de la venta
- */
 class InvoiceGenerator(private val context: Context) {
 
     companion object {
         private const val TAG = "InvoiceGenerator"
 
-        // Dimensiones página A4 en puntos (72 DPI)
         private const val PAGE_WIDTH = 595
         private const val PAGE_HEIGHT = 842
 
-        // Márgenes
         private const val MARGIN_LEFT = 40f
         private const val MARGIN_RIGHT = 40f
         private const val MARGIN_TOP = 40f
 
-        // Colores
         private const val COLOR_PRIMARY = 0xFF2196F3.toInt()
         private const val COLOR_SECONDARY = 0xFF757575.toInt()
         private const val COLOR_TEXT = 0xFF212121.toInt()
         private const val COLOR_LINE = 0xFFE0E0E0.toInt()
+        private const val COLOR_HEADER_BG = 0xFFF5F5F5.toInt()
+
+        private const val QR_SIZE = 100f
     }
 
-    /**
-     * Genera la factura en PDF y la guarda en caché
-     * @return File del PDF generado
-     */
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun generateInvoice(
         sale: Sale,
-        productsMap: Map<String, String>, // productId -> productName
-        businessInfo: BusinessInfo
+        productsMap: Map<String, String>,
+        businessInfo: BusinessInfo,
+        invoiceNumber: String
     ): Result<File> = runCatching {
-        Log.d(TAG, "Generating invoice for sale: ${sale.saleId}")
 
         val document = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
-        val page = document.startPage(pageInfo)
+        val page = document.startPage(
+            PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
+        )
         val canvas = page.canvas
 
-        var yPosition = MARGIN_TOP
+        var y = MARGIN_TOP
 
-        // ═══════════════════════════════════════════════════
-        // 📋 ENCABEZADO DE LA EMPRESA
-        // ═══════════════════════════════════════════════════
+        /* ================= HEADER SECTION ================= */
+
+        // Business name with larger font
         val titlePaint = Paint().apply {
             color = COLOR_PRIMARY
-            textSize = 24f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textSize = 28f
+            typeface = Typeface.DEFAULT_BOLD
             isAntiAlias = true
         }
+        canvas.drawText(businessInfo.name, MARGIN_LEFT, y, titlePaint)
+        y += 35f
 
-        canvas.drawText(businessInfo.name, MARGIN_LEFT, yPosition, titlePaint)
-        yPosition += 30f
-
+        // Business information
         val infoPaint = Paint().apply {
             color = COLOR_SECONDARY
             textSize = 10f
             isAntiAlias = true
         }
 
-        canvas.drawText(businessInfo.address, MARGIN_LEFT, yPosition, infoPaint)
-        yPosition += 15f
-        canvas.drawText("Tel: ${businessInfo.phone}", MARGIN_LEFT, yPosition, infoPaint)
-        yPosition += 15f
-        canvas.drawText("RNC: ${businessInfo.taxId}", MARGIN_LEFT, yPosition, infoPaint)
-        yPosition += 30f
-
-        // ═══════════════════════════════════════════════════
-        // 🧾 INFORMACIÓN DE LA FACTURA
-        // ═══════════════════════════════════════════════════
-        val invoiceTitlePaint = Paint().apply {
-            color = COLOR_TEXT
-            textSize = 18f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
+        fun drawIfNotNull(text: String?) {
+            text?.takeIf { it.isNotBlank() }?.let {
+                canvas.drawText(it, MARGIN_LEFT, y, infoPaint)
+                y += 14f
+            }
         }
 
-        canvas.drawText("FACTURA", PAGE_WIDTH - 150f, MARGIN_TOP, invoiceTitlePaint)
+        drawIfNotNull(businessInfo.address)
+        drawIfNotNull(businessInfo.city)
+        drawIfNotNull(businessInfo.phone?.let { "Tel: $it" })
+        drawIfNotNull(businessInfo.email?.let { "Email: $it" })
+        drawIfNotNull(businessInfo.taxId?.let { "RNC: $it" })
 
-        val invoiceNumberPaint = Paint().apply {
-            color = COLOR_TEXT
-            textSize = 12f
-            isAntiAlias = true
+        /* ================= INVOICE INFO BOX ================= */
+
+        val boxX = PAGE_WIDTH - MARGIN_RIGHT - 200f
+        val boxY = MARGIN_TOP
+        val boxWidth = 200f
+        val boxHeight = 90f
+
+        // Draw box background
+        val boxPaint = Paint().apply {
+            color = COLOR_HEADER_BG
+            style = Paint.Style.FILL
         }
+        val rect = RectF(boxX, boxY, boxX + boxWidth, boxY + boxHeight)
+        canvas.drawRoundRect(rect, 8f, 8f, boxPaint)
 
-        val saleIdShort = sale.saleId.toString().takeLast(8).uppercase()
-        canvas.drawText("No. $saleIdShort", PAGE_WIDTH - 150f, MARGIN_TOP + 25f, invoiceNumberPaint)
-
-        val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-        canvas.drawText(
-            "Fecha: ${sale.saleDate.format(dateFormatter)}",
-            PAGE_WIDTH - 150f,
-            MARGIN_TOP + 40f,
-            invoiceNumberPaint
-        )
-
-        // Línea separadora
-        val linePaint = Paint().apply {
-            color = COLOR_LINE
+        // Draw box border
+        val borderPaint = Paint().apply {
+            color = COLOR_PRIMARY
+            style = Paint.Style.STROKE
             strokeWidth = 2f
         }
-        canvas.drawLine(MARGIN_LEFT, yPosition, PAGE_WIDTH - MARGIN_RIGHT, yPosition, linePaint)
-        yPosition += 20f
+        canvas.drawRoundRect(rect, 8f, 8f, borderPaint)
 
-        // ═══════════════════════════════════════════════════
-        // 📦 TABLA DE PRODUCTOS
-        // ═══════════════════════════════════════════════════
-        val headerPaint = Paint().apply {
+        // Invoice text inside box
+        var boxTextY = boxY + 25f
+
+        val invoiceTitlePaint = Paint().apply {
+            color = COLOR_PRIMARY
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("FACTURA", boxX + boxWidth / 2, boxTextY, invoiceTitlePaint)
+        boxTextY += 22f
+
+        val invoiceDetailPaint = Paint().apply {
             color = COLOR_TEXT
             textSize = 11f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("No. $invoiceNumber", boxX + boxWidth / 2, boxTextY, invoiceDetailPaint)
+        boxTextY += 18f
+
+        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+        canvas.drawText(
+            sale.saleDate.format(formatter),
+            boxX + boxWidth / 2,
+            boxTextY,
+            invoiceDetailPaint
+        )
+
+        y = maxOf(y, boxY + boxHeight) + 30f
+
+        /* ================= SEPARATOR LINE ================= */
+
+        val linePaint = Paint().apply {
+            color = COLOR_PRIMARY
+            strokeWidth = 3f
+        }
+        canvas.drawLine(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y, linePaint)
+        y += 25f
+
+        /* ================= PRODUCTS TABLE ================= */
+
+        // Table header background
+        val headerBgPaint = Paint().apply {
+            color = COLOR_HEADER_BG
+            style = Paint.Style.FILL
+        }
+        val headerRect = RectF(
+            MARGIN_LEFT,
+            y - 5f,
+            PAGE_WIDTH - MARGIN_RIGHT,
+            y + 18f
+        )
+        canvas.drawRect(headerRect, headerBgPaint)
+
+        // Table headers
+        val headerPaint = Paint().apply {
+            color = COLOR_TEXT
+            textSize = 10f
+            typeface = Typeface.DEFAULT_BOLD
             isAntiAlias = true
         }
 
-        // Headers de la tabla
-        canvas.drawText("Producto", MARGIN_LEFT, yPosition, headerPaint)
-        canvas.drawText("Cant.", PAGE_WIDTH - 280f, yPosition, headerPaint)
-        canvas.drawText("Precio", PAGE_WIDTH - 220f, yPosition, headerPaint)
-        canvas.drawText("Desc.", PAGE_WIDTH - 160f, yPosition, headerPaint)
-        canvas.drawText("Total", PAGE_WIDTH - 100f, yPosition, headerPaint)
-        yPosition += 5f
+        val colProduct = MARGIN_LEFT + 5f
+        val colQty = PAGE_WIDTH - 280f
+        val colPrice = PAGE_WIDTH - 220f
+        val colDisc = PAGE_WIDTH - 160f
+        val colTotal = PAGE_WIDTH - 100f
 
-        canvas.drawLine(MARGIN_LEFT, yPosition, PAGE_WIDTH - MARGIN_RIGHT, yPosition, linePaint)
-        yPosition += 15f
+        canvas.drawText("Producto", colProduct, y + 10f, headerPaint)
+        canvas.drawText("Cant.", colQty, y + 10f, headerPaint)
+        canvas.drawText("Precio", colPrice, y + 10f, headerPaint)
+        canvas.drawText("Desc.", colDisc, y + 10f, headerPaint)
+        canvas.drawText("Total", colTotal, y + 10f, headerPaint)
 
-        // Items de la venta
+        y += 20f
+
+        val thinLinePaint = Paint().apply {
+            color = COLOR_LINE
+            strokeWidth = 1f
+        }
+        canvas.drawLine(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y, thinLinePaint)
+        y += 15f
+
+        // Table items
         val itemPaint = Paint().apply {
             color = COLOR_TEXT
             textSize = 10f
             isAntiAlias = true
         }
 
-        val itemBoldPaint = Paint().apply {
-            color = COLOR_TEXT
-            textSize = 10f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
+        sale.saleDetails.forEach { d ->
+            val name = productsMap[d.productId.toString()] ?: "Producto"
+            val itemStartY = y
 
-        sale.saleDetails.forEach { detail ->
-            val productName = productsMap[detail.productId.toString()]
-                ?: "Producto Desconocido"
-
-
-            // Nombre del producto (con wrap si es muy largo)
-            val maxProductNameWidth = PAGE_WIDTH - 350f
-            val wrappedName = wrapText(productName, maxProductNameWidth, itemPaint)
-
-            wrappedName.forEachIndexed { index, line ->
-                canvas.drawText(line, MARGIN_LEFT, yPosition, itemPaint)
-                if (index < wrappedName.size - 1) yPosition += 12f
+            // Product name with wrapping
+            val wrappedLines = wrapText(name, PAGE_WIDTH - 350f, itemPaint)
+            wrappedLines.forEach {
+                canvas.drawText(it, colProduct, y, itemPaint)
+                y += 13f
             }
 
-            // Datos numéricos
-            canvas.drawText(detail.quantity.toString(), PAGE_WIDTH - 280f, yPosition, itemPaint)
-            canvas.drawText("$${String.format("%.2f", detail.unitPrice)}", PAGE_WIDTH - 220f, yPosition, itemPaint)
+            // Align other columns with the first line
+            canvas.drawText(d.quantity.toString(), colQty, itemStartY, itemPaint)
+            canvas.drawText("$${"%.2f".format(d.unitPrice)}", colPrice, itemStartY, itemPaint)
+            canvas.drawText(
+                if (d.discount > 0) "$${"%.2f".format(d.discount)}" else "-",
+                colDisc,
+                itemStartY,
+                itemPaint
+            )
 
-            val discountText = if (detail.discount > 0) "$${String.format("%.2f", detail.discount)}" else "-"
-            canvas.drawText(discountText, PAGE_WIDTH - 160f, yPosition, itemPaint)
-            canvas.drawText("$${String.format("%.2f", detail.finalPrice)}", PAGE_WIDTH - 100f, yPosition, itemBoldPaint)
+            val totalPaint = Paint(itemPaint).apply {
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText(
+                "$${"%.2f".format(d.finalPrice)}",
+                colTotal,
+                itemStartY,
+                totalPaint
+            )
 
-            yPosition += 20f
+            y += 5f
         }
 
-        yPosition += 10f
-        canvas.drawLine(MARGIN_LEFT, yPosition, PAGE_WIDTH - MARGIN_RIGHT, yPosition, linePaint)
-        yPosition += 20f
+        /* ================= TOTALS SECTION ================= */
 
-        // ═══════════════════════════════════════════════════
-        // 💰 TOTALES
-        // ═══════════════════════════════════════════════════
-        val totalPaint = Paint().apply {
-            color = COLOR_TEXT
-            textSize = 12f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
+        y += 10f
+        canvas.drawLine(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y, thinLinePaint)
+        y += 20f
 
-        // Subtotal (antes de descuento global)
         val subtotal = sale.saleDetails.sumOf { it.unitPrice * it.quantity }
-        canvas.drawText("Subtotal:", PAGE_WIDTH - 200f, yPosition, itemPaint)
-        canvas.drawText("$${String.format("%.2f", subtotal)}", PAGE_WIDTH - 100f, yPosition, itemPaint)
-        yPosition += 18f
+        val labelX = PAGE_WIDTH - 200f
+        val valueX = PAGE_WIDTH - 80f
 
-        // Descuento Global
+        val totalLabelPaint = Paint().apply {
+            color = COLOR_TEXT
+            textSize = 11f
+            isAntiAlias = true
+            textAlign = Paint.Align.RIGHT
+        }
+
+        val totalValuePaint = Paint(totalLabelPaint).apply {
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        canvas.drawText("Subtotal:", labelX, y, totalLabelPaint)
+        canvas.drawText("$${"%.2f".format(subtotal)}", valueX, y, totalValuePaint)
+        y += 16f
+
         if (sale.globalDiscount > 0) {
-            canvas.drawText("Descuento Global:", PAGE_WIDTH - 200f, yPosition, itemPaint)
-            canvas.drawText("-$${String.format("%.2f", sale.globalDiscount)}", PAGE_WIDTH - 100f, yPosition, itemPaint)
-            yPosition += 18f
+            canvas.drawText("Descuento:", labelX, y, totalLabelPaint)
+            canvas.drawText("-$${"%.2f".format(sale.globalDiscount)}", valueX, y, totalValuePaint)
+            y += 16f
         }
 
-        // TOTAL FINAL
-        canvas.drawText("TOTAL:", PAGE_WIDTH - 200f, yPosition, totalPaint)
-        canvas.drawText("$${String.format("%.2f", sale.total)}", PAGE_WIDTH - 100f, yPosition, totalPaint)
-        yPosition += 30f
+        // ITBIS (18%)
+        canvas.drawText("ITBIS (18%):", labelX, y, totalLabelPaint)
+        canvas.drawText("$${"%.2f".format(sale.itbis)}", valueX, y, totalValuePaint)
+        y += 20f
 
-        // ═══════════════════════════════════════════════════
-        // 💳 MÉTODO DE PAGO
-        // ═══════════════════════════════════════════════════
-        val paymentMethodText = when (sale.paymentMethod) {
-            "cash" -> "Efectivo"
-            "card" -> "Tarjeta de Crédito/Débito"
-            "transfer" -> "Transferencia Bancaria"
-            else -> sale.paymentMethod
+        // Final total - sin recuadro azul, solo más grande y negrita
+        val finalTotalPaint = Paint().apply {
+            color = COLOR_TEXT
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            isAntiAlias = true
+            textAlign = Paint.Align.RIGHT
         }
 
-        canvas.drawText("Método de pago: $paymentMethodText", MARGIN_LEFT, yPosition, itemPaint)
-        yPosition += 30f
+        canvas.drawText("TOTAL:", labelX, y, finalTotalPaint)
+        canvas.drawText("$${"%.2f".format(sale.total)}", valueX, y, finalTotalPaint)
+        y += 35f
 
-        // ═══════════════════════════════════════════════════
-        // 📝 FOOTER
-        // ═══════════════════════════════════════════════════
+        /* ================= QR CODE SECTION ================= */
+
+        y += 15f
+        canvas.drawLine(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y, thinLinePaint)
+        y += 20f
+
+        generateQRCode(invoiceNumber, QR_SIZE.toInt())?.let { qrBitmap ->
+            val qrX = MARGIN_LEFT
+            canvas.drawBitmap(qrBitmap, qrX, y, null)
+
+            // QR description
+            val qrLabelPaint = Paint().apply {
+                color = COLOR_SECONDARY
+                textSize = 9f
+                isAntiAlias = true
+            }
+            canvas.drawText("Escanea para verificar", qrX, y + QR_SIZE + 15f, qrLabelPaint)
+            canvas.drawText("Factura: $invoiceNumber", qrX, y + QR_SIZE + 28f, qrLabelPaint)
+        }
+
+        /* ================= FOOTER ================= */
+
         val footerPaint = Paint().apply {
             color = COLOR_SECONDARY
-            textSize = 9f
+            textSize = 10f
             textAlign = Paint.Align.CENTER
             isAntiAlias = true
         }
 
         val footerY = PAGE_HEIGHT - 60f
-        canvas.drawText("¡Gracias por su compra!", PAGE_WIDTH / 2f, footerY, footerPaint)
-        canvas.drawText(businessInfo.email, PAGE_WIDTH / 2f, footerY + 15f, footerPaint)
+
+        val thanksPaint = Paint(footerPaint).apply {
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            color = COLOR_PRIMARY
+        }
+        canvas.drawText("¡Gracias por su compra!", PAGE_WIDTH / 2f, footerY, thanksPaint)
+
+        businessInfo.email?.let { email ->
+            canvas.drawText(email, PAGE_WIDTH / 2f, footerY + 18f, footerPaint)
+        }
+
+        // Bottom line
+        canvas.drawLine(
+            MARGIN_LEFT,
+            PAGE_HEIGHT - 35f,
+            PAGE_WIDTH - MARGIN_RIGHT,
+            PAGE_HEIGHT - 35f,
+            thinLinePaint
+        )
 
         document.finishPage(page)
 
-        // ═══════════════════════════════════════════════════
-        // 💾 GUARDAR EN CACHÉ
-        // ═══════════════════════════════════════════════════
-        val cacheDir = File(context.cacheDir, "invoices").apply { mkdirs() }
-        val fileName = "invoice_${sale.saleId}.pdf"
-        val file = File(cacheDir, fileName)
+        /* ================= SAVE PDF ================= */
 
-        FileOutputStream(file).use { outputStream ->
-            document.writeTo(outputStream)
-        }
+        val dir = File(context.cacheDir, "invoices").apply { mkdirs() }
+        val file = File(dir, "invoice_${invoiceNumber.replace("/", "_")}.pdf")
+
+        FileOutputStream(file).use { document.writeTo(it) }
         document.close()
 
-        Log.d(TAG, "Invoice generated: ${file.absolutePath}")
+        Log.d(TAG, "Invoice generated successfully: ${file.absolutePath}")
         file
     }
 
-    /**
-     * Divide texto largo en múltiples líneas
-     */
-    private fun wrapText(text: String, maxWidth: Float, paint: Paint): List<String> {
-        val words = text.split(" ")
-        val lines = mutableListOf<String>()
-        var currentLine = ""
-
-        words.forEach { word ->
-            val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
-            val width = paint.measureText(testLine)
-
-            if (width > maxWidth && currentLine.isNotEmpty()) {
-                lines.add(currentLine)
-                currentLine = word
-            } else {
-                currentLine = testLine
+    private fun generateQRCode(text: String, size: Int): Bitmap? =
+        runCatching {
+            val matrix = QRCodeWriter().encode(
+                text,
+                BarcodeFormat.QR_CODE,
+                size,
+                size,
+                mapOf(EncodeHintType.MARGIN to 1)
+            )
+            Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565).apply {
+                for (x in 0 until size)
+                    for (y in 0 until size)
+                        setPixel(x, y, if (matrix[x, y]) Color.BLACK else Color.WHITE)
             }
-        }
+        }.getOrNull()
 
-        if (currentLine.isNotEmpty()) {
-            lines.add(currentLine)
+    private fun wrapText(text: String, maxWidth: Float, paint: Paint): List<String> {
+        val result = mutableListOf<String>()
+        var line = ""
+        text.split(" ").forEach {
+            val test = if (line.isEmpty()) it else "$line $it"
+            if (paint.measureText(test) > maxWidth) {
+                if (line.isNotEmpty()) result.add(line)
+                line = it
+            } else line = test
         }
-
-        return lines
+        if (line.isNotEmpty()) result.add(line)
+        return result
     }
 }
-
-/**
- * Información del negocio para la factura
- */
-data class BusinessInfo(
-    val name: String,
-    val address: String,
-    val phone: String,
-    val email: String,
-    val taxId: String // RNC o Tax ID
-)

@@ -1,16 +1,15 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders
 
-import androidx.activity.ComponentActivity
 import java.io.File
 import java.util.UUID
 
 sealed class SalesIntent {
-    // Búsqueda
+    // Búsqueda de productos
     data class SearchProductByName(val query: String) : SalesIntent()
     data class SearchProductByBarcode(val barcode: String) : SalesIntent()
-    object ClearSearchResults : SalesIntent()
+    data object ClearSearchResults : SalesIntent()
 
-    // Gestión de productos
+    // Gestión de productos en venta
     data class AddSaleDetail(
         val productId: Int,
         val quantity: Int,
@@ -27,7 +26,7 @@ sealed class SalesIntent {
         val discount: Double
     ) : SalesIntent()
 
-    // Venta
+    // Creación y gestión de venta
     data class CreateSale(
         val paymentMethod: String,
         val globalDiscount: Double,
@@ -35,25 +34,18 @@ sealed class SalesIntent {
     ) : SalesIntent()
 
     data class UpdatePaymentMethod(val method: String) : SalesIntent()
-
-    object CompleteSale : SalesIntent()
-
-    // Pagos
+    data object CompleteSale : SalesIntent()
+    // Métodos de pago
     data class ConfirmCashPayment(val amountReceived: Double) : SalesIntent()
-
-    object InitiateCardPayment : SalesIntent()
-
-
+    data object InitiateCardPayment : SalesIntent()
     data class ProcessStripeResult(val paymentIntentId: String) : SalesIntent()
-
-    object CaptureTransferEvidence : SalesIntent()
-
+    data object CaptureTransferEvidence : SalesIntent()
     data class SubmitTransferEvidence(
         val imageFile: File,
         val referenceNumber: String
     ) : SalesIntent()
 
-    // Control
-    object ClearSale : SalesIntent()
-    object ClearError : SalesIntent()
+    // Control general
+    data object ClearSale : SalesIntent()
+    data object ClearError : SalesIntent()
 }

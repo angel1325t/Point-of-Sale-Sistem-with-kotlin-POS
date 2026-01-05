@@ -145,33 +145,6 @@ fun HomeScreen(
                                     color = Color.White.copy(alpha = 0.2f),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Store,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = stringResource(R.string.current_branch),
-                                                fontSize = 11.sp,
-                                                color = Color.White.copy(alpha = 0.8f)
-                                            )
-                                            Text(
-                                                text = branch.name,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.White
-                                            )
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -208,10 +181,12 @@ fun HomeScreen(
                         }
                     )
 
+                    // ✅ NUEVO: Item de Devoluciones
                     DrawerItem(
                         icon = Icons.Default.KeyboardReturn,
                         title = stringResource(R.string.returns),
                         onClick = {
+                            navController.navigate("refunds")
                             scope.launch { drawerState.close() }
                         }
                     )

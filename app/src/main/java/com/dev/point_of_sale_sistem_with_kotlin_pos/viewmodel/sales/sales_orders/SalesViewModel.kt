@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.InvoiceRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
@@ -28,28 +29,25 @@ class SalesViewModel(
     private val salesProductRepository: SalesProductRepository,
     private val paymentProofRepository: PaymentProofRepository,
     private val stripePaymentRepository: StripePaymentRepository,
-    private val activityRef: WeakReference<Activity>? = null // 🔥 NUEVO: Activity opcional
+    private val invoiceRepository: InvoiceRepository,
+    private val activityRef: WeakReference<Activity>? = null
 ) : ViewModel() {
 
-    // 🔥 NUEVO: Constructor adicional que acepta Activity directamente
     constructor(
         salesRepository: SalesRepository,
         salesProductRepository: SalesProductRepository,
         paymentProofRepository: PaymentProofRepository,
         stripePaymentRepository: StripePaymentRepository,
+        invoiceRepository: InvoiceRepository,
         activity: Activity
     ) : this(
         salesRepository,
         salesProductRepository,
         paymentProofRepository,
         stripePaymentRepository,
-
+        invoiceRepository,
         WeakReference(activity)
     )
-
-    private val _lastInvoiceFile = MutableStateFlow<File?>(null)
-    val lastInvoiceFile = _lastInvoiceFile.asStateFlow()
-
 
     private val _state = MutableStateFlow(SaleState())
     val state: StateFlow<SaleState> = _state.asStateFlow()
@@ -58,6 +56,7 @@ class SalesViewModel(
 
     companion object {
         private const val TAG = "SalesViewModel"
+        private const val ITBIS_RATE = 0.18
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -255,13 +254,16 @@ class SalesViewModel(
     private fun updateSaleState() {
         val currentSale = _state.value.sale ?: return
 
-        val subtotal = saleItems.sumOf { it.unitPrice * it.quantity }
-        val totalDiscount = saleItems.sumOf { it.discount }
-        val total = subtotal - totalDiscount - currentSale.globalDiscount
+        val itemsSubtotal = saleItems.sumOf { it.unitPrice * it.quantity }
+        val subtotalAfterDiscount = itemsSubtotal - currentSale.globalDiscount
+        val itbis = subtotalAfterDiscount * ITBIS_RATE
+        val total = subtotalAfterDiscount + itbis
 
         _state.value = _state.value.copy(
             sale = currentSale.copy(
                 saleDetails = saleItems.toList(),
+                subtotal = subtotalAfterDiscount,
+                itbis = itbis,
                 total = total
             )
         )
@@ -321,8 +323,9 @@ class SalesViewModel(
         }
 
         val change = amountReceived - sale.total
-        Log.d(TAG, "Cash payment: Received $amountReceived, Change: $change")
+        Log.d(TAG, "Cash payment - Total: ${sale.total}, Received: $amountReceived, Change: $change")
 
+        // 🔥 CREAR VENTA PRIMERO, LUEGO IMPRIMIR
         finalizeSaleWithInvoice()
     }
 
@@ -347,7 +350,7 @@ class SalesViewModel(
                 currency = "USD",
                 saleId = sale.saleId.toString()
             ).onSuccess { intent ->
-                Log.d(TAG, "Stripe Payment Intent created: ${intent.paymentIntentId}")
+                Log.d(TAG, "Stripe Payment Intent created: ${sale.total}")
 
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -357,7 +360,6 @@ class SalesViewModel(
                         clientSecret = intent.clientSecret
                     )
                 )
-
             }.onFailure { e ->
                 Log.e(TAG, "Error creating Stripe Payment Intent", e)
                 _state.value = _state.value.copy(
@@ -411,30 +413,34 @@ class SalesViewModel(
             stripePaymentRepository.confirmPayment(paymentIntentId)
                 .onSuccess { confirmation ->
                     if (confirmation.status == "succeeded") {
-                        Log.d(TAG, "Stripe payment confirmed: ${confirmation.paymentIntentId}")
+                        Log.d(TAG, "Stripe payment confirmed: ${sale.total}")
 
-                        paymentProofRepository.createPaymentProof(
-                            saleId = sale.saleId.toString(),
-                            paymentMethod = "card",
-                            voucherPath = "stripe_${confirmation.chargeId ?: confirmation.paymentIntentId}",
-                            referenceNumber = paymentIntentId,
-                            amount = sale.total,
-                            capturedBy = sale.userId.toString()
-                        ).onSuccess {
-                            Log.d(TAG, "Stripe payment proof created")
-                        }.onFailure { e ->
-                            Log.w(TAG, "Could not create payment proof (non-critical)", e)
-                        }
-
-                        finalizeSaleWithInvoice()
-
+                        // 🔥 PRIMERO: Crear la venta
+                        finalizeSaleWithInvoice(
+                            onSuccess = { createdSaleId ->
+                                // 🔥 DESPUÉS: Guardar evidencia de pago
+                                viewModelScope.launch {
+                                    paymentProofRepository.createPaymentProof(
+                                        saleId = createdSaleId,
+                                        paymentMethod = "card",
+                                        voucherPath = "stripe_${confirmation.chargeId ?: confirmation.paymentIntentId}",
+                                        referenceNumber = paymentIntentId,
+                                        amount = sale.total,
+                                        capturedBy = sale.userId.toString()
+                                    ).onSuccess {
+                                        Log.d(TAG, "Stripe payment proof created")
+                                    }.onFailure { e ->
+                                        Log.w(TAG, "Could not create payment proof (non-critical)", e)
+                                    }
+                                }
+                            }
+                        )
                     } else {
                         _state.value = _state.value.copy(
                             isLoading = false,
                             paymentFlowState = PaymentFlowState.Error("Pago no completado: ${confirmation.status}")
                         )
                     }
-
                 }.onFailure { e ->
                     Log.e(TAG, "Error confirming Stripe payment", e)
                     _state.value = _state.value.copy(
@@ -486,27 +492,31 @@ class SalesViewModel(
                         imageFile = imageFile
                     ).onSuccess { voucherPath ->
 
-                        paymentProofRepository.createPaymentProof(
-                            saleId = sale.saleId.toString(),
-                            paymentMethod = "transfer",
-                            voucherPath = voucherPath,
-                            referenceNumber = referenceNumber,
-                            amount = sale.total,
-                            capturedBy = sale.userId.toString()
-                        ).onSuccess { proof ->
-                            Log.d(TAG, "Payment proof created: ${proof.proofId}")
-                            finalizeSaleWithInvoice()
-
-                        }.onFailure { e ->
-                            Log.e(TAG, "Error creating proof", e)
-                            setError(SaleError.Server("Error al registrar evidencia"))
-                        }
+                        // 🔥 PRIMERO: Crear la venta
+                        finalizeSaleWithInvoice(
+                            onSuccess = { createdSaleId ->
+                                // 🔥 DESPUÉS: Guardar evidencia de pago
+                                viewModelScope.launch {
+                                    paymentProofRepository.createPaymentProof(
+                                        saleId = createdSaleId,
+                                        paymentMethod = "transfer",
+                                        voucherPath = voucherPath,
+                                        referenceNumber = referenceNumber,
+                                        amount = sale.total,
+                                        capturedBy = sale.userId.toString()
+                                    ).onSuccess {
+                                        Log.d(TAG, "Transfer payment proof created")
+                                    }.onFailure { e ->
+                                        Log.e(TAG, "Error creating proof (non-critical)", e)
+                                    }
+                                }
+                            }
+                        )
 
                     }.onFailure { e ->
                         Log.e(TAG, "Error uploading voucher", e)
                         setError(SaleError.Server("Error al subir comprobante"))
                     }
-
                 }.onFailure { e ->
                     Log.e(TAG, "Error validating reference", e)
                     setError(SaleError.Server("Error al validar referencia"))
@@ -517,8 +527,9 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🧾 FINALIZACIÓN DE VENTA CON FACTURACIÓN
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun finalizeSaleWithInvoice() {
+    private fun finalizeSaleWithInvoice(onSuccess: ((String) -> Unit)? = null) {
         val sale = _state.value.sale ?: return
 
         _state.value = _state.value.copy(isLoading = true)
@@ -528,56 +539,47 @@ class SalesViewModel(
 
             salesRepository.createSale(saleToCreate)
                 .onSuccess { result ->
-                    Log.d(TAG, "Sale created successfully: ${result.saleId}")
 
-                    // 🔥 Generar e imprimir factura (solo si hay Activity disponible)
+                    Log.d(TAG, "Sale created: ${result.saleId}, invoice: ${result.invoiceNumber}")
+
+                    // Actualizar con invoice_number
+                    val completedSale = saleToCreate.copy(
+                        invoiceNumber = result.invoiceNumber
+                    )
+
+                    // Generar e imprimir factura
                     if (activityRef?.get() != null) {
-                        salesRepository.generateAndPrintInvoice(
-                            sale = saleToCreate,
-                            productsCache = _state.value.productsCache
-                        ).onSuccess { file ->
-                            _lastInvoiceFile.value = file   // 🔥 AQUÍ
-                            Log.d(TAG, "Invoice generated and sent to print")
-                        }.onFailure { e ->
+                        val productsMap = completedSale.saleDetails.associate { detail ->
+                            val name = _state.value.productsCache[detail.productId]?.name
+                                ?: "Producto #${detail.productId}"
+                            detail.productId.toString() to name
+                        }
+
+                        invoiceRepository.generateAndPrintInvoice(
+                            sale = completedSale,
+                            productsMap = productsMap
+                        ).onFailure { e ->
                             Log.e(TAG, "Error generating invoice (non-critical)", e)
                         }
                     } else {
-                        Log.w(TAG, "Cannot print invoice: Activity not available or API < 19")
+                        Log.w(TAG, "Cannot print invoice: Activity not available")
                     }
 
                     _state.value = _state.value.copy(
-                        sale = saleToCreate,
+                        sale = completedSale,
                         isLoading = false,
-                        paymentFlowState = PaymentFlowState.Success(result.saleId)
+                        paymentFlowState = PaymentFlowState.Success(
+                            UUID.fromString(result.saleId)
+                        )
                     )
+
+                    // 🔥 Llamar callback para crear payment proof
+                    onSuccess?.invoke(result.saleId)
                 }
                 .onFailure { e ->
                     Log.e(TAG, "Error finalizing sale", e)
-                    setError(SaleError.Server("Error al crear la venta"))
+                    setError(SaleError.Server("Error al crear la venta: ${e.message}"))
                 }
-        }
-    }
-
-    // 🔥 Reimprimir factura
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
-    fun reprintLastInvoice() {
-        val currentSale = _state.value.sale ?: return
-
-        if (activityRef?.get() == null) {
-            Log.w(TAG, "Cannot reprint: Activity not available")
-            return
-        }
-
-        viewModelScope.launch {
-            salesRepository.generateAndPrintInvoice(
-                sale = currentSale,
-                productsCache = _state.value.productsCache
-            ).onSuccess {
-                Log.d(TAG, "Invoice reprinted successfully")
-            }.onFailure { e ->
-                Log.e(TAG, "Error reprinting invoice", e)
-                setError(SaleError.Server("Error al reimprimir factura"))
-            }
         }
     }
 
@@ -597,6 +599,8 @@ class SalesViewModel(
                 createdAt = nowUtc,
                 paymentMethod = paymentMethod,
                 status = "pending",
+                subtotal = 0.0,
+                itbis = 0.0,
                 total = 0.0,
                 globalDiscount = globalDiscount,
                 saleDetails = emptyList()
