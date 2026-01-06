@@ -18,7 +18,7 @@ class SessionPreferences(private val context: Context) {
     companion object {
         private val BRANCH_ID_KEY = stringPreferencesKey("branch_id")
         private val USER_DISABLED_KEY = stringPreferencesKey("user_disabled")
-
+        private val HAS_BIOMETRIC_KEY = booleanPreferencesKey("has_biometric")
     }
 
     // BranchId
@@ -37,4 +37,14 @@ class SessionPreferences(private val context: Context) {
     suspend fun setUserDisabled(disabled: Boolean) {
         context.dataStore.edit { it[USER_DISABLED_KEY] = disabled.toString() }
     }
+
+    // Biométrico disponible
+    suspend fun setHasBiometric(hasBiometric: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[HAS_BIOMETRIC_KEY] = hasBiometric
+        }
+    }
+
+    suspend fun getHasBiometric(): Boolean =
+        context.dataStore.data.map { it[HAS_BIOMETRIC_KEY] ?: false }.first()
 }

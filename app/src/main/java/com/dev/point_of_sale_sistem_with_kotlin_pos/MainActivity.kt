@@ -139,12 +139,23 @@ fun AppNavigation(
     val requireBiometricState = AppLifecycleObserver.requireBiometric.collectAsState()
     val requireBiometric = requireBiometricState.value
 
-    LaunchedEffect(requireBiometric) {
-        if (requireBiometric) {
+    var hasBiometric by remember { mutableStateOf(false) }
+
+    // Obtener el estado de biométrico al inicio
+    LaunchedEffect(Unit) {
+        hasBiometric = authSessionViewModel.getHasBiometric()
+    }
+
+    // Solo activar el observer si tiene biométrico configurado
+    LaunchedEffect(requireBiometric, hasBiometric) {
+        if (requireBiometric && hasBiometric) {
             val currentRoute = navController.currentDestination?.route ?: "home"
             navController.navigate("biometric_auth/$currentRoute") {
                 launchSingleTop = true
             }
+            AppLifecycleObserver.reset()
+        } else if (requireBiometric && !hasBiometric) {
+            // Si no tiene biométrico, solo resetear sin hacer nada
             AppLifecycleObserver.reset()
         }
     }
@@ -153,6 +164,7 @@ fun AppNavigation(
         navController = navController,
         startDestination = "splash"
     ) {
+
         // =========================
         //        AUTENTICACIÓN
         // =========================
