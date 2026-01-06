@@ -93,22 +93,7 @@ data class CreateCreditNoteRpcDTO(
     @SerialName("p_user_id")
     val userId: String
 )
-@Serializable
-data class CreditNoteDebugDTO(
-    val items: JsonElement,
 
-    @SerialName("items_total")
-    val itemsTotal: Double,
-
-    @SerialName("expected_subtotal")
-    val expectedSubtotal: Double,
-
-    @SerialName("original_sale")
-    val originalSale: String,
-
-    @SerialName("user_id")
-    val userId: String
-)
 
 
 

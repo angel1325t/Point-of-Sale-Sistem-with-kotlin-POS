@@ -7,7 +7,6 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.credit_notes.ApplyCre
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.credit_notes.CreateCreditNoteRpcDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.credit_notes.CreditNote
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.credit_notes.CreditNoteDTO
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.credit_notes.CreditNoteDebugDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.credit_notes.CreditNoteItemRpcDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.refunds.*
 import io.github.jan.supabase.SupabaseClient
@@ -15,6 +14,8 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.UUID
 
 class RefundRepository(
@@ -77,7 +78,7 @@ class RefundRepository(
     }
 
     // ─────────────────────────────────────────────
-    // CREAR NOTA DE CRÉDITO (RPC)
+    // CREAR NOTA DE CRÉDITO (RPC) - FIXED
     // ─────────────────────────────────────────────
     suspend fun createCreditNote(
         originalSaleId: UUID,
@@ -86,7 +87,7 @@ class RefundRepository(
         subtotal: Double,
         itbis: Double,
         totalRefund: Double
-    ): Result<List<CreditNoteDebugDTO>> = runCatching {
+    ): Result<UUID> = runCatching {
 
         Log.d(TAG, "Creating credit note via RPC")
         Log.d(TAG, "Original Sale ID: $originalSaleId")
@@ -120,14 +121,20 @@ class RefundRepository(
             userId = userId.toString()
         )
 
-
-        val creditNoteId = supabase
+        // 🔥 FIX: La RPC devuelve un string UUID directamente
+        val creditNoteIdString = supabase
             .postgrest
-        .rpc(
-            function = "debug_credit_note_v2",
-            parameters = params
-        )
-        .decodeList<CreditNoteDebugDTO>()
+            .rpc(
+                function = "create_credit_note_v4",
+                parameters = params
+            )
+            .decodeAs<String>()
+
+        Log.d(TAG, "RPC Response: $creditNoteIdString")
+
+        // Limpiar comillas si existen y convertir a UUID
+        val cleanedId = creditNoteIdString.trim().removeSurrounding("\"")
+        val creditNoteId = UUID.fromString(cleanedId)
 
         Log.d(TAG, "Credit note created successfully: $creditNoteId")
         creditNoteId
@@ -185,27 +192,4 @@ class RefundRepository(
         Log.d(TAG, "Credit applied successfully")
         Unit
     }
-
-//    // ─────────────────────────────────────────────
-//    // OBTENER TODAS LAS NOTAS DE CRÉDITO DISPONIBLES
-//    // ─────────────────────────────────────────────
-//    @RequiresApi(Build.VERSION_CODES.O)
-//    suspend fun getAvailableCreditNotes(): Result<List<CreditNote>> = runCatching {
-//
-//        Log.d(TAG, "Fetching available credit notes")
-//
-//        val response = supabase.from("sales")
-//            .select {
-//                filter {
-//                    eq("is_credit_note", true)
-//                    gt("credit_remaining", 0.0)
-//                }
-//                order("sale_date", ascending = false)
-//            }
-//            .decodeList<CreditNoteDTO>()
-//
-//        Log.d(TAG, "Found ${response.size} available credit notes")
-//
-//        response.map { it.toDomain() }
-//    }
 }

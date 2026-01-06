@@ -1,6 +1,5 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.models.refunds
 
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.credit_notes.CreditNoteDebugDTO
 import java.util.UUID
 
 /**
@@ -28,7 +27,7 @@ data class RefundState(
     val refundSubtotal: Double = 0.0,
     val refundItbis: Double = 0.0,
     val totalRefundAmount: Double = 0.0,
-    val createdCreditNoteId: List<CreditNoteDebugDTO>? = null
+    val createdCreditNoteId: UUID? = null
 ) {
     val hasSelectedItems: Boolean
         get() = selectedItems.isNotEmpty()

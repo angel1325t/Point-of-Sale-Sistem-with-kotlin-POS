@@ -103,17 +103,17 @@ class SalesRepository(
     private suspend fun getCurrentStock(productId: Int): Int {
         return try {
             @Serializable
-            data class StockResponse(val stock: Int)
+            data class StockResponse(val current_stock: Int)
 
             val response = supabase.from("products")
-                .select(Columns.list("stock")) {
+                .select(Columns.list("current_stock")) {
                     filter {
                         eq("product_id", productId)
                     }
                 }
                 .decodeSingle<StockResponse>()
 
-            response.stock
+            response.current_stock
         } catch (e: Exception) {
             Log.e(TAG, "Error getting stock for product $productId", e)
             throw e
@@ -137,7 +137,7 @@ class SalesRepository(
             supabase.from("products")
                 .update(
                     {
-                        set("stock", newStock)
+                        set("current_stock", newStock)
                     }
                 ) {
                     filter {
