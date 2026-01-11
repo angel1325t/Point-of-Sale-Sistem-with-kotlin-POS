@@ -294,6 +294,24 @@
     <string name="cash_register_error_load_failed">Error al cargar las cajas</string>
     <string name="cash_register_error_operation_failed">Error en la operación</string>
 
+
+
+    <!-- Errores Inventario -->
+    <string name="error_network">Error de conexión. Verifica tu internet.</string>
+    <string name="error_timeout">La operación tardó demasiado.</string>
+    <string name="error_inventory_not_found">El producto no fue encontrado.</string>
+    <string name="error_not_enough_stock">Stock insuficiente.</string>
+    <string name="error_unknown">Ocurrió un error inesperado.</string>
+
+    <!-- Validaciones -->
+    <string name="error_field_required">Este campo es obligatorio.</string>
+    <string name="error_invalid_input">Entrada inválida.</string>
+
+    <!-- Éxitos -->
+    <string name="success_stock_increased">Stock aumentado correctamente.</string>
+    <string name="success_stock_decreased">Stock reducido correctamente.</string>
+
+
     <!-- General Actions -->
     <string name="action_retry">Reintentar</string>
     <string name="action_cancel">Cancelar</string>
@@ -351,5 +369,76 @@
         <string name="cash_register_invalid_number">Ingresa un número válido</string>
         <string name="cash_register_must_be_positive">El valor debe ser positivo</string>
     <string name="retry">Reintentar</string>
+
+    <!-- INVENTORY SCREEN -->
+    <string name="inventory_title">Inventario</string>
+    <string name="inventory_back">Volver</string>
+    <string name="inventory_sort">Ordenar</string>
+    <string name="inventory_refresh">Recargar</string>
+
+    <!-- SEARCH BAR -->
+    <string name="inventory_search_placeholder">Buscar productos...</string>
+    <string name="inventory_clear_search">Limpiar</string>
+
+    <!-- PRODUCT CARD -->
+    <string name="inventory_category_label">Categoría:</string>
+    <string name="inventory_no_category">Sin categoría</string>
+    <string name="inventory_stock_label">Stock:</string>
+    <string name="inventory_increase_stock">Agregar</string>
+    <string name="inventory_decrease_stock">Disminuir</string>
+
+    <!-- EMPTY STATE -->
+    <string name="inventory_empty_title">No hay productos encontrados</string>
+    <string name="inventory_empty_subtitle">Agrega productos desde el módulo de Productos</string>
+
+    <!-- ERROR -->
+    <string name="inventory_error_unexpected">Error inesperado</string>
+    <string name="inventory_error_retry">Reintentar</string>
+    <string name="inventory_error_close">Cerrar</string>
+
+    <!-- SORT DIALOG -->
+    <string name="inventory_sort_title">Ordenar por</string>
+    <string name="inventory_sort_name_asc">Nombre A-Z</string>
+    <string name="inventory_sort_name_desc">Nombre Z-A</string>
+    <string name="inventory_sort_stock_asc">Stock menor a mayor</string>
+    <string name="inventory_sort_stock_desc">Stock mayor a menor</string>
+    <string name="inventory_sort_low_stock">Bajo stock primero</string>
+
+    <!-- INVENTORY SCREEN -->
+    <string name="back">Volver</string>
+    <string name="sort">Ordenar</string>
+    <string name="search_products">Buscar productos…</string>
+    <string name="clear">Limpiar</string>
+
+    <!-- ACTIONS -->
+    <string name="increase_stock">Aumentar stock</string>
+    <string name="decrease_stock">Disminuir stock</string>
+
+    <!-- EMPTY STATE -->
+    <string name="empty_inventory_title">No hay productos</string>
+    <string name="empty_inventory_subtitle">Agrega productos desde el módulo de Productos</string>
+
+    <!-- MESSAGES -->
+    <string name="stock_increased">Stock aumentado</string>
+    <string name="stock_decreased">Stock disminuido</string>
+
+    <!-- NOTIFICACIONES -->
+    <string name="notifications_title">Notificaciones</string>
+    <string name="notifications_clear">Limpiar</string>
+    <string name="notifications_empty">No hay notificaciones</string>
+    <string name="notifications_low_stock_title">Stock bajo</string>
+    <string name="notifications_out_stock_title">Producto agotado</string>
+
+    <!-- INVENTARIO -->
+    <string name="inventory_low_stock_msg">El producto %1$s está por agotarse</string>
+    <string name="inventory_out_stock_msg">El producto %1$s se quedó sin stock</string>
+
+    <!-- UI -->
+    <string name="btn_retry">Reintentar</string>
+    <string name="btn_close">Cerrar</string>
+    <string name="btn_back">Volver</string>
+
+    <string name="no_notifications">No tienes notificaciones</string>
+    <string name="low_stock_warning">Stock bajo</string>
 
 </resources>

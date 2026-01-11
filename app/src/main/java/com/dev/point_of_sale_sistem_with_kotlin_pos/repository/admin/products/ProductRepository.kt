@@ -358,3 +358,5 @@ class ProductsRepository(private val supabase: SupabaseClient) {
         minimumStock = minimumStock
     )
 }
+
+annotation class ProductRepository

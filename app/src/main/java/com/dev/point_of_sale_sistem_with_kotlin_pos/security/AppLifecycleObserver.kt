@@ -8,30 +8,41 @@ import kotlinx.coroutines.flow.asStateFlow
 
 object AppLifecycleObserver : DefaultLifecycleObserver {
 
-    // True = la app volvió al foreground y NECESITA validación
     private val _requireBiometric = MutableStateFlow(false)
     val requireBiometric = _requireBiometric.asStateFlow()
 
     private var wasInBackground = false
+    private var _isFirstLaunch = true
+
+    val isFirstLaunch: Boolean
+        get() = _isFirstLaunch
 
     fun start() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 
     override fun onStop(owner: LifecycleOwner) {
-        // La app se fue al background
         wasInBackground = true
     }
 
     override fun onStart(owner: LifecycleOwner) {
-        // La app volvió al foreground
+        if (_isFirstLaunch) {
+            _isFirstLaunch = false
+            return
+        }
+
         if (wasInBackground) {
             _requireBiometric.value = true
         }
+
         wasInBackground = false
     }
 
     fun reset() {
         _requireBiometric.value = false
+    }
+
+    fun resetFirstLaunch() {
+        _isFirstLaunch = true
     }
 }
