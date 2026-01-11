@@ -94,30 +94,37 @@ class InventoryViewModel(
     private fun increaseStock(productId: Int, amount: Int) {
         viewModelScope.launch {
             Log.d(TAG, "📈 Aumentando stock: ID=$productId, amount=$amount")
-            _state.update { it.copy(isLoading = true) }
 
+            // Actualización optimista del UI
+            val currentProduct = _state.value.items.find { it.id == productId }
+            if (currentProduct == null) {
+                Log.e(TAG, "❌ Producto no encontrado en estado local")
+                return@launch
+            }
+
+            val newStock = currentProduct.stock + amount
+            updateLocalStock(productId, newStock)
+
+            // Actualizar en base de datos
             repository.increaseStock(productId, amount)
                 .onSuccess {
-                    Log.d(TAG, "✅ Stock aumentado exitosamente")
+                    Log.d(TAG, "✅ Stock aumentado en BD exitosamente")
 
-                    val product = _state.value.items.find { it.id == productId }
-                    if (product != null) {
-                        sendStockChangeNotification(
-                            productName = product.name,
-                            newStock = product.stock + amount,
-                            isIncrease = true
-                        )
-                    }
-
-                    loadInventory()
+                    // Enviar notificación
+                    sendStockChangeNotification(
+                        productName = currentProduct.name,
+                        newStock = newStock,
+                        isIncrease = true
+                    )
                 }
                 .onFailure { error ->
                     Log.e(TAG, "❌ Error aumentando stock: ${error.message}")
+
+                    // Revertir cambio optimista
+                    updateLocalStock(productId, currentProduct.stock)
+
                     _state.update {
-                        it.copy(
-                            error = error.message ?: "Error aumentando stock",
-                            isLoading = false
-                        )
+                        it.copy(error = error.message ?: "Error aumentando stock")
                     }
                 }
         }
@@ -126,33 +133,63 @@ class InventoryViewModel(
     private fun decreaseStock(productId: Int, amount: Int) {
         viewModelScope.launch {
             Log.d(TAG, "📉 Reduciendo stock: ID=$productId, amount=$amount")
-            _state.update { it.copy(isLoading = true) }
 
+            // Actualización optimista del UI
+            val currentProduct = _state.value.items.find { it.id == productId }
+            if (currentProduct == null) {
+                Log.e(TAG, "❌ Producto no encontrado en estado local")
+                return@launch
+            }
+
+            val newStock = (currentProduct.stock - amount).coerceAtLeast(0)
+            updateLocalStock(productId, newStock)
+
+            // Actualizar en base de datos
             repository.decreaseStock(productId, amount)
                 .onSuccess {
-                    Log.d(TAG, "✅ Stock reducido exitosamente")
+                    Log.d(TAG, "✅ Stock reducido en BD exitosamente")
 
-                    val product = _state.value.items.find { it.id == productId }
-                    if (product != null) {
-                        val newStock = (product.stock - amount).coerceAtLeast(0)
-                        sendStockChangeNotification(
-                            productName = product.name,
-                            newStock = newStock,
-                            isIncrease = false
-                        )
-                    }
-
-                    loadInventory()
+                    // Enviar notificación
+                    sendStockChangeNotification(
+                        productName = currentProduct.name,
+                        newStock = newStock,
+                        isIncrease = false
+                    )
                 }
                 .onFailure { error ->
                     Log.e(TAG, "❌ Error reduciendo stock: ${error.message}")
+
+                    // Revertir cambio optimista
+                    updateLocalStock(productId, currentProduct.stock)
+
                     _state.update {
-                        it.copy(
-                            error = error.message ?: "Error reduciendo stock",
-                            isLoading = false
-                        )
+                        it.copy(error = error.message ?: "Error reduciendo stock")
                     }
                 }
+        }
+    }
+
+    /**
+     * Actualiza solo el stock de un producto específico sin recargar todo
+     */
+    private fun updateLocalStock(productId: Int, newStock: Int) {
+        _state.update { currentState ->
+            val updatedItems = currentState.items.map { item ->
+                if (item.id == productId) {
+                    item.copy(stock = newStock)
+                } else {
+                    item
+                }
+            }
+
+            currentState.copy(
+                items = updatedItems,
+                filteredItems = applySortAndFilter(
+                    updatedItems,
+                    currentState.searchQuery,
+                    currentState.sortMode
+                )
+            )
         }
     }
 

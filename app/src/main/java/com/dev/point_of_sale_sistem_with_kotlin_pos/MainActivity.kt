@@ -38,6 +38,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterManagementScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterHistoryScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.inventory.InventoryScreen
 
 // Theme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
@@ -51,11 +52,13 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.S
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.inventory.InventoryRepository
 
 // ViewModels
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.inventory.InventoryViewModel
 
 // Security
 import com.dev.point_of_sale_sistem_with_kotlin_pos.security.AppLifecycleObserver
@@ -93,6 +96,8 @@ class MainActivity : FragmentActivity() {
                     val categoryRepository = remember { CategoryRepository(supabase) }
                     val productsRepository = remember { ProductsRepository(supabase) }
                     val supplierRepository = remember { SupplierRepository(supabase) }
+                    val inventoryRepository = remember { InventoryRepository(supabase) }
+
 
                     // VIEWMODELS
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
@@ -103,6 +108,7 @@ class MainActivity : FragmentActivity() {
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
+                    val inventoryViewModel = remember { InventoryViewModel(inventoryRepository) }
 
                     AppNavigation(
                         navController = navController,
@@ -114,6 +120,7 @@ class MainActivity : FragmentActivity() {
                         categoryViewModel = categoryViewModel,
                         productsViewModel = productsViewModel,
                         supplierViewModel = supplierViewModel,
+                        inventoryViewModel = inventoryViewModel,
                         cashRegisterViewModel = cashRegisterViewModel
                     )
                 }
@@ -133,6 +140,7 @@ fun AppNavigation(
     categoryViewModel: CategoryViewModel,
     productsViewModel: ProductsViewModel,
     supplierViewModel: SupplierViewModel,
+    inventoryViewModel: InventoryViewModel,
     cashRegisterViewModel: CashRegisterViewModel
 ) {
     val categoryState by categoryViewModel.state.collectAsState()
@@ -318,5 +326,14 @@ fun AppNavigation(
         // =========================
         composable("cash_register/manage") { CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() } }
         composable("cash_register/history") { CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() } }
+
+        composable("inventory") {
+            InventoryScreen(
+                viewModel = inventoryViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+
     }
 }
