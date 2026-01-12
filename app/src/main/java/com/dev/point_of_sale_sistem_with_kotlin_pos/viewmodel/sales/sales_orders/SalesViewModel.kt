@@ -7,8 +7,15 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.AppliedCreditNote
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.PaymentFlowState
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Sale
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetail
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleState
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.credit_notes.CreditNoteRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.InvoiceRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
@@ -30,6 +37,8 @@ class SalesViewModel(
     private val paymentProofRepository: PaymentProofRepository,
     private val stripePaymentRepository: StripePaymentRepository,
     private val invoiceRepository: InvoiceRepository,
+    private val creditNoteRepository: CreditNoteRepository,
+    private val cashRegisterRepository: CashRegisterRepository,
     private val activityRef: WeakReference<Activity>? = null
 ) : ViewModel() {
 
@@ -39,6 +48,8 @@ class SalesViewModel(
         paymentProofRepository: PaymentProofRepository,
         stripePaymentRepository: StripePaymentRepository,
         invoiceRepository: InvoiceRepository,
+        creditNoteRepository: CreditNoteRepository,
+        cashRegisterRepository: CashRegisterRepository,
         activity: Activity
     ) : this(
         salesRepository,
@@ -46,6 +57,8 @@ class SalesViewModel(
         paymentProofRepository,
         stripePaymentRepository,
         invoiceRepository,
+        creditNoteRepository,
+        cashRegisterRepository,
         WeakReference(activity)
     )
 
@@ -89,6 +102,11 @@ class SalesViewModel(
             is SalesIntent.SearchProductByName -> searchByName(intent.query)
             is SalesIntent.SearchProductByBarcode -> searchByBarcode(intent.barcode)
             SalesIntent.ClearSearchResults -> clearSearchResults()
+
+            // 🆕 LECTOR DE CÓDIGOS
+            SalesIntent.ToggleBarcodeReader -> toggleBarcodeReader()
+            is SalesIntent.ProcessBarcodeFromReader -> processBarcodeFromReader(intent.barcode)
+
             is SalesIntent.AddSaleDetail -> addProductToSale(intent)
             is SalesIntent.RemoveSaleDetail -> removeProductFromSale(intent.productId)
             is SalesIntent.UpdateSaleDetail -> updateProductInSale(intent)
@@ -100,9 +118,117 @@ class SalesViewModel(
             is SalesIntent.ProcessStripeResult -> processStripeResult(intent.paymentIntentId)
             SalesIntent.CaptureTransferEvidence -> captureTransferEvidence()
             is SalesIntent.SubmitTransferEvidence -> submitTransferEvidence(intent.imageFile, intent.referenceNumber)
+            is SalesIntent.ApplyCreditNote -> applyCreditNote(intent.creditNoteId, intent.amountApplied)
+            is SalesIntent.RemoveCreditNote -> removeCreditNote(intent.creditNoteId)
             SalesIntent.ClearSale -> clearSale()
             SalesIntent.ClearError -> clearError()
         }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 🔓 VALIDACIÓN DE CAJA ABIERTA
+    // ═══════════════════════════════════════════════════
+
+    private suspend fun validateCashRegisterOpen(): String? {
+        return try {
+            val openRegister = cashRegisterRepository.getOpenCashRegister()
+            if (openRegister == null) {
+                Log.w(TAG, "⚠️ No hay caja abierta")
+                null
+            } else {
+                Log.d(TAG, "✅ Caja abierta: ${openRegister.history_id}")
+                openRegister.history_id
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error validando caja abierta", e)
+            null
+        }
+    }
+
+// ═══════════════════════════════════════════════════
+// 📟 LECTOR DE CÓDIGOS DE BARRA
+// ═══════════════════════════════════════════════════
+
+    private fun toggleBarcodeReader() {
+        val newState = !_state.value.isBarcodeReaderActive
+        _state.value = _state.value.copy(
+            isBarcodeReaderActive = newState,
+            barcodeReaderBuffer = "" // Limpiar buffer al activar/desactivar
+        )
+        Log.d(TAG, "Barcode reader toggled: $newState")
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun processBarcodeFromReader(barcode: String) {
+        if (!_state.value.isBarcodeReaderActive) return
+
+        Log.d(TAG, "Processing barcode from reader: $barcode")
+
+        viewModelScope.launch {
+            salesProductRepository.getProductByBarcode(barcode)
+                .onSuccess { product ->
+                    if (product != null) {
+                        Log.d(TAG, "Product found via reader: ${product.name}")
+
+                        // Agregar producto automáticamente
+                        addProductToSale(
+                            SalesIntent.AddSaleDetail(
+                                productId = product.productId,
+                                quantity = 1,
+                                unitPrice = product.price,
+                                discount = 0.0
+                            )
+                        )
+
+                        // Limpiar buffer
+                        _state.value = _state.value.copy(barcodeReaderBuffer = "")
+                    } else {
+                        Log.w(TAG, "Product not found: $barcode")
+                        setError(SaleError.Server("Producto no encontrado: $barcode"))
+                        _state.value = _state.value.copy(barcodeReaderBuffer = "")
+                    }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Error processing barcode from reader", e)
+                    setError(SaleError.Server("Error al buscar producto"))
+                    _state.value = _state.value.copy(barcodeReaderBuffer = "")
+                }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // 🎫 GESTIÓN DE NOTAS DE CRÉDITO
+    // ═══════════════════════════════════════════════════
+    private fun applyCreditNote(creditNoteId: String, amountApplied: Double) {
+        viewModelScope.launch {
+            // Validar que el monto no exceda el total pendiente
+            val remainingToPay = _state.value.remainingToPay
+            if (amountApplied > remainingToPay) {
+                setError(SaleError.ValidationFailed)
+                return@launch
+            }
+
+            val newCreditNote = AppliedCreditNote(
+                creditNoteId = UUID.fromString(creditNoteId),
+                invoiceNumber = "", // Se puede obtener del scan
+                amountApplied = amountApplied
+            )
+
+            _state.value = _state.value.copy(
+                appliedCreditNotes = _state.value.appliedCreditNotes + newCreditNote
+            )
+
+            Log.d(TAG, "Credit note applied: $creditNoteId, amount: $amountApplied")
+        }
+    }
+
+    private fun removeCreditNote(creditNoteId: UUID) {
+        _state.value = _state.value.copy(
+            appliedCreditNotes = _state.value.appliedCreditNotes.filter {
+                it.creditNoteId != creditNoteId
+            }
+        )
+        Log.d(TAG, "Credit note removed: $creditNoteId")
     }
 
     // ═══════════════════════════════════════════════════
@@ -283,6 +409,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🚀 INICIO DEL PROCESO DE PAGO
     // ═══════════════════════════════════════════════════
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun initiateSaleCompletion() {
         val sale = _state.value.sale
 
@@ -291,21 +418,44 @@ class SalesViewModel(
             return
         }
 
-        Log.d(TAG, "Initiating sale completion with method: ${sale.paymentMethod}")
+        // 🔐 VALIDAR QUE HAYA CAJA ABIERTA
+        viewModelScope.launch {
+            val cashRegisterHistoryId = validateCashRegisterOpen()
 
-        when (sale.paymentMethod) {
-            "cash" -> {
-                _state.value = _state.value.copy(
-                    paymentFlowState = PaymentFlowState.CashPayment(sale.total)
-                )
+            if (cashRegisterHistoryId == null) {
+                setError(SaleError.Server("⚠️ No hay caja abierta. Por favor, abre una caja antes de realizar ventas."))
+                return@launch
             }
-            "card" -> {
-                initiateCardPayment()
+
+            // Actualizar sale con el ID de la caja
+            _state.value = _state.value.copy(
+                sale = sale.copy(cashRegisterHistoryId = cashRegisterHistoryId)
+            )
+
+            val remainingToPay = _state.value.remainingToPay
+            val isCoveredByCredit = _state.value.isCoveredByCredit
+
+            Log.d(TAG, "Initiating sale completion - Remaining: $remainingToPay, Covered by credit: $isCoveredByCredit")
+
+            if (isCoveredByCredit) {
+                finalizeSaleWithInvoice()
+                return@launch
             }
-            "transfer" -> {
-                _state.value = _state.value.copy(
-                    paymentFlowState = PaymentFlowState.TransferPayment(sale.total)
-                )
+
+            when (sale.paymentMethod) {
+                "cash" -> {
+                    _state.value = _state.value.copy(
+                        paymentFlowState = PaymentFlowState.CashPayment(remainingToPay)
+                    )
+                }
+                "card" -> {
+                    initiateCardPayment()
+                }
+                "transfer" -> {
+                    _state.value = _state.value.copy(
+                        paymentFlowState = PaymentFlowState.TransferPayment(remainingToPay)
+                    )
+                }
             }
         }
     }
@@ -315,17 +465,16 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     @RequiresApi(Build.VERSION_CODES.O)
     private fun processCashPayment(amountReceived: Double) {
-        val sale = _state.value.sale ?: return
+        val remainingToPay = _state.value.remainingToPay
 
-        if (amountReceived < sale.total) {
+        if (amountReceived < remainingToPay) {
             setError(SaleError.ValidationFailed)
             return
         }
 
-        val change = amountReceived - sale.total
-        Log.d(TAG, "Cash payment - Total: ${sale.total}, Received: $amountReceived, Change: $change")
+        val change = amountReceived - remainingToPay
+        Log.d(TAG, "Cash payment - Remaining: $remainingToPay, Received: $amountReceived, Change: $change")
 
-        // 🔥 CREAR VENTA PRIMERO, LUEGO IMPRIMIR
         finalizeSaleWithInvoice()
     }
 
@@ -333,29 +482,31 @@ class SalesViewModel(
     // 💳 PAGO CON TARJETA (STRIPE)
     // ═══════════════════════════════════════════════════
     private fun initiateCardPayment() {
-        val sale = _state.value.sale ?: return
+        val remainingToPay = _state.value.remainingToPay
 
         _state.value = _state.value.copy(
             isLoading = true,
             paymentFlowState = PaymentFlowState.CardPayment(
-                total = sale.total,
+                total = remainingToPay,
                 paymentIntentId = null,
                 clientSecret = null
             )
         )
 
         viewModelScope.launch {
+            val sale = _state.value.sale ?: return@launch
+
             stripePaymentRepository.createPaymentIntent(
-                amount = sale.total,
+                amount = remainingToPay,
                 currency = "USD",
                 saleId = sale.saleId.toString()
             ).onSuccess { intent ->
-                Log.d(TAG, "Stripe Payment Intent created: ${sale.total}")
+                Log.d(TAG, "Stripe Payment Intent created: $remainingToPay")
 
                 _state.value = _state.value.copy(
                     isLoading = false,
                     paymentFlowState = PaymentFlowState.CardPayment(
-                        total = sale.total,
+                        total = remainingToPay,
                         paymentIntentId = intent.paymentIntentId,
                         clientSecret = intent.clientSecret
                     )
@@ -381,11 +532,11 @@ class SalesViewModel(
             }
             is com.stripe.android.paymentsheet.PaymentSheetResult.Canceled -> {
                 Log.d(TAG, "Stripe payment cancelled by user")
-                val sale = _state.value.sale ?: return
+                val remainingToPay = _state.value.remainingToPay
                 _state.value = _state.value.copy(
                     isLoading = false,
                     paymentFlowState = PaymentFlowState.CardPayment(
-                        total = sale.total,
+                        total = remainingToPay,
                         errorMessage = "Pago cancelado"
                     )
                 )
@@ -413,19 +564,17 @@ class SalesViewModel(
             stripePaymentRepository.confirmPayment(paymentIntentId)
                 .onSuccess { confirmation ->
                     if (confirmation.status == "succeeded") {
-                        Log.d(TAG, "Stripe payment confirmed: ${sale.total}")
+                        Log.d(TAG, "Stripe payment confirmed")
 
-                        // 🔥 PRIMERO: Crear la venta
                         finalizeSaleWithInvoice(
                             onSuccess = { createdSaleId ->
-                                // 🔥 DESPUÉS: Guardar evidencia de pago
                                 viewModelScope.launch {
                                     paymentProofRepository.createPaymentProof(
                                         saleId = createdSaleId,
                                         paymentMethod = "card",
                                         voucherPath = "stripe_${confirmation.chargeId ?: confirmation.paymentIntentId}",
                                         referenceNumber = paymentIntentId,
-                                        amount = sale.total,
+                                        amount = _state.value.remainingToPay,
                                         capturedBy = sale.userId.toString()
                                     ).onSuccess {
                                         Log.d(TAG, "Stripe payment proof created")
@@ -460,7 +609,7 @@ class SalesViewModel(
         _state.value = _state.value.copy(
             paymentFlowState = PaymentFlowState.CapturingEvidence(
                 saleId = sale.saleId.toString(),
-                total = sale.total
+                total = _state.value.remainingToPay
             )
         )
     }
@@ -492,17 +641,15 @@ class SalesViewModel(
                         imageFile = imageFile
                     ).onSuccess { voucherPath ->
 
-                        // 🔥 PRIMERO: Crear la venta
                         finalizeSaleWithInvoice(
                             onSuccess = { createdSaleId ->
-                                // 🔥 DESPUÉS: Guardar evidencia de pago
                                 viewModelScope.launch {
                                     paymentProofRepository.createPaymentProof(
                                         saleId = createdSaleId,
                                         paymentMethod = "transfer",
                                         voucherPath = voucherPath,
                                         referenceNumber = referenceNumber,
-                                        amount = sale.total,
+                                        amount = _state.value.remainingToPay,
                                         capturedBy = sale.userId.toString()
                                     ).onSuccess {
                                         Log.d(TAG, "Transfer payment proof created")
@@ -525,12 +672,13 @@ class SalesViewModel(
     }
 
     // ═══════════════════════════════════════════════════
-    // 🧾 FINALIZACIÓN DE VENTA CON FACTURACIÓN
+    // 🧾 FINALIZACIÓN DE VENTA CON FACTURACIÓN Y CRÉDITOS
     // ═══════════════════════════════════════════════════
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun finalizeSaleWithInvoice(onSuccess: ((String) -> Unit)? = null) {
         val sale = _state.value.sale ?: return
+        val appliedCredits = _state.value.appliedCreditNotes
 
         _state.value = _state.value.copy(isLoading = true)
 
@@ -542,7 +690,19 @@ class SalesViewModel(
 
                     Log.d(TAG, "Sale created: ${result.saleId}, invoice: ${result.invoiceNumber}")
 
-                    // Actualizar con invoice_number
+                    // 🎫 APLICAR NOTAS DE CRÉDITO
+                    if (appliedCredits.isNotEmpty()) {
+                        appliedCredits.forEach { credit ->
+                            creditNoteRepository.applyCreditNote(
+                                creditNoteId = credit.creditNoteId.toString(),
+                                appliedToSaleId = result.saleId,
+                                amountApplied = credit.amountApplied
+                            ).onFailure { e ->
+                                Log.e(TAG, "Error applying credit note (non-critical)", e)
+                            }
+                        }
+                    }
+
                     val completedSale = saleToCreate.copy(
                         invoiceNumber = result.invoiceNumber
                     )
@@ -573,7 +733,6 @@ class SalesViewModel(
                         )
                     )
 
-                    // 🔥 Llamar callback para crear payment proof
                     onSuccess?.invoke(result.saleId)
                 }
                 .onFailure { e ->
@@ -607,7 +766,8 @@ class SalesViewModel(
             ),
             searchResults = emptyList(),
             productsCache = emptyMap(),
-            paymentFlowState = PaymentFlowState.Idle
+            paymentFlowState = PaymentFlowState.Idle,
+            appliedCreditNotes = emptyList()
         )
     }
 

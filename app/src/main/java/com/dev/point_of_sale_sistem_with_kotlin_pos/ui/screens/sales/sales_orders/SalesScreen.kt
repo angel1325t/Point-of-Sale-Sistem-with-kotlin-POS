@@ -4,30 +4,94 @@ import android.annotation.SuppressLint
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.*
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Money
+import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Scanner
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -36,7 +100,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.AppliedCreditNote
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.PaymentFlowState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetail
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.credit_notes.AppliedCreditNotesCard
@@ -50,11 +113,13 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_order
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.TransferPaymentDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.utils.toUserMessage
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.credit_notes.CreditNoteViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.credit_notes.CreditNoteUsageViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.rememberPaymentSheet
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 @SuppressLint("ContextCastToActivity")
@@ -65,7 +130,7 @@ fun SalesScreen(
     viewModel: SalesViewModel?,
     onNavigateBack: () -> Unit,
     authViewModel: AuthSessionViewModel,
-    creditNoteViewModel: CreditNoteViewModel // Pasar desde navegación
+    creditNoteUsageViewModel: CreditNoteUsageViewModel
 ) {
     val state = viewModel?.state?.collectAsStateWithLifecycle()
     val authState by authViewModel.state.collectAsState()
@@ -88,15 +153,18 @@ fun SalesScreen(
     var showReferenceDialog by remember { mutableStateOf(false) }
     var pendingImageFile by remember { mutableStateOf<java.io.File?>(null) }
 
-    // 🎫 ESTADO LOCAL PARA NOTAS DE CRÉDITO (sin modificar SalesViewModel)
+    // 🎫 ESTADO PARA NOTAS DE CRÉDITO
     var showCreditNoteScanner by remember { mutableStateOf(false) }
-    var appliedCreditNotes by remember { mutableStateOf<List<AppliedCreditNote>>(emptyList()) }
 
-    // Cálculos derivados de créditos
-    val totalCreditApplied = appliedCreditNotes.sumOf { it.amountApplied }
+    // 📟 ESTADO PARA LECTOR DE CÓDIGOS
+    val isBarcodeReaderActive = state?.value?.isBarcodeReaderActive ?: false
+
+    // Obtener valores del ViewModel state
+    val appliedCreditNotes = state?.value?.appliedCreditNotes ?: emptyList()
+    val totalCreditApplied = state?.value?.totalCreditApplied ?: 0.0
     val saleTotal = state?.value?.sale?.total ?: 0.0
-    val remainingToPay = maxOf(0.0, saleTotal - totalCreditApplied)
-    val isCoveredByCredit = remainingToPay <= 0.0
+    val remainingToPay = state?.value?.remainingToPay ?: saleTotal
+    val isCoveredByCredit = state?.value?.isCoveredByCredit ?: false
 
     /* ---------------- INIT SALE ---------------- */
     LaunchedEffect(state?.value?.sale) {
@@ -113,7 +181,7 @@ fun SalesScreen(
 
     /* ---------------- SEARCH ---------------- */
     LaunchedEffect(searchQuery) {
-        if (searchQuery.length >= 2) {
+        if (searchQuery.length >= 2 && !isBarcodeReaderActive) {
             delay(300)
             viewModel?.handleIntent(SalesIntent.SearchProductByName(searchQuery))
         } else if (searchQuery.isBlank()) {
@@ -132,14 +200,14 @@ fun SalesScreen(
     /* ---------------- CREDIT NOTE SCANNER ---------------- */
     if (showCreditNoteScanner) {
         CreditNoteUsageScreen(
-            viewModel = creditNoteViewModel,
-            saleTotal = remainingToPay, // Pasar el saldo restante
+            viewModel = creditNoteUsageViewModel,
+            saleTotal = remainingToPay,
             onCreditApplied = { creditNoteId, amountApplied ->
-                // Agregar crédito aplicado a la lista local
-                appliedCreditNotes = appliedCreditNotes + AppliedCreditNote(
-                    creditNoteId = creditNoteId,
-                    invoiceNumber = "", // Opcional: puedes guardarlo si lo necesitas
-                    amountApplied = amountApplied
+                viewModel?.handleIntent(
+                    SalesIntent.ApplyCreditNote(
+                        creditNoteId = creditNoteId,
+                        amountApplied = amountApplied
+                    )
                 )
                 showCreditNoteScanner = false
             },
@@ -147,14 +215,14 @@ fun SalesScreen(
                 showCreditNoteScanner = false
             }
         )
-        return // Salir del composable para mostrar solo el scanner
+        return
     }
 
     /* ---------------- PAYMENT FLOWS ---------------- */
     when (val flow = state?.value?.paymentFlowState) {
         is PaymentFlowState.CashPayment -> {
             CashPaymentDialog(
-                total = remainingToPay, // Usar saldo restante
+                total = remainingToPay,
                 onDismiss = { viewModel.handleIntent(SalesIntent.ClearError) },
                 onConfirm = {
                     viewModel.handleIntent(SalesIntent.ConfirmCashPayment(it))
@@ -180,7 +248,7 @@ fun SalesScreen(
             }
 
             StripePaymentDialog(
-                total = remainingToPay, // Usar saldo restante
+                total = remainingToPay,
                 isProcessing = flow.clientSecret != null,
                 errorMessage = flow.errorMessage,
                 onDismiss = {
@@ -194,7 +262,7 @@ fun SalesScreen(
 
         is PaymentFlowState.TransferPayment -> {
             TransferPaymentDialog(
-                total = remainingToPay, // Usar saldo restante
+                total = remainingToPay,
                 onDismiss = { viewModel.handleIntent(SalesIntent.ClearError) },
                 onCaptureEvidence = {
                     viewModel.handleIntent(SalesIntent.CaptureTransferEvidence)
@@ -206,7 +274,6 @@ fun SalesScreen(
             SaleSuccessDialog(
                 onConfirm = {
                     viewModel.handleIntent(SalesIntent.ClearSale)
-                    appliedCreditNotes = emptyList() // Limpiar créditos
                     onNavigateBack()
                 }
             )
@@ -224,7 +291,7 @@ fun SalesScreen(
         ProcessingPaymentDialog()
     }
 
-    /* ---------------- BARCODE SCANNER ---------------- */
+    /* ---------------- BARCODE SCANNER (CÁMARA) ---------------- */
     if (showBarcodeScanner) {
         BarcodeScannerScreen(
             onBarcodeScanned = {
@@ -247,7 +314,6 @@ fun SalesScreen(
                     }
                 },
                 actions = {
-                    // Botón para aplicar notas de crédito
                     state?.value?.sale?.let { sale ->
                         if (sale.saleDetails.isNotEmpty()) {
                             IconButton(
@@ -310,8 +376,10 @@ fun SalesScreen(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
                 ) {
-                    focusManager.clearFocus()
-                    isSearchFocused = false
+                    if (!isBarcodeReaderActive) {
+                        focusManager.clearFocus()
+                        isSearchFocused = false
+                    }
                 }
         ) {
             Column(Modifier.padding(16.dp)) {
@@ -320,78 +388,99 @@ fun SalesScreen(
                     AppliedCreditNotesCard(
                         appliedCredits = appliedCreditNotes,
                         onRemoveCredit = { creditNote ->
-                            appliedCreditNotes = appliedCreditNotes.filter {
-                                it.creditNoteId != creditNote.creditNoteId
-                            }
+                            viewModel?.handleIntent(
+                                SalesIntent.RemoveCreditNote(creditNote.creditNoteId)
+                            )
                         }
                     )
                     Spacer(Modifier.height(12.dp))
                 }
 
-                // Search bar con Popup
-                Box {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onFocusChanged { isSearchFocused = it.isFocused },
-                        placeholder = { Text("Buscar producto") },
-                        trailingIcon = {
-                            IconButton(onClick = {
-                                showBarcodeScanner = true
-                                keyboardController?.hide()
-                            }) {
-                                Icon(Icons.Default.QrCodeScanner, null)
+                // Search bar con Popup (solo visible cuando el lector está INACTIVO)
+                if (!isBarcodeReaderActive) {
+                    Box {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { isSearchFocused = it.isFocused },
+                            placeholder = { Text("Buscar producto") },
+                            trailingIcon = {
+                                IconButton(onClick = {
+                                    showBarcodeScanner = true
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
+                                }) {
+                                    Icon(Icons.Default.QrCodeScanner, null)
+                                }
                             }
-                        }
-                    )
+                        )
 
-                    // Popup con resultados de búsqueda
-                    if (isSearchFocused && state?.value?.searchResults?.isNotEmpty() == true && searchQuery.isNotBlank()) {
-                        Popup(
-                            alignment = Alignment.TopStart,
-                            properties = PopupProperties(focusable = false)
-                        ) {
-                            Surface(
-                                modifier = Modifier
-                                    .padding(top = 60.dp)
-                                    .fillMaxWidth(0.92f)
-                                    .heightIn(max = 280.dp)
-                                    .shadow(8.dp, RoundedCornerShape(12.dp)),
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                tonalElevation = 4.dp
+                        // Popup con resultados de búsqueda
+                        if (isSearchFocused && state?.value?.searchResults?.isNotEmpty() == true && searchQuery.isNotBlank()) {
+                            Popup(
+                                alignment = Alignment.TopStart,
+                                properties = PopupProperties(focusable = false)
                             ) {
-                                LazyColumn(
-                                    modifier = Modifier.padding(vertical = 4.dp)
+                                Surface(
+                                    modifier = Modifier
+                                        .padding(top = 60.dp)
+                                        .fillMaxWidth(0.92f)
+                                        .heightIn(max = 280.dp)
+                                        .shadow(8.dp, RoundedCornerShape(12.dp)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    tonalElevation = 4.dp
                                 ) {
-                                    items(
-                                        items = state.value.searchResults,
-                                        key = { it.productId }
-                                    ) { product ->
-                                        SearchResultItem(
-                                            product = product,
-                                            onClick = {
-                                                viewModel.handleIntent(
-                                                    SalesIntent.AddSaleDetail(
-                                                        productId = product.productId,
-                                                        quantity = 1,
-                                                        unitPrice = product.price,
-                                                        discount = 0.0
+                                    LazyColumn(
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    ) {
+                                        items(
+                                            items = state.value.searchResults,
+                                            key = { it.productId }
+                                        ) { product ->
+                                            SearchResultItem(
+                                                product = product,
+                                                onClick = {
+                                                    viewModel.handleIntent(
+                                                        SalesIntent.AddSaleDetail(
+                                                            productId = product.productId,
+                                                            quantity = 1,
+                                                            unitPrice = product.price,
+                                                            discount = 0.0
+                                                        )
                                                     )
-                                                )
-                                                searchQuery = ""
-                                                viewModel.handleIntent(SalesIntent.ClearSearchResults)
-                                                focusManager.clearFocus()
-                                            }
-                                        )
+                                                    searchQuery = ""
+                                                    viewModel.handleIntent(SalesIntent.ClearSearchResults)
+                                                    focusManager.clearFocus()
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
                 }
+
+                // 📟 LECTOR DE CÓDIGOS DE BARRA
+                BarcodeReaderSection(
+                    isActive = isBarcodeReaderActive,
+                    onToggle = {
+                        viewModel?.handleIntent(SalesIntent.ToggleBarcodeReader)
+                        if (!isBarcodeReaderActive) {
+                            // Al activar, limpiar búsqueda y focus
+                            searchQuery = ""
+                            focusManager.clearFocus()
+                            viewModel?.handleIntent(SalesIntent.ClearSearchResults)
+                        }
+                    },
+                    onBarcodeSubmit = { barcode ->
+                        viewModel?.handleIntent(SalesIntent.ProcessBarcodeFromReader(barcode))
+                    }
+                )
 
                 Spacer(Modifier.height(12.dp))
 
@@ -473,7 +562,6 @@ fun SalesScreen(
             onDismiss = { showCancelDialog = false },
             onConfirm = {
                 viewModel?.handleIntent(SalesIntent.ClearSale)
-                appliedCreditNotes = emptyList() // Limpiar créditos
                 showCancelDialog = false
                 onNavigateBack()
             }
@@ -481,7 +569,196 @@ fun SalesScreen(
     }
 }
 
+// ═══════════════════════════════════════════════════
+// 📟 COMPONENTE DEL LECTOR DE CÓDIGOS DE BARRA
+// ═══════════════════════════════════════════════════
 
+@Composable
+private fun BarcodeReaderSection(
+    isActive: Boolean,
+    onToggle: () -> Unit,
+    onBarcodeSubmit: (String) -> Unit
+) {
+    var barcodeInput by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // 🎯 DEBOUNCE PARA DETECTAR CUANDO EL LECTOR TERMINA
+    var debounceJob by remember { mutableStateOf<Job?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Auto-focus cuando se activa
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            delay(100)
+            focusRequester.requestFocus()
+            keyboardController?.show()
+            barcodeInput = "" // Limpiar al activar
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Scanner,
+                        contentDescription = null,
+                        tint = if (isActive)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column {
+                        Text(
+                            text = "Lector de códigos de barra",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (isActive)
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (isActive) {
+                            Text(
+                                text = "Activo - Esperando escaneo...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                Switch(
+                    checked = isActive,
+                    onCheckedChange = { onToggle() }
+                )
+            }
+
+            if (isActive) {
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = barcodeInput,
+                    onValueChange = { newValue ->
+                        barcodeInput = newValue
+
+                        // 🔥 CANCELAR DEBOUNCE ANTERIOR
+                        debounceJob?.cancel()
+
+                        // 🔥 CREAR NUEVO DEBOUNCE (150ms para detectar cuando el lector termina)
+                        if (newValue.isNotBlank()) {
+                            debounceJob = coroutineScope.launch {
+                                delay(150) // Esperar a que el lector termine de escribir
+
+                                // Si el código tiene longitud razonable (6-15 dígitos)
+                                if (newValue.length in 6..15) {
+                                    Log.d("BarcodeReader", "Auto-submitting: $newValue")
+                                    onBarcodeSubmit(newValue.trim())
+                                    barcodeInput = ""
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    placeholder = {
+                        Text(
+                            if (barcodeInput.isEmpty())
+                                "Escanee el código de barra..."
+                            else
+                                "Procesando..."
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (barcodeInput.isNotBlank()) {
+                                debounceJob?.cancel()
+                                onBarcodeSubmit(barcodeInput.trim())
+                                barcodeInput = ""
+                            }
+                        }
+                    ),
+                    trailingIcon = {
+                        if (barcodeInput.isNotEmpty()) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${barcodeInput.length}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                IconButton(
+                                    onClick = {
+                                        debounceJob?.cancel()
+                                        onBarcodeSubmit(barcodeInput.trim())
+                                        barcodeInput = ""
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Send,
+                                        contentDescription = "Buscar",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "💡 El producto se agregará automáticamente",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (barcodeInput.isNotEmpty()) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 @SuppressLint("DefaultLocale")
 @Composable
 private fun SearchResultItem(
@@ -698,337 +975,307 @@ private fun EmptySaleState(modifier: Modifier = Modifier) {
         )
     }
 }
-
 @Composable
 fun SalesBottomBar(
     subtotal: Double,
     itbis: Double,
     total: Double,
-    creditApplied: Double = 0.0, // NUEVO
-    remainingToPay: Double = total, // NUEVO
-    isCoveredByCredit: Boolean = false, // NUEVO
+    creditApplied: Double = 0.0,
+    remainingToPay: Double = total,
+    isCoveredByCredit: Boolean = false,
     itemCount: Int,
     selectedPaymentMethod: String,
     onPaymentMethodSelected: (String) -> Unit,
     onCompleteClick: () -> Unit,
     onCancelClick: () -> Unit
 ) {
+    var showPaymentMethods by remember { mutableStateOf(false) }
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp,
         shadowElevation = 8.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            // Resumen de montos
+            // Resumen de totales
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        RoundedCornerShape(8.dp)
-                    )
-                    .padding(12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Cantidad de items
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Items:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "$itemCount",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Subtotal
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "Subtotal:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "$${"%.2f".format(subtotal)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "$${String.format("%.2f", subtotal)}",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // ITBIS
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "ITBIS (18%):",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "$${"%.2f".format(itbis)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        text = "$${String.format("%.2f", itbis)}",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
 
-                Divider()
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Total
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "TOTAL:",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "Total:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "$${"%.2f".format(total)}",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
+                        text = "$${String.format("%.2f", total)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
-                // NUEVO: Mostrar crédito aplicado
+                // Mostrar crédito aplicado si existe
                 if (creditApplied > 0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Receipt,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "Crédito aplicado:",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                            Text(
-                                text = "-$${"%.2f".format(creditApplied)}",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Divider()
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Saldo a pagar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = if (isCoveredByCredit) "Cubierto:" else "Saldo a pagar:",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = if (isCoveredByCredit)
-                                MaterialTheme.colorScheme.tertiary
-                            else
-                                MaterialTheme.colorScheme.error
+                            text = "Crédito aplicado:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.secondary
                         )
                         Text(
-                            text = "$${"%.2f".format(remainingToPay)}",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
+                            text = "-$${String.format("%.2f", creditApplied)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Restante a pagar:",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
                             color = if (isCoveredByCredit)
                                 MaterialTheme.colorScheme.tertiary
                             else
-                                MaterialTheme.colorScheme.error
+                                MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "$${String.format("%.2f", remainingToPay)}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isCoveredByCredit)
+                                MaterialTheme.colorScheme.tertiary
+                            else
+                                MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Métodos de pago (solo si no está cubierto por crédito)
-            if (!isCoveredByCredit) {
                 Text(
-                    text = "Método de pago ${if (creditApplied > 0) "(saldo restante)" else ""}",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "$itemCount ${if (itemCount == 1) "artículo" else "artículos"}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PaymentMethodButton(
-                        icon = Icons.Default.Payments,
-                        label = "Efectivo",
-                        isSelected = selectedPaymentMethod == "cash",
-                        onClick = { onPaymentMethodSelected("cash") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    PaymentMethodButton(
-                        icon = Icons.Default.CreditCard,
-                        label = "Tarjeta",
-                        isSelected = selectedPaymentMethod == "card",
-                        onClick = { onPaymentMethodSelected("card") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    PaymentMethodButton(
-                        icon = Icons.Default.AccountBalance,
-                        label = "Transfer.",
-                        isSelected = selectedPaymentMethod == "transfer",
-                        onClick = { onPaymentMethodSelected("transfer") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-            } else {
-                // Mensaje de cubierto por crédito
-                Surface(
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary
-                        )
-                        Text(
-                            text = "Venta cubierta con nota de crédito",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Botón de método de pago (solo si hay saldo pendiente)
+            if (!isCoveredByCredit && remainingToPay > 0) {
+                OutlinedButton(
+                    onClick = { showPaymentMethods = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = when (selectedPaymentMethod) {
+                            "cash" -> Icons.Default.Money
+                            "card" -> Icons.Default.CreditCard
+                            "transfer" -> Icons.Default.AccountBalance
+                            else -> Icons.Default.Payment
+                        },
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        when (selectedPaymentMethod) {
+                            "cash" -> "Efectivo"
+                            "card" -> "Tarjeta"
+                            "transfer" -> "Transferencia"
+                            else -> "Seleccionar método"
+                        }
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Botones de acción
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
                     onClick = onCancelClick,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Default.Cancel, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Default.Close, null)
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Cancelar")
                 }
 
                 Button(
                     onClick = onCompleteClick,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isCoveredByCredit)
-                            MaterialTheme.colorScheme.tertiary
-                        else
-                            MaterialTheme.colorScheme.primary
-                    )
+                    enabled = itemCount > 0
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (isCoveredByCredit) "Finalizar" else "Completar")
+                    Icon(
+                        imageVector = if (isCoveredByCredit)
+                            Icons.Default.CheckCircle
+                        else
+                            Icons.Default.Payment,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        if (isCoveredByCredit)
+                            "Completar"
+                        else
+                            "Pagar"
+                    )
                 }
             }
         }
     }
+
+    // Diálogo de selección de método de pago
+    if (showPaymentMethods) {
+        AlertDialog(
+            onDismissRequest = { showPaymentMethods = false },
+            title = { Text("Método de pago") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PaymentMethodOption(
+                        icon = Icons.Default.Money,
+                        label = "Efectivo",
+                        isSelected = selectedPaymentMethod == "cash",
+                        onClick = {
+                            onPaymentMethodSelected("cash")
+                            showPaymentMethods = false
+                        }
+                    )
+                    PaymentMethodOption(
+                        icon = Icons.Default.CreditCard,
+                        label = "Tarjeta",
+                        isSelected = selectedPaymentMethod == "card",
+                        onClick = {
+                            onPaymentMethodSelected("card")
+                            showPaymentMethods = false
+                        }
+                    )
+                    PaymentMethodOption(
+                        icon = Icons.Default.AccountBalance,
+                        label = "Transferencia",
+                        isSelected = selectedPaymentMethod == "transfer",
+                        onClick = {
+                            onPaymentMethodSelected("transfer")
+                            showPaymentMethods = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPaymentMethods = false }) {
+                    Text("Cerrar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
-private fun PaymentMethodButton(
+private fun PaymentMethodOption(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
-    FilterChip(
-        selected = isSelected,
+    Surface(
         onClick = onClick,
-        label = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        shape = MaterialTheme.shapes.medium,
+        color = if (isSelected)
+            MaterialTheme.colorScheme.primaryContainer
+        else
+            MaterialTheme.colorScheme.surface,
+        border = if (isSelected)
+            null
+        else
+            ButtonDefaults.outlinedButtonBorder,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected)
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                else
+                    MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                else
+                    MaterialTheme.colorScheme.onSurface
+            )
+            if (isSelected) {
+                Spacer(modifier = Modifier.weight(1f))
                 Icon(
-                    icon,
+                    imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp)
+                    tint = MaterialTheme.colorScheme.primary
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(label, style = MaterialTheme.typography.labelSmall)
             }
-        },
-        modifier = modifier.height(70.dp)
-    )
+        }
+    }
 }
-
 @Composable
 private fun CancelSaleDialog(
     onDismiss: () -> Unit,

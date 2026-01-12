@@ -1,12 +1,17 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.refunds
 
+import android.app.Activity
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.refunds.RefundIntent
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.BusinessInfo
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.refunds.RefundState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.refunds.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.refunds.RefundRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.CreditNoteInvoiceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +20,8 @@ import java.util.UUID
 
 class RefundViewModel(
     private val repository: RefundRepository,
-    private val userId: UUID
+    private val creditNoteInvoiceRepository: CreditNoteInvoiceRepository,
+    private val userId: UUID,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RefundState())
@@ -149,7 +155,7 @@ class RefundViewModel(
         val updatedItems = _state.value.selectedItems
             .filter { it.saleDetailId != saleDetailId } + newItem
 
-        // 🔥 CALCULAR TOTALES CON ITBIS
+        // Calcular totales con ITBIS
         val itemsSubtotal = updatedItems.sumOf { (it.unitPrice * it.quantityToRefund) - it.discount }
         val itbis = itemsSubtotal * ITBIS_RATE
         val totalRefund = itemsSubtotal + itbis
@@ -177,7 +183,7 @@ class RefundViewModel(
         val updatedItems = _state.value.selectedItems
             .filter { it.saleDetailId != saleDetailId }
 
-        // 🔥 RECALCULAR TOTALES
+        // Recalcular totales
         val itemsSubtotal = updatedItems.sumOf { (it.unitPrice * it.quantityToRefund) - it.discount }
         val itbis = itemsSubtotal * ITBIS_RATE
         val totalRefund = itemsSubtotal + itbis
@@ -191,7 +197,7 @@ class RefundViewModel(
     }
 
     // ═══════════════════════════════════════════════════
-    // PROCESAMIENTO DE DEVOLUCIÓN
+    // PROCESAMIENTO DE DEVOLUCIÓN CON IMPRESIÓN
     // ═══════════════════════════════════════════════════
 
     private fun processRefund() {
@@ -203,6 +209,7 @@ class RefundViewModel(
         _state.value = _state.value.copy(showConfirmationDialog = true)
     }
 
+    @RequiresApi(Build.VERSION_CODES.KITKAT)
     private fun confirmRefund() {
         val sale = _state.value.foundSale ?: return
         val items = _state.value.selectedItems
@@ -233,11 +240,9 @@ class RefundViewModel(
             )
                 .onSuccess { creditNoteId ->
                     Log.d(TAG, "Credit note created successfully: $creditNoteId")
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        showSuccessDialog = true,
-                        createdCreditNoteId = creditNoteId
-                    )
+
+                    // 🔥 NUEVO: Obtener la venta de crédito para imprimir
+                    fetchAndPrintCreditNote(creditNoteId)
                 }
                 .onFailure { e ->
                     Log.e(TAG, "Error creating credit note", e)
@@ -245,6 +250,73 @@ class RefundViewModel(
                 }
         }
     }
+
+    /**
+     * Obtiene la nota de crédito creada y la imprime
+     */
+    @RequiresApi(Build.VERSION_CODES.KITKAT)
+    private fun fetchAndPrintCreditNote(creditNoteId: UUID) {
+        viewModelScope.launch {
+            // Buscar la nota de crédito por ID
+            repository.findCreditNoteBySaleId(creditNoteId)
+                .onSuccess { creditNoteSale ->
+                    if (creditNoteSale != null) {
+                        Log.d(TAG, "Fetched credit note for printing: ${creditNoteSale.invoiceNumber}")
+
+                        // Crear mapa de productos
+                        val productsMap = _state.value.selectedItems.associate {
+                            it.productId.toString() to it.productName
+                        }
+
+                        // Imprimir la factura
+                        printCreditNoteInvoice(creditNoteSale, productsMap)
+
+                        // Actualizar estado como exitoso
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            showSuccessDialog = true,
+                            createdCreditNoteId = creditNoteId
+                        )
+                    } else {
+                        Log.w(TAG, "Credit note not found after creation")
+                        setError(RefundError.Server("No se pudo recuperar la nota de crédito"))
+                    }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Error fetching credit note for printing", e)
+                    // Aún así marcamos como exitoso porque se creó
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        showSuccessDialog = true,
+                        createdCreditNoteId = creditNoteId
+                    )
+                }
+        }
+    }
+
+    /**
+     * Imprime la factura de nota de crédito
+     */
+    private fun printCreditNoteInvoice(
+        sale: RefundableSale,
+        productsMap: Map<String, String>
+    ) {
+        viewModelScope.launch {
+            creditNoteInvoiceRepository
+                .generateAndPrintCreditNoteInvoice(
+                    sale = sale,
+                    productsMap = productsMap
+                )
+                .onSuccess { pdfFile ->
+                    Log.d(TAG, "Credit note invoice printed: ${pdfFile.absolutePath}")
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Error printing credit note invoice", e)
+                    // No bloqueamos el flujo si falla la impresión
+                }
+        }
+    }
+
 
     // ═══════════════════════════════════════════════════
     // UTILIDADES

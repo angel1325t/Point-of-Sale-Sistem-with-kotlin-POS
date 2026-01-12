@@ -24,6 +24,7 @@ data class Sale(
     val isCreditNote: Boolean = false,
     val originalSaleId: UUID? = null,
     val creditRemaining: Double? = null,
+    val cashRegisterHistoryId: String = "",
 
     val saleDetails: List<SaleDetail> = emptyList()
 )
@@ -66,7 +67,9 @@ data class SaleInsertDTO(
     val originalSaleId: String? = null,
 
     @SerialName("credit_remaining")
-    val creditRemaining: Double? = null
+    val creditRemaining: Double? = null,
+    @SerialName("cash_register_history_id")
+    val cashRegisterHistoryId: String
 )
 
 @Serializable

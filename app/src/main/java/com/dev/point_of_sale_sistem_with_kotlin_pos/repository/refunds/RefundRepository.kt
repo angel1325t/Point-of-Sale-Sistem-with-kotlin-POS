@@ -14,8 +14,6 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.rpc
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonPrimitive
 import java.util.UUID
 
 class RefundRepository(
@@ -78,7 +76,58 @@ class RefundRepository(
     }
 
     // ─────────────────────────────────────────────
-    // CREAR NOTA DE CRÉDITO (RPC) - FIXED
+    // BUSCAR NOTA DE CRÉDITO POR SALE_ID (PARA IMPRIMIR)
+    // ─────────────────────────────────────────────
+    suspend fun findCreditNoteBySaleId(
+        saleId: UUID
+    ): Result<RefundableSale?> = runCatching {
+
+        Log.d(TAG, "Fetching credit note by sale_id: $saleId")
+
+        val response = supabase.from("sales")
+            .select(
+                columns = Columns.raw(
+                    """
+                    sale_id,
+                    invoice_number,
+                    sale_date,
+                    total,
+                    payment_method,
+                    refunded_total,
+                    is_credit_note,
+                    original_sale_id,
+                    credit_remaining,
+                    sale_details (
+                        sale_detail_id,
+                        product_id,
+                        quantity,
+                        refunded_quantity,
+                        unit_price,
+                        discount,
+                        final_price,
+                        products ( name )
+                    )
+                    """.trimIndent()
+                )
+            ) {
+                filter {
+                    eq("sale_id", saleId.toString())
+                    eq("is_credit_note", true)
+                }
+            }
+            .decodeSingleOrNull<RefundableSaleDTO>()
+
+        if (response == null) {
+            Log.d(TAG, "No credit note found with sale_id: $saleId")
+            return@runCatching null
+        }
+
+        Log.d(TAG, "Credit note found: ${response.invoiceNumber}")
+        response.toDomain()
+    }
+
+    // ─────────────────────────────────────────────
+    // CREAR NOTA DE CRÉDITO (RPC)
     // ─────────────────────────────────────────────
     suspend fun createCreditNote(
         originalSaleId: UUID,
@@ -121,7 +170,7 @@ class RefundRepository(
             userId = userId.toString()
         )
 
-        // 🔥 FIX: La RPC devuelve un string UUID directamente
+        // La RPC devuelve un string UUID directamente
         val creditNoteIdString = supabase
             .postgrest
             .rpc(
@@ -141,7 +190,7 @@ class RefundRepository(
     }
 
     // ─────────────────────────────────────────────
-    // BUSCAR NOTA DE CRÉDITO
+    // BUSCAR NOTA DE CRÉDITO POR INVOICE
     // ─────────────────────────────────────────────
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun findCreditNoteByInvoiceNumber(

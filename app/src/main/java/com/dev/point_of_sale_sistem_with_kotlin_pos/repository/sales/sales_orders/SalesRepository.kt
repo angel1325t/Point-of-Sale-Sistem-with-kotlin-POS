@@ -33,6 +33,11 @@ class SalesRepository(
 
         Log.d(TAG, "Creating sale with ${sale.saleDetails.size} items")
 
+        // 🔐 VALIDAR QUE TENGA cash_register_history_id
+        if (sale.cashRegisterHistoryId.isBlank()) {
+            throw IllegalStateException("No se puede crear venta sin caja abierta")
+        }
+
         // 1️⃣ VALIDAR STOCK ANTES DE CREAR LA VENTA
         for (detail in sale.saleDetails) {
             val currentStock = getCurrentStock(detail.productId)
@@ -44,7 +49,7 @@ class SalesRepository(
             }
         }
 
-        // 2️⃣ CREAR LA VENTA
+        // 2️⃣ CREAR LA VENTA CON cash_register_history_id
         val saleDTO = SaleInsertDTO(
             userId = sale.userId.toString(),
             saleDate = sale.saleDate.toString(),
@@ -56,8 +61,12 @@ class SalesRepository(
             globalDiscount = sale.globalDiscount,
             isCreditNote = sale.isCreditNote,
             originalSaleId = sale.originalSaleId?.toString(),
-            creditRemaining = sale.creditRemaining
+            creditRemaining = sale.creditRemaining,
+            cashRegisterHistoryId = sale.cashRegisterHistoryId // 🆕
         )
+
+        Log.d(TAG, "Inserting sale - Cash Register History ID: ${sale.cashRegisterHistoryId}")
+        Log.d(TAG, "Sale totals - Subtotal: ${sale.subtotal}, ITBIS: ${sale.itbis}, Total: ${sale.total}")
 
         val createdSale = supabase.from("sales")
             .insert(saleDTO) {

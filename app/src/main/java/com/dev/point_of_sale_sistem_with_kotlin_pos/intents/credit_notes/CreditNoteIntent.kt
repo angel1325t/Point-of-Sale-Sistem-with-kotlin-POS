@@ -7,22 +7,23 @@ import java.util.UUID
  * Acciones de usuario para usar notas de crédito
  */
 sealed class CreditNoteIntent {
-    // Búsqueda de nota de crédito
-    data class SearchByInvoiceNumber(val invoiceNumber: String) : CreditNoteIntent()
-    data class SearchByQRCode(val qrContent: String) : CreditNoteIntent()
-    data object ClearSearch : CreditNoteIntent()
 
-    // Aplicación de crédito
+    data class SearchByQRCode(val qrContent: String) : CreditNoteIntent()
+    data class SearchByInvoiceNumber(val invoiceNumber: String) : CreditNoteIntent()
+
+    data class AmountChanged(val amount: Double) : CreditNoteIntent()
+
     data class ApplyCreditToSale(
-        val creditNoteId: UUID,
+        val creditNoteId: String,
+        val saleTotal: Double
+    ) : CreditNoteIntent()
+    data class SetSaleTotal(
         val saleTotal: Double
     ) : CreditNoteIntent()
 
-    data object ConfirmCreditApplication : CreditNoteIntent()
-
-    // Control de UI
-    data object ShowQRScanner : CreditNoteIntent()
-    data object HideQRScanner : CreditNoteIntent()
-    data object ClearError : CreditNoteIntent()
-    data object NavigateBack : CreditNoteIntent()
+    object ConfirmCreditApplication : CreditNoteIntent()
+    object ShowQRScanner : CreditNoteIntent()
+    object HideQRScanner : CreditNoteIntent()
+    object ClearError : CreditNoteIntent()
+    object NavigateBack : CreditNoteIntent()
 }

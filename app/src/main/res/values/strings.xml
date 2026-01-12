@@ -630,5 +630,6 @@
     <string name="sales_price_format">RD$ %1$,.2f</string>
     <string name="sales_discount_format">-RD$ %1$,.2f</string>
     <string name="sales_quantity_format">x%1$d</string>
+    <string name="cash_register_already_open">Ya tienes una caja abierta</string>
 
 </resources>

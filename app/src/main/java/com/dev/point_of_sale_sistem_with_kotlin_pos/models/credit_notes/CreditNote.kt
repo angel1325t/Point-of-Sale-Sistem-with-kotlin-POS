@@ -13,6 +13,40 @@ import java.util.UUID
 // MODELOS DE DOMINIO (USADOS POR VIEWMODEL)
 // ═══════════════════════════════════════════════════
 
+@Serializable
+data class CreditNoteUsageDTO(
+    @SerialName("credit_note_id")
+    val creditNoteId: String,
+
+    @SerialName("applied_to_sale_id")
+    val appliedToSaleId: String,
+
+    @SerialName("amount_applied")
+    val amountApplied: Double,
+
+    @SerialName("applied_at")
+    val appliedAt: String
+)
+
+@Serializable
+data class CreditRemainingDTO(
+    @SerialName("credit_remaining")
+    val creditRemaining: Double
+)
+
+@Serializable
+data class CreditNoteUsageInsertDTO(
+    @SerialName("credit_note_id")
+    val creditNoteId: String,
+
+    @SerialName("applied_to_sale_id")
+    val appliedToSaleId: String,
+
+    @SerialName("amount_applied")
+    val amountApplied: Double
+)
+
+
 data class CreditNote(
     val saleId: UUID,
     val invoiceNumber: String,
@@ -25,23 +59,14 @@ data class CreditNote(
         get() = creditRemaining <= 0.01
 }
 
-data class CreditApplication(
-    val creditNoteId: UUID,
-    val amountToApply: Double,
-    val remainingCredit: Double,
-    val saleTotal: Double
-) {
-    val needsAdditionalPayment: Boolean
-        get() = saleTotal > amountToApply
-
-    val additionalPaymentRequired: Double
-        get() = if (needsAdditionalPayment) saleTotal - amountToApply else 0.0
-}
-
 // ═══════════════════════════════════════════════════
 // DTO PARA DESERIALIZAR DESDE SUPABASE
 // ═══════════════════════════════════════════════════
-
+data class ScannedCreditNote(
+    val saleId: String,
+    val invoiceNumber: String,
+    val creditRemaining: Double
+)
 @Serializable
 data class CreditNoteDTO(
     @SerialName("sale_id")

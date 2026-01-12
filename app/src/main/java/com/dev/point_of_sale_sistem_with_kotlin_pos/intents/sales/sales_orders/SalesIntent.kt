@@ -9,6 +9,10 @@ sealed class SalesIntent {
     data class SearchProductByBarcode(val barcode: String) : SalesIntent()
     data object ClearSearchResults : SalesIntent()
 
+    // 🆕 LECTOR DE CÓDIGOS DE BARRA
+    data object ToggleBarcodeReader : SalesIntent()
+    data class ProcessBarcodeFromReader(val barcode: String) : SalesIntent()
+
     // Gestión de productos en venta
     data class AddSaleDetail(
         val productId: Int,
@@ -35,6 +39,7 @@ sealed class SalesIntent {
 
     data class UpdatePaymentMethod(val method: String) : SalesIntent()
     data object CompleteSale : SalesIntent()
+
     // Métodos de pago
     data class ConfirmCashPayment(val amountReceived: Double) : SalesIntent()
     data object InitiateCardPayment : SalesIntent()
@@ -43,6 +48,16 @@ sealed class SalesIntent {
     data class SubmitTransferEvidence(
         val imageFile: File,
         val referenceNumber: String
+    ) : SalesIntent()
+
+    // Notas de crédito
+    data class ApplyCreditNote(
+        val creditNoteId: String,
+        val amountApplied: Double
+    ) : SalesIntent()
+
+    data class RemoveCreditNote(
+        val creditNoteId: UUID
     ) : SalesIntent()
 
     // Control general

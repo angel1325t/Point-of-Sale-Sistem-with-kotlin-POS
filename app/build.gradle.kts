@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "2.2.20"
+    id("com.google.gms.google-services")
 }
 
 val localProperties = rootProject.file("local.properties").takeIf { it.exists() }?.let {
@@ -62,6 +63,9 @@ android {
 }
 
 dependencies {
+    //Firebase messaging
+    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

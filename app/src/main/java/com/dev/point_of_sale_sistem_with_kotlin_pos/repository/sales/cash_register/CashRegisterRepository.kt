@@ -119,38 +119,92 @@ class CashRegisterRepository(private val supabase: SupabaseClient) {
     }
 
     @OptIn(ExperimentalTime::class)
-    suspend fun closeCashRegister(finalBalance: Double? = null): CashRegisterHistory {
+    suspend fun closeCashRegister(realFinalBalance: Double): CashRegisterHistory {
         val authId = getCurrentUserId() ?: throw Exception("Usuario no autenticado")
 
-        val nowUtc = Clock.System.now()  // fecha y hora actual en UTC
+        val openRegister = getOpenCashRegister()
+            ?: throw Exception("No hay caja abierta para cerrar")
+
+        val historyId = openRegister.history_id
+
+        // 📊 CALCULAR VENTAS EN EFECTIVO
+        val totalCashSales = getTotalCashSales(historyId)
+
+        // 💰 CÁLCULOS
+        val expectedBalance = openRegister.initial_balance + totalCashSales
+        val difference = realFinalBalance - expectedBalance
+
+        Log.d(TAG, """
+            Cierre de caja:
+            - ID: $historyId
+            - Saldo inicial: ${openRegister.initial_balance}
+            - Ventas en efectivo: $totalCashSales
+            - Saldo esperado: $expectedBalance
+            - Saldo real: $realFinalBalance
+            - Diferencia: $difference
+        """.trimIndent())
+
+        val nowUtc = Clock.System.now()
 
         val data = buildJsonObject {
-            if (finalBalance != null) put("final_balance", finalBalance)
+            put("final_balance", realFinalBalance)
+            put("expected_balance", expectedBalance)
+            put("difference", difference)
             put("is_open", false)
-            put("closing_date", nowUtc.toString()) // <-- agregamos closing_date
+            put("closing_date", nowUtc.toString())
         }
 
-        // Actualizamos la fila abierta
+        // Actualizar el registro
         supabase.postgrest.from("cash_registers_history")
             .update(data) {
                 filter {
-                    eq("auth_id", authId)
-                    eq("is_open", true)
+                    eq("history_id", historyId)
                 }
             }
 
-        // Recuperamos la última fila cerrada
-        return supabase.postgrest.from("cash_registers_history")
+        // Recuperar el registro actualizado
+        val closedRegister = supabase.postgrest.from("cash_registers_history")
             .select {
                 filter {
-                    eq("auth_id", authId)
-                    eq("is_open", false)
+                    eq("history_id", historyId)
                 }
-                order("closing_date", Order.DESCENDING)
-                limit(1)
             }
-            .decodeSingle()
+            .decodeSingle<CashRegisterHistory>()
+
+        Log.d(TAG, "Caja cerrada exitosamente: $historyId")
+
+        return closedRegister
     }
+
+    // ----------------------------------------------------
+    // 💵 CÁLCULO DE VENTAS EN EFECTIVO
+    // ----------------------------------------------------
+
+    private suspend fun getTotalCashSales(historyId: String): Double {
+        return try {
+            // Consulta para sumar todas las ventas en efectivo de esta apertura
+            val result = supabase.postgrest.from("sales")
+                .select {
+                    filter {
+                        eq("cash_register_history_id", historyId)
+                        eq("payment_method", "cash")
+                        eq("status", "completed")
+                    }
+                }
+                .decodeList<SaleSummary>()
+
+            val total = result.sumOf { it.total }
+            Log.d(TAG, "Total ventas en efectivo: $total (${result.size} ventas)")
+            total
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculando ventas", e)
+            0.0
+        }
+    }
+
+    // Clase auxiliar para deserializar solo el campo 'total'
+    @kotlinx.serialization.Serializable
+    private data class SaleSummary(val total: Double)
 
     // ----------------------------------------------------
     // CONSULTAS DE ESTADO
@@ -186,8 +240,6 @@ class CashRegisterRepository(private val supabase: SupabaseClient) {
             }
             .decodeList<CashRegisterHistory>()
     }
-
-
 
     // ----------------------------------------------------
     // UTILIDADES
