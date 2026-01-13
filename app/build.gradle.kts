@@ -1,5 +1,5 @@
-import java.util.Properties
 import java.io.FileReader
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,7 +15,8 @@ val localProperties = rootProject.file("local.properties").takeIf { it.exists() 
 
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: "DEFAULT_URL"
 val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: "DEFAULT_KEY"
-val stripePublishableKey = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") ?: "DEFAULT_KEY"
+val stripePublishableKey =
+    localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") ?: "DEFAULT_KEY"
 
 android {
     namespace = "com.dev.point_of_sale_sistem_with_kotlin_pos"
@@ -27,6 +28,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // 🔹 Supabase
@@ -47,9 +49,11 @@ android {
         }
     }
 
+    // ✅ DESUGARING ACTIVADO (CLAVE)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -63,13 +67,19 @@ android {
 }
 
 dependencies {
-    //Firebase messaging
+
+    // ✅ DESUGARING (PERMITE java.time EN API 24+)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
+    // Firebase Messaging
     implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
     implementation("com.google.firebase:firebase-messaging")
+
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.material3)
 
     // CameraX
     val cameraxVersion = "1.3.1"
@@ -92,52 +102,44 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.ui.text)
 
-    // ZXing para generar códigos de barras
+    // Coroutines & ZXing
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.google.zxing:core:3.5.3")
 
-    // Navigation
+    // Navigation & Lifecycle
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
     implementation("androidx.navigation:navigation-compose:2.9.5")
     implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
     implementation("androidx.biometric:biometric:1.1.0")
 
-    // Image Loading
+    // Image Loading & DataStore
     implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
-
-    // Persistencia de sesión
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // ═══════════════════════════════════════════════════
-    // STRIPE SDK
-    // ═══════════════════════════════════════════════════
+    // Security
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Stripe
     implementation("com.stripe:stripe-android:20.49.0")
 
-    // ═══════════════════════════════════════════════════
-    // SUPABASE - VERSIONES CORRECTAS
-    // ═══════════════════════════════════════════════════
+    // Supabase
     implementation(platform("io.github.jan-tennert.supabase:bom:3.2.4"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
     implementation("io.github.jan-tennert.supabase:functions-kt")
 
-    // ═══════════════════════════════════════════════════
-    // KTOR (Necesario para Supabase)
-    // ═══════════════════════════════════════════════════
+    // Ktor
     implementation("io.ktor:ktor-client-core:3.3.1")
     implementation("io.ktor:ktor-client-android:3.3.1")
     implementation("io.ktor:ktor-client-content-negotiation:3.3.1")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.1")
 
-    // ═══════════════════════════════════════════════════
-    // SERIALIZATION
-    // ═══════════════════════════════════════════════════
+    // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
+    // Tests
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

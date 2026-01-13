@@ -1,14 +1,5 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
-// Screens
-
-// Theme
-
-// Repositories
-
-// ViewModels
-
-// Security
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -48,6 +39,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.CreditNot
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.InvoiceRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.refunds.RefundRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.reports.SalesReportRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
@@ -74,6 +66,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.U
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.refunds.RefundScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.reports.ReportsScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterHistoryScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterManagementScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.SalesScreen
@@ -91,6 +84,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewM
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.credit_notes.CreditNoteUsageViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.refunds.RefundViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.reports.ReportsViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders.SalesViewModel
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -138,11 +132,13 @@ class MainActivity : FragmentActivity() {
                     val supplierRepository = remember { SupplierRepository(supabase) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val salesRepository = remember { SalesRepository(supabase) }
-
                     val salesProductRepository = remember { SalesProductRepository(supabase, sessionPreferences) }
                     val paymentProofRepository = remember { PaymentProofRepository(supabase) }
                     val refundRepository = remember { RefundRepository(supabase) }
                     val creditNoteRepository = remember { CreditNoteRepository(supabase) }
+
+                    // ✅ SALES REPORT REPOSITORY
+                    val salesReportRepository = remember { SalesReportRepository(supabase) }
 
                     val stripePaymentRepository = remember {
                         StripePaymentRepository(
@@ -154,6 +150,7 @@ class MainActivity : FragmentActivity() {
 
                     // 🔥 BUSINESS INFO STATE
                     var businessInfo by remember { mutableStateOf<BusinessInfo?>(null) }
+
 
                     LaunchedEffect(Unit) {
                         businessInfo = branchRepository.getBusinessInfo()
@@ -180,9 +177,8 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
-
                     // VIEWMODELS
-                    val roleViewModel = remember { RoleViewModel(roleRepository,sessionPreferences) }
+                    val roleViewModel = remember { RoleViewModel(roleRepository, sessionPreferences) }
                     val userViewModel = remember { UserViewModel(userRepository) }
                     val branchViewModel = remember { BranchViewModel(branchRepository) }
                     val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
@@ -190,6 +186,10 @@ class MainActivity : FragmentActivity() {
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
                     val creditNoteUsageViewModel = remember { CreditNoteUsageViewModel(creditNoteRepository) }
+
+                    val reportsViewModel = remember(businessInfo) {
+                        ReportsViewModel(salesReportRepository, businessInfo)
+                    }
 
                     // 🔥 REFUND VIEWMODEL (necesita userId del session)
                     val authState by authSessionViewModel.state.collectAsState()
@@ -207,7 +207,6 @@ class MainActivity : FragmentActivity() {
                             null
                         }
                     }
-
 
                     // 🔥 SALES VIEWMODEL (solo si hay InvoiceRepository)
                     val salesViewModel: SalesViewModel? = invoiceRepository?.let { repo ->
@@ -239,6 +238,7 @@ class MainActivity : FragmentActivity() {
                         cashRegisterViewModel = cashRegisterViewModel,
                         salesViewModel = salesViewModel,
                         refundViewModel = refundViewModel,
+                        reportsViewModel = reportsViewModel,
                         sessionPreferences = sessionPreferences
                     )
                 }
@@ -263,6 +263,7 @@ fun AppNavigation(
     cashRegisterViewModel: CashRegisterViewModel,
     salesViewModel: SalesViewModel?,
     refundViewModel: RefundViewModel?,
+    reportsViewModel: ReportsViewModel,
     sessionPreferences: SessionPreferences
 ) {
     val context = LocalContext.current
@@ -464,15 +465,21 @@ fun AppNavigation(
             )
         }
 
-        // ✅ DEVOLUCIONES
+        // DEVOLUCIONES
         composable("refunds") {
-            // Solo mostrar si el usuario está autenticado y el viewModel está disponible
             refundViewModel?.let { viewModel ->
                 RefundScreen(
                     viewModel = viewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+        }
+        composable("reports") {
+            val reportsState by reportsViewModel.state.collectAsState()
+            ReportsScreen(
+                state = reportsState,
+                onIntent = { intent -> reportsViewModel.handleIntent(intent) }
+            )
         }
     }
 }
