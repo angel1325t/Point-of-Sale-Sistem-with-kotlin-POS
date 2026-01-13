@@ -30,6 +30,8 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.Users
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UserFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierFormScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_orders.PurchaseOrderListScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_orders.PurchaseOrderFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.BiometricAuthScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
@@ -49,6 +51,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories.
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductsRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.purchase_orders.PurchaseOrderRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
@@ -96,8 +99,9 @@ class MainActivity : FragmentActivity() {
                     val categoryRepository = remember { CategoryRepository(supabase) }
                     val productsRepository = remember { ProductsRepository(supabase) }
                     val supplierRepository = remember { SupplierRepository(supabase) }
+                    val purchaseOrderRepository = remember { PurchaseOrderRepository(supabase) }
                     val inventoryRepository = remember { InventoryRepository(supabase) }
-
+                    val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
 
                     // VIEWMODELS
                     val roleViewModel = remember { RoleViewModel(roleRepository) }
@@ -106,7 +110,7 @@ class MainActivity : FragmentActivity() {
                     val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
                     val productsViewModel = remember { ProductsViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
-                    val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
+                    val purchaseOrderViewModel = remember { PurchaseOrderViewModel(purchaseOrderRepository) }
                     val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
                     val inventoryViewModel = remember { InventoryViewModel(inventoryRepository) }
 
@@ -120,6 +124,7 @@ class MainActivity : FragmentActivity() {
                         categoryViewModel = categoryViewModel,
                         productsViewModel = productsViewModel,
                         supplierViewModel = supplierViewModel,
+                        purchaseOrderViewModel = purchaseOrderViewModel,
                         inventoryViewModel = inventoryViewModel,
                         cashRegisterViewModel = cashRegisterViewModel
                     )
@@ -140,6 +145,7 @@ fun AppNavigation(
     categoryViewModel: CategoryViewModel,
     productsViewModel: ProductsViewModel,
     supplierViewModel: SupplierViewModel,
+    purchaseOrderViewModel: PurchaseOrderViewModel,
     inventoryViewModel: InventoryViewModel,
     cashRegisterViewModel: CashRegisterViewModel
 ) {
@@ -300,7 +306,7 @@ fun AppNavigation(
         }
 
         // =========================
-        //        SUPPLIERS
+        //        PROVEEDORES
         // =========================
         composable("suppliers") {
             SupplierListScreen(supplierViewModel,
@@ -322,18 +328,59 @@ fun AppNavigation(
         }
 
         // =========================
+        //   PEDIDOS DE REPOSICIÓN
+        // =========================
+        composable("purchase_orders") {
+            PurchaseOrderListScreen(
+                viewModel = purchaseOrderViewModel,
+                onNavigateToCreate = { navController.navigate("purchase_orders/create") },
+                onNavigateToEdit = { id -> navController.navigate("purchase_orders/edit/$id") },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("purchase_orders/create") {
+            PurchaseOrderFormScreen(
+                orderViewModel = purchaseOrderViewModel,
+                supplierViewModel = supplierViewModel,
+                productViewModel = productsViewModel,
+                orderId = null,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            "purchase_orders/edit/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.IntType })
+        ) {
+            val orderId = it.arguments?.getInt("orderId")
+            PurchaseOrderFormScreen(
+                orderViewModel = purchaseOrderViewModel,
+                supplierViewModel = supplierViewModel,
+                productViewModel = productsViewModel,
+                orderId = orderId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // =========================
         //        CAJAS
         // =========================
-        composable("cash_register/manage") { CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() } }
-        composable("cash_register/history") { CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() } }
+        composable("cash_register/manage") {
+            CashRegisterManagementScreen(cashRegisterViewModel) { navController.popBackStack() }
+        }
+        composable("cash_register/history") {
+            CashRegisterHistoryScreen(cashRegisterViewModel) { navController.popBackStack() }
+        }
 
+        // =========================
+        //        INVENTARIO
+        // =========================
         composable("inventory") {
             InventoryScreen(
                 viewModel = inventoryViewModel,
                 onBack = { navController.popBackStack() }
             )
         }
-
-
     }
 }

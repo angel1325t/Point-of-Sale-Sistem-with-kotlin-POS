@@ -266,15 +266,16 @@ fun HomeScreen(
                     )
 
                     DrawerItem(
-                        icon = Icons.Default.Store,
-                        title = "Categorias",
+                        icon = Icons.Default.Category,
+                        title = "Categorías",
                         onClick = {
                             navController.navigate("categories")
                             scope.launch { drawerState.close() }
                         }
                     )
+
                     DrawerItem(
-                        icon = Icons.Default.Store,
+                        icon = Icons.Default.Inventory2,
                         title = "Productos",
                         onClick = {
                             navController.navigate("products")
@@ -283,10 +284,20 @@ fun HomeScreen(
                     )
 
                     DrawerItem(
-                        icon = Icons.Default.Store,
+                        icon = Icons.Default.LocalShipping,
                         title = "Proveedores",
                         onClick = {
                             navController.navigate("suppliers")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    // ⭐ NUEVO: Pedidos de Reposición
+                    DrawerItem(
+                        icon = Icons.Default.ShoppingCart,
+                        title = "Pedidos de Reposición",
+                        onClick = {
+                            navController.navigate("purchase_orders")
                             scope.launch { drawerState.close() }
                         }
                     )
