@@ -39,7 +39,7 @@ fun HomeScreen(
     sessionViewModel: AuthSessionViewModel
 ) {
     val state by sessionViewModel.state.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
