@@ -62,8 +62,8 @@ app/src/main/java/com/dev/point_of_sale_sistem_with_kotlin_pos/
 
 | Role | Name | Responsibility |
 |------|------|----------------|
-| Lead Developer | Development Team | Architecture, Core Systems, Supabase Integration |
-| Mobile Developer | Development Team | Android Implementation,Compose Interface |
+| Lead Developer | Angel Perez | Architecture, Core Systems, Supabase Integration |
+| Mobile Developer | Delanny Mauro | Android Implementation,Compose Interface |
 
 ### Development Team Contact
 - **Organization**: Development Team
