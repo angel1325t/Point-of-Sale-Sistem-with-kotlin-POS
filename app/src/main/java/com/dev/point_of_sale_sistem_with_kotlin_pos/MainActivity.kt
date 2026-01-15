@@ -304,6 +304,9 @@ fun AppNavigation(
             }
 
             AppLifecycleObserver.reset()
+        } else if (requireBiometric && !hasBiometric) {
+            // Si no tiene biométrico, solo resetear sin hacer nada
+            AppLifecycleObserver.reset()
         }
     }
 
