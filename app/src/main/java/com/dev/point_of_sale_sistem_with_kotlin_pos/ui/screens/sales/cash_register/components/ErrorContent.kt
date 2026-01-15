@@ -1,9 +1,17 @@
 // ui/screens/sales/cash_register/components/ErrorContent.kt
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -12,8 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.BranchError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegisterError
+
 @Composable
 fun ErrorContent(
     error: CashRegisterError,
@@ -28,6 +36,7 @@ fun ErrorContent(
         is CashRegisterError.UnauthorizedError -> context.getString(R.string.unauthorize_error)
         is CashRegisterError.CashRegisterNotFound -> context.getString(R.string.cash_register_not_found_error)
         is CashRegisterError.UnknownError -> error.message
+        CashRegisterError.CashRegisterAlreadyOpen -> stringResource(R.string.cash_register_already_open)
     }
 
     Column(

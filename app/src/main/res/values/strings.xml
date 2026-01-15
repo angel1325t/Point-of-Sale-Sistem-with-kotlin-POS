@@ -352,4 +352,284 @@
         <string name="cash_register_must_be_positive">El valor debe ser positivo</string>
     <string name="retry">Reintentar</string>
 
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - GENERAL -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="products_title">Productos</string>
+    <string name="products_management">Gestión de Productos</string>
+    <string name="product_create">Crear Producto</string>
+    <string name="product_edit">Editar Producto</string>
+    <string name="product_delete">Eliminar Producto</string>
+    <string name="product_new">Nuevo Producto</string>
+    <string name="product_update">Actualizar Producto</string>
+    <string name="product_save">Guardar Producto</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - CAMPOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="product_name">Nombre del producto</string>
+    <string name="product_name_required">Nombre del producto *</string>
+    <string name="product_description">Descripción</string>
+    <string name="product_description_optional">Descripción (opcional)</string>
+    <string name="product_price">Precio</string>
+    <string name="product_price_required">Precio (RD$) *</string>
+    <string name="product_price_final">Precio final: RD$ %1$s</string>
+    <string name="product_barcode">Código de barras</string>
+    <string name="product_barcode_label">Código: %1$s</string>
+    <string name="product_category">Categoría</string>
+    <string name="product_select_category">Seleccionar categoría *</string>
+    <string name="product_stock_current">Stock actual</string>
+    <string name="product_stock_current_required">Stock actual *</string>
+    <string name="product_stock_minimum">Stock mínimo</string>
+    <string name="product_stock_minimum_required">Stock mínimo *</string>
+    <string name="product_stock_label">Stock: %1$d</string>
+    <string name="product_image">Imagen</string>
+    <string name="product_discount">Descuento</string>
+    <string name="product_discount_configure">Configurar Descuento</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - DESCUENTOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="discount_none">Sin descuento</string>
+    <string name="discount_percent">Porcentaje (%)</string>
+    <string name="discount_fixed">Monto fijo (RD$)</string>
+    <string name="discount_type">Tipo de descuento</string>
+    <string name="discount_value">Valor del descuento</string>
+    <string name="discount_percent_value">%1$s%% de descuento</string>
+    <string name="discount_fixed_value">RD$ %1$s de descuento</string>
+    <string name="discount_apply">Aplicar</string>
+    <string name="discount_percentage_label">Porcentaje</string>
+    <string name="discount_amount_label">Monto</string>
+    <string name="discount_helper_percent">Ingresa un valor entre 0 y 100</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - BÚSQUEDA Y FILTROS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="product_search">Buscar productos</string>
+    <string name="product_search_placeholder">Buscar productos…</string>
+    <string name="product_search_by_name">Buscar por nombre</string>
+    <string name="product_search_by_barcode">Buscar por código de barras</string>
+    <string name="product_filter_by_category">Filtrar por categoría</string>
+    <string name="product_clear_filters">Limpiar filtros</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ESTADOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="product_status_available">Disponible</string>
+    <string name="product_status_low_stock">Stock bajo</string>
+    <string name="product_status_out_of_stock">Sin stock</string>
+    <string name="product_loading">Cargando productos…</string>
+    <string name="product_empty_list">No hay productos</string>
+    <string name="product_empty_search">No se encontraron productos</string>
+    <string name="product_empty_message">Agrega tu primer producto</string>
+    <string name="product_empty_search_message">Intenta con otros términos de búsqueda</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - CONFIRMACIONES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="product_delete_title">¿Eliminar producto?</string>
+    <string name="product_delete_message">Estás a punto de eliminar el producto:</string>
+    <string name="product_delete_warning">Esta acción no se puede deshacer.</string>
+    <string name="product_delete_confirm">Eliminar</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - MENSAJES DE ÉXITO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="product_created_success">Producto creado exitosamente</string>
+    <string name="product_updated_success">Producto actualizado exitosamente</string>
+    <string name="product_deleted_success">Producto eliminado exitosamente</string>
+    <string name="product_barcode_regenerated">Código de barras regenerado</string>
+    <string name="product_stock_updated">Stock actualizado</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ERRORES DE RED -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="error_network">Error de conexión. Verifica tu internet.</string>
+    <string name="error_timeout">La operación tardó demasiado. Intenta de nuevo.</string>
+    <string name="error_no_internet">Sin conexión a internet.</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ERRORES DE VALIDACIÓN -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="error_validation_generic">%1$s: %2$s</string>
+    <string name="error_product_name_invalid">El nombre del producto es inválido.</string>
+    <string name="error_product_name_too_short">El nombre debe tener al menos 2 caracteres</string>
+    <string name="error_product_name_too_long">El nombre no puede exceder 100 caracteres</string>
+    <string name="error_price_invalid">El precio debe ser mayor a 0.</string>
+    <string name="error_price_zero_or_negative">El precio debe ser mayor a 0</string>
+    <string name="error_stock_invalid">La cantidad de stock es inválida.</string>
+    <string name="error_stock_negative">El stock no puede ser negativo</string>
+    <string name="error_category_invalid">Debes seleccionar una categoría válida.</string>
+    <string name="error_barcode_invalid">El código de barras es inválido.</string>
+    <string name="error_discount_invalid">El descuento ingresado es inválido.</string>
+    <string name="error_discount_value_invalid">El valor del descuento es inválido</string>
+    <string name="error_discount_percentage_exceeded">El descuento no puede ser mayor al 100%</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ERRORES DE BASE DE DATOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="error_product_not_found">Producto no encontrado.</string>
+    <string name="error_duplicate_barcode">Ya existe un producto con el código de barras: %1$s</string>
+    <string name="error_database">Error en la base de datos.</string>
+    <string name="error_unauthorized">No tienes permisos para realizar esta acción.</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ERRORES DE OPERACIONES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="error_create_product_failed">No se pudo crear el producto.</string>
+    <string name="error_update_product_failed">No se pudo actualizar el producto.</string>
+    <string name="error_delete_product_failed">No se pudo eliminar el producto.</string>
+    <string name="error_load_products_failed">No se pudieron cargar los productos.</string>
+    <string name="error_search_products_failed">Error al buscar productos.</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ERRORES DE ARCHIVOS/STORAGE -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="error_image_upload_failed">Error al subir la imagen del código de barras.</string>
+    <string name="error_barcode_generation_failed">Error al generar el código de barras.</string>
+    <string name="error_storage">Error de almacenamiento.</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ERRORES DE STOCK -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="error_insufficient_stock">Stock insuficiente.</string>
+    <string name="error_stock_update_failed">Error al actualizar el stock.</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- PRODUCTOS - ERROR GENÉRICO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="error_unknown">Ocurrió un error inesperado: %1$s</string>
+    <string name="error_unknown_simple">Ocurrió un error inesperado.</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- CATEGORÍAS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="category_select">Seleccionar Categoría</string>
+    <string name="category_close">Cerrar</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- ACCIONES GENERALES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="action_back">Volver</string>
+    <string name="action_refresh">Actualizar</string>
+    <string name="action_add">Agregar</string>
+    <string name="action_search">Buscar</string>
+    <string name="action_clear">Limpiar</string>
+    <string name="action_apply">Aplicar</string>
+    <string name="processing">Procesando…</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - GENERAL -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_title">Ventas</string>
+    <string name="sales_new">Nueva Venta</string>
+    <string name="sales_list">Lista de Ventas</string>
+    <string name="sales_details">Detalles de Venta</string>
+    <string name="sales_history">Historial de Ventas</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - BÚSQUEDA DE PRODUCTOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_search_product">Buscar producto</string>
+    <string name="sales_search_by_name">Buscar por nombre</string>
+    <string name="sales_search_by_barcode">Escanear código de barras</string>
+    <string name="sales_product_not_found">Producto no encontrado</string>
+    <string name="sales_searching">Buscando producto…</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - CARRITO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_cart_title">Carrito de Compras</string>
+    <string name="sales_cart_empty">El carrito está vacío</string>
+    <string name="sales_cart_empty_message">Agrega productos para comenzar la venta</string>
+    <string name="sales_add_to_cart">Agregar al carrito</string>
+    <string name="sales_remove_from_cart">Eliminar del carrito</string>
+    <string name="sales_cart_items">%1$d artículo(s)</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - PRODUCTO EN CARRITO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_quantity">Cantidad</string>
+    <string name="sales_unit_price">Precio unitario</string>
+    <string name="sales_discount_item">Descuento</string>
+    <string name="sales_subtotal">Subtotal</string>
+    <string name="sales_total">Total</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - RESUMEN -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_summary">Resumen de Venta</string>
+    <string name="sales_items_count">Artículos</string>
+    <string name="sales_subtotal_amount">Subtotal</string>
+    <string name="sales_discount_total">Descuento total</string>
+    <string name="sales_total_amount">Total a pagar</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - MÉTODO DE PAGO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_payment_method">Método de pago</string>
+    <string name="sales_payment_cash">Efectivo</string>
+    <string name="sales_payment_card">Tarjeta</string>
+    <string name="sales_payment_transfer">Transferencia</string>
+    <string name="sales_select_payment">Seleccionar método de pago</string>
+    <!-- Branch/Sucursal strings -->
+    <string name="product_branch">Sucursal</string>
+    <string name="product_select_branch">Seleccione una sucursal</string>
+    <string name="error_branch_required">Debe seleccionar una sucursal</string>
+
+    <!-- Filtros -->
+    <string name="filter_by_branch">Filtrar por Sucursal</string>
+    <string name="all_branches">Todas las Sucursales</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - ACCIONES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_process">Procesar Venta</string>
+    <string name="sales_complete">Completar Venta</string>
+    <string name="sales_cancel">Cancelar</string>
+    <string name="sales_continue_shopping">Continuar comprando</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - CONFIRMACIONES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_cancel_confirmation_title">¿Cancelar venta?</string>
+    <string name="sales_cancel_confirmation_message">Se perderán todos los productos del carrito</string>
+    <string name="sales_complete_confirmation_title">Confirmar venta</string>
+    <string name="sales_complete_confirmation_message">¿Deseas completar esta venta?</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - ESTADOS -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_status_pending">Pendiente</string>
+    <string name="sales_status_completed">Completada</string>
+    <string name="sales_status_cancelled">Cancelada</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - MENSAJES DE ÉXITO -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_created_success">Venta creada exitosamente</string>
+    <string name="sales_completed_success">Venta completada exitosamente</string>
+    <string name="sales_cancelled_success">Venta cancelada</string>
+    <string name="sales_product_added">Producto agregado al carrito</string>
+    <string name="sales_product_removed">Producto eliminado del carrito</string>
+    <string name="sales_product_updated">Producto actualizado</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - ERRORES -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_error_validation">Error de validación</string>
+    <string name="sales_error_network">Error de conexión</string>
+    <string name="sales_error_empty_cart">El carrito está vacío</string>
+    <string name="sales_error_invalid_quantity">Cantidad inválida</string>
+    <string name="sales_error_stock_insufficient">Stock insuficiente</string>
+    <string name="sales_error_no_payment_method">Selecciona un método de pago</string>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- VENTAS - FORMATO DE MONEDA -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <string name="sales_price_format">RD$ %1$,.2f</string>
+    <string name="sales_discount_format">-RD$ %1$,.2f</string>
+    <string name="sales_quantity_format">x%1$d</string>
+    <string name="cash_register_already_open">Ya tienes una caja abierta</string>
+
 </resources>

@@ -10,276 +10,252 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.products.ProductsIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductsViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.components.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.Category
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.utils.toDiscountType
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.components.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductFormScreen(
-    viewModel: ProductsViewModel,
+    viewModel: ProductViewModel,
     productId: Int?,
     categories: List<Category>,
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
-
+    val context = LocalContext.current
     val isEditMode = productId != null
 
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
+    var currentStock by remember { mutableStateOf("") }
     var minimumStock by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf<Int?>(null) }
-    var barcode by remember { mutableStateOf("") }
+    var discountType by remember { mutableStateOf(DiscountType.NONE) }
+    var discountValue by remember { mutableStateOf("") }
 
     var showCategoryPicker by remember { mutableStateOf(false) }
+    var showDiscountPicker by remember { mutableStateOf(false) }
 
-    // ----------------------------------------------------
-    // CARGAR PRODUCTO EN EDICIÓN
-    // ----------------------------------------------------
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Precio final
+    val finalPrice = remember(price, discountType, discountValue) {
+        val p = price.toDoubleOrNull() ?: 0.0
+        val d = discountValue.toDoubleOrNull() ?: 0.0
+        when (discountType) {
+            DiscountType.NONE -> p
+            DiscountType.PERCENT -> p * (1 - d / 100)
+            DiscountType.FIXED -> (p - d).coerceAtLeast(0.0)
+        }
+    }
+
+    // Cargar producto
     LaunchedEffect(productId) {
-        if (productId != null) {
-            viewModel.handleIntent(ProductsIntent.LoadProductById(productId))
+        productId?.let {
+            viewModel.handleIntent(ProductsIntent.LoadProductById(it))
         }
     }
 
-    // Cuando el producto llega del estado, llenar los campos
+    // Setear datos al editar
     LaunchedEffect(state.selectedProduct) {
-        state.selectedProduct?.let { p ->
-            name = p.name
-            description = p.description ?: ""
-            price = p.price.toString()
-            minimumStock = p.minimumStock.toString()
-            barcode = p.barcode ?: ""
-            categoryId = p.categoryId
+        state.selectedProduct?.let { product ->
+            name = product.name
+            description = product.description.orEmpty()
+            price = String.format("%.2f", product.price)
+            currentStock = product.currentStock.toString()
+            minimumStock = product.minimumStock.toString()
+            categoryId = product.categoryId
+            discountType = product.discountType.toDiscountType()
+            discountValue = if (product.discountValue > 0) product.discountValue.toString() else ""
         }
     }
 
-    // Cerrar pantalla cuando se crea/actualiza
-    LaunchedEffect(state.operationSuccess) {
-        if (state.operationSuccess) {
+    // Mensajes
+    LaunchedEffect(state.successMessage, state.error) {
+        state.successMessage?.let {
+            snackbarHostState.showSnackbar(
+                if (it == "product_created_success")
+                    context.getString(R.string.product_created_success)
+                else
+                    context.getString(R.string.product_updated_success)
+            )
             onNavigateBack()
+        }
+
+        state.error?.let {
+            snackbarHostState.showSnackbar(context.getString(R.string.error_unknown_simple))
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (isEditMode) "Editar Producto" else "Nuevo Producto",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
+                        if (isEditMode) stringResource(R.string.product_edit)
+                        else stringResource(R.string.product_new),
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(Icons.Default.ArrowBack, null)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                }
             )
-        }
-    ) { paddingValues ->
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
 
-        if (state.isLoading && isEditMode) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.product_name_required)) },
+                leadingIcon = { Icon(Icons.Default.Inventory, null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
 
-                // ------------------------
-                // NOMBRE
-                // ------------------------
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nombre *") },
-                    leadingIcon = { Icon(Icons.Default.Inventory, null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text(stringResource(R.string.product_description_optional)) },
+                leadingIcon = { Icon(Icons.Default.Description, null) },
+                modifier = Modifier.fillMaxWidth().height(120.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
 
-                // DESCRIPCIÓN
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Descripción") },
-                    leadingIcon = { Icon(Icons.Default.Description, null) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    maxLines = 4,
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                // PRECIO
-                OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it },
-                    label = { Text("Precio (RD$)") },
-                    leadingIcon = { Icon(Icons.Default.AttachMoney, null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    isError = price.toDoubleOrNull() == null
-                )
-
-                // STOCK MÍNIMO
-                OutlinedTextField(
-                    value = minimumStock,
-                    onValueChange = { minimumStock = it },
-                    label = { Text("Stock mínimo *") },
-                    leadingIcon = { Icon(Icons.Default.Warning, null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    isError = minimumStock.toIntOrNull() == null
-                )
-
-                // BARCODE
-                OutlinedTextField(
-                    value = barcode,
-                    onValueChange = { barcode = it },
-                    label = { Text("Código de barras (Opcional)") },
-                    leadingIcon = { Icon(Icons.Default.QrCode, null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                // CATEGORÍA
-                OutlinedCard(
-                    onClick = { showCategoryPicker = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        val categoryName = categories.find { it.categoryId == categoryId }?.name
-
+            OutlinedTextField(
+                value = price,
+                onValueChange = { price = it },
+                label = { Text(stringResource(R.string.product_price_required)) },
+                leadingIcon = { Icon(Icons.Default.AttachMoney, null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                supportingText = {
+                    if (discountType != DiscountType.NONE && price.toDoubleOrNull() != null) {
                         Text(
-                            text = categoryName ?: "Seleccionar categoría",
-                            style = MaterialTheme.typography.bodyLarge
+                            stringResource(
+                                R.string.product_price_final,
+                                String.format("%.2f", finalPrice)
+                            ),
+                            fontWeight = FontWeight.Bold
                         )
-
-                        Icon(Icons.Default.ArrowDropDown, null)
                     }
                 }
+            )
 
-                // BOTONES
+            OutlinedCard(onClick = { showDiscountPicker = true }) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Cancelar")
-                    }
+                    Text(stringResource(R.string.product_discount))
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
+            }
 
-                    Button(
-                        onClick = {
-                            if (isEditMode && productId != null) {
-                                viewModel.handleIntent(
-                                    ProductsIntent.UpdateProduct(
-                                        productId = productId,
-                                        name = name,
-                                        description = description.ifBlank { null },
-                                        price = price.toDoubleOrNull() ?: 0.0,
-                                        barcode = barcode.ifBlank { null },
-                                        categoryId = categoryId ?: 0,
-                                        image = null,
-                                        currentStock = 0,
-                                        minimumStock = minimumStock.toIntOrNull() ?: 0
-                                    )
-                                )
-                            } else {
-                                viewModel.handleIntent(
-                                    ProductsIntent.CreateProduct(
-                                        name = name,
-                                        description = description.ifBlank { null },
-                                        price = price.toDoubleOrNull() ?: 0.0,
-                                        barcode = barcode.ifBlank { null },
-                                        categoryId = categoryId ?: 0,
-                                        image = null,
-                                        currentStock = 0,
-                                        minimumStock = minimumStock.toIntOrNull() ?: 0
-                                    )
-                                )
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = name.isNotBlank() &&
-                                price.toDoubleOrNull() != null &&
-                                minimumStock.toIntOrNull() != null &&
-                                categoryId != null
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
+            OutlinedTextField(
+                value = currentStock,
+                onValueChange = { currentStock = it },
+                label = { Text(stringResource(R.string.product_stock_current_required)) },
+                leadingIcon = { Icon(Icons.Default.Inventory2, null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            OutlinedTextField(
+                value = minimumStock,
+                onValueChange = { minimumStock = it },
+                label = { Text(stringResource(R.string.product_stock_minimum_required)) },
+                leadingIcon = { Icon(Icons.Default.Warning, null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            OutlinedCard(onClick = { showCategoryPicker = true }) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        categories.find { it.categoryId == categoryId }?.name
+                            ?: stringResource(R.string.product_select_category)
+                    )
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isLoading,
+                onClick = {
+                    val p = price.toDoubleOrNull() ?: return@Button
+                    val stock = currentStock.toIntOrNull() ?: 0
+                    val minStock = minimumStock.toIntOrNull() ?: 0
+                    val cat = categoryId ?: return@Button
+
+                    if (isEditMode && productId != null) {
+                        viewModel.handleIntent(
+                            ProductsIntent.UpdateProduct(
+                                productId,
+                                name,
+                                description.ifBlank { null },
+                                p,
+                                null,
+                                cat,
+                                null,
+                                stock,
+                                minStock
                             )
-                        } else {
-                            Text(if (isEditMode) "Actualizar" else "Crear")
-                        }
+                        )
+                    } else {
+                        viewModel.handleIntent(
+                            ProductsIntent.CreateProduct(
+                                name,
+                                description.ifBlank { null },
+                                p,
+                                null,
+                                cat,
+                                null,
+                                stock,
+                                minStock
+                            )
+                        )
                     }
                 }
-
-                // ERROR
-                if (state.error != null) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                            Text(
-                                state.error!!.message,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
-                    }
-                }
+            ) {
+                Text(if (isEditMode) stringResource(R.string.update_text) else stringResource(R.string.create_text))
             }
         }
     }
 
-    // ------------------------------
-    // DIALOG PARA SELECCIONAR CATEGORÍA
-    // ------------------------------
     if (showCategoryPicker) {
         CategoryPickerDialog(
             categories = categories,
@@ -289,6 +265,19 @@ fun ProductFormScreen(
                 showCategoryPicker = false
             },
             onDismiss = { showCategoryPicker = false }
+        )
+    }
+
+    if (showDiscountPicker) {
+        DiscountPickerDialog(
+            currentType = discountType,
+            currentValue = discountValue.toDoubleOrNull() ?: 0.0,
+            onConfirm = { type, value ->
+                discountType = type
+                discountValue = value.toString()
+                showDiscountPicker = false
+            },
+            onDismiss = { showDiscountPicker = false }
         )
     }
 }
