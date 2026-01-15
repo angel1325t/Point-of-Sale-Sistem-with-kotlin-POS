@@ -466,7 +466,7 @@ class SalesReportRepository(private val supabase: SupabaseClient) {
 
 ```properties
 # Supabase Configuration
-SUPABASE_URL=[https://your-project.supabase.co](https://uhtlmanoxrfdefelpybs.supabase.co)
+SUPABASE_URL=https://uhtlmanoxrfdefelpybs.supabase.co
 SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodGxtYW5veHJmZGVmZWxweWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTQ5MjEsImV4cCI6MjA3NjM3MDkyMX0.K4D40jXz3Q3T_iq4bGmm1AeOqOzft1hpTi7eVb2siR0
 ```
 
