@@ -265,7 +265,7 @@ implementation("androidx.security:security-crypto:1.1.0-alpha06")
 implementation("androidx.biometric:biometric:1.2.0-alpha05")
 ```
 
-#### Red
+#### Cliente Http
 ```kotlin
 implementation("io.ktor:ktor-client-core:3.3.1")
 implementation("io.ktor:ktor-client-android:3.3.1")
