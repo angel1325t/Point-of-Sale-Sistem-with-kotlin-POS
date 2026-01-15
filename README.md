@@ -62,15 +62,13 @@ app/src/main/java/com/dev/point_of_sale_sistem_with_kotlin_pos/
 
 | Role | Name | Responsibility |
 |------|------|----------------|
-| Lead Developer | Development Team | Architecture, Core Systems |
-| Backend Integration | Development Team | Supabase Integration |
-| Mobile Developer | Development Team | Android Implementation |
-| UI/UX Designer | Development Team | Compose Interface |
+| Lead Developer | Development Team | Architecture, Core Systems, Supabase Integration |
+| Mobile Developer | Development Team | Android Implementation,Compose Interface |
 
 ### Development Team Contact
 - **Organization**: Development Team
-- **Repository**: [GitHub Repository]
-- **Support**: [Contact Email]
+- **Repository**: https://github.com/angel1325t/
+- **Support**: angelalexanderperezmartinez47@gmail.com
 
 ---
 
@@ -100,7 +98,7 @@ Before running the project, ensure you have the following installed:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-repository/Point-of-Sale-Sistem-with-kotlin-POS.git
+   git clone https://github.com/angel1325t/Point-of-Sale-Sistem-with-kotlin-POS.git
    cd Point-of-Sale-Sistem-with-kotlin-POS
    ```
 
@@ -108,7 +106,7 @@ Before running the project, ensure you have the following installed:
    Create or edit `local.properties` in the project root:
    ```properties
    sdk.dir=C:\\Android\\SDK
-   SUPABASE_URL=[https://your-project.supabase.co](https://uhtlmanoxrfdefelpybs.supabase.co)
+   SUPABASE_URL=https://uhtlmanoxrfdefelpybs.supabase.co
    SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodGxtYW5veHJmZGVmZWxweWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTQ5MjEsImV4cCI6MjA3NjM3MDkyMX0.K4D40jXz3Q3T_iq4bGmm1AeOqOzft1hpTi7eVb2siR0
    STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiMZmK7o8dUvwrn5iUEhGLxB11jTxrNcjjN328ElOwX00jJnAr3zv
    ```
@@ -468,8 +466,8 @@ class SalesReportRepository(private val supabase: SupabaseClient) {
 
 ```properties
 # Supabase Configuration
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-anon-key
+SUPABASE_URL=[https://your-project.supabase.co](https://uhtlmanoxrfdefelpybs.supabase.co)
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodGxtYW5veHJmZGVmZWxweWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTQ5MjEsImV4cCI6MjA3NjM3MDkyMX0.K4D40jXz3Q3T_iq4bGmm1AeOqOzft1hpTi7eVb2siR0
 ```
 
 #### Database Setup
@@ -510,7 +508,7 @@ supabase functions new confirm-stripe-payment
 2. Get test API keys from Dashboard
 3. Add publishable key to `local.properties`:
    ```properties
-   STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+   STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiMZmK7o8dUvwrn5iUEhGLxB11jTxrNcjjN328ElOwX00jJnAr3zv
    ```
 
 #### Configure Stripe in Dashboard
