@@ -1,192 +1,188 @@
-# Point of Sale System - Android POS Application
+# Sistema Punto de Venta - Aplicación POS para Android
 
 <div align="center">
   <img src="app/src/main/res/drawable/logo_img.jpeg" alt="POS System Logo" width="150" />
-
   <br/>
-  <h1>Android Point of Sale System</h1>
-  <p>A comprehensive, modern POS solution built with Kotlin and Jetpack Compose</p>
+  <h1>Sistema de Punto de Venta para Android</h1>
+  <p>Una solución POS completa y moderna construida con Kotlin y Jetpack Compose</p>
 </div>
 
 ---
 
-## Project Overview
+## Descripción General del Proyecto
 
-This is a complete **Android Point of Sale (POS) System** built entirely in **Kotlin** using **Jetpack Compose** for the UI layer. The application features a modern architecture with offline-first capabilities, real-time synchronization, and multi-payment support.
+Este es un **Sistema de Punto de Venta (POS) completo para Android** construido enteramente en **Kotlin** utilizando **Jetpack Compose** para la capa de interfaz de usuario. La aplicación cuenta con una arquitectura moderna con capacidades offline-first, sincronización en tiempo real y soporte para múltiples métodos de pago.
 
-### Key Features
+### Características Principales
 
-- **Sales Management**: Create, manage, and track sales transactions
-- **Inventory Management**: Product and category management with barcode scanning
-- **Cash Register Operations**: Open/close cash drawers, track transactions
-- **User & Role Management**: Complete authentication and authorization system
-- **Offline Support**: Full offline functionality with automatic sync
-- **Multiple Payment Methods**: Cash, Stripe card payments
-- **Reporting & Analytics**: Sales reports and business insights
-- **Refund & Credit Notes**: Handle returns and issue credit notes
-- **Biometric Authentication**: Secure access with fingerprint/biometrics
-- **Multi-Branch Support**: Manage multiple business locations
+- **Gestión de Ventas**: Crear, administrar y rastrear transacciones de venta
+- **Gestión de Inventario**: Administración de productos y categorías con escaneo de códigos de barras
+- **Operaciones de Caja Registradora**: Abrir/cerrar cajones de efectivo, rastrear transacciones
+- **Gestión de Usuarios y Roles**: Sistema completo de autenticación y autorización
+- **Soporte Offline**: Funcionalidad offline completa con sincronización automática
+- **Múltiples Métodos de Pago**: Efectivo, pagos con tarjeta Stripe
+- **Reportes y Análisis**: Informes de ventas e insights de negocio
+- **Reembolsos y Notas de Crédito**: Manejar devoluciones y emitir notas de crédito
+- **Autenticación Biométrica**: Acceso seguro con huella digital/biometría
+- **Soporte Multi-Sucursal**: Administrar múltiples ubicaciones de negocio
 
-### Architecture
+### Arquitectura
 
-The application follows **Clean Architecture** principles with the following layers:
-
+La aplicación sigue los principios de **Arquitectura Limpia** con las siguientes capas:
 ```
 app/src/main/java/com/dev/point_of_sale_sistem_with_kotlin_pos/
-├── core/                  # Core functionality and infrastructure
-│   ├── capabilities/      # App capabilities and state management
-│   ├── network/           # Network monitoring and Supabase client
-│   └── sync/              # Synchronization logic
-├── data/                  # Data layer
-│   ├── local/             # Room database, DAOs, entities
-│   ├── mappers/           # Data mappers
-│   └── sales/             # Sales data sources
-├── intents/               # Business logic intents (MVI pattern)
-├── models/                # Domain models and states
-├── repository/            # Repository implementations
-├── security/              # Security utilities
-├── ui/                    # Jetpack Compose UI
-│   ├── screens/           # App screens
-│   └── theme/             # Material3 theming
-└── viewmodel/             # ViewModels
+├── core/                # Funcionalidad central e infraestructura
+│   ├── capabilities/    # Capacidades de la app y gestión de estado
+│   ├── network/        # Monitoreo de red y cliente Supabase
+│   └── sync/           # Lógica de sincronización
+├── data/               # Capa de datos
+│   ├── local/          # Base de datos Room, DAOs, entidades
+│   ├── mappers/        # Mapeadores de datos
+│   └── sales/          # Fuentes de datos de ventas
+├── intents/            # Intents de lógica de negocio (patrón MVI)
+├── models/             # Modelos de dominio y estados
+├── repository/         # Implementaciones de repositorios
+├── security/           # Utilidades de seguridad
+├── ui/                 # Interfaz de usuario Jetpack Compose
+│   ├── screens/        # Pantallas de la app
+│   └── theme/          # Tematización Material3
+└── viewmodel/          # ViewModels
 ```
 
 ---
 
-## Team Presentation
+## Presentación del Equipo
 
-### Project Name
-**Android Point of Sale System (POS)**
+### Nombre del Proyecto
+**Sistema de Punto de Venta para Android (POS)**
 
-### Team Members
+### Miembros del Equipo
 
-| Role | Name | Responsibility |
-|------|------|----------------|
-| Lead Developer | Angel Perez | Architecture, Core Systems, Supabase Integration |
-| Mobile Developer | Delanny Mauro | Android Implementation,Compose Interface |
+| Rol | Nombre | Responsabilidad |
+|------|------|-------------------|
+| Desarrollador Principal | Angel Perez | Arquitectura, Sistemas Centrales, Integración Supabase |
+| Desarrollador Móvil | Delanny Mauro | Implementación Android, Interfaz Compose |
 
-### Development Team Contact
-- **Organization**: Development Team
-- **Repository**: https://github.com/angel1325t/
-- **Support**: angelalexanderperezmartinez47@gmail.com
+### Contacto del Equipo de Desarrollo
+- **Organización**: Equipo de Desarrollo
+- **Repositorio**: https://github.com/angel1325t/
+- **Soporte**: angelalexanderperezmartinez47@gmail.com
 
 ---
 
-## Project Execution Steps
+## Pasos para la Ejecución del Proyecto
 
-### Prerequisites
+### Requisitos Previos
 
-Before running the project, ensure you have the following installed:
+Antes de ejecutar el proyecto, asegúrate de tener instalado lo siguiente:
 
-1. **Android Studio** (Latest version recommended)
-   - Download from: https://developer.android.com/studio
-   - Version: Hedgehog (2023.1.1) or newer
+1. **Android Studio** (Se recomienda la última versión)
+   - Descargar desde: https://developer.android.com/studio
+   - Versión: Hedgehog (2023.1.1) o más reciente
 
 2. **Java Development Kit (JDK) 17**
    - OpenJDK 17: https://adoptium.net/
-   - Or use Android Studio's bundled JDK
+   - O usar el JDK incluido en Android Studio
 
 3. **Android SDK**
-   - Minimum SDK: 24 (Android 7.0)
-   - Target SDK: 36
-   - Compile SDK: 36
+   - SDK Mínimo: 24 (Android 7.0)
+   - SDK Objetivo: 36
+   - SDK de Compilación: 36
 
 4. **Gradle**
-   - Version: 8.4 or newer (included in gradle wrapper)
+   - Versión: 8.4 o más reciente (incluido en gradle wrapper)
 
-### Installation Steps
+### Pasos de Instalación
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/angel1325t/Point-of-Sale-Sistem-with-kotlin-POS.git
-   cd Point-of-Sale-Sistem-with-kotlin-POS
-   ```
+1. **Clonar el Repositorio**
+```bash
+git clone https://github.com/angel1325t/Point-of-Sale-Sistem-with-kotlin-POS.git
+cd Point-of-Sale-Sistem-with-kotlin-POS
+```
 
-2. **Configure Local Properties**
-   Create or edit `local.properties` in the project root:
-   ```properties
-   sdk.dir=C:\\Android\\SDK
-   SUPABASE_URL=https://uhtlmanoxrfdefelpybs.supabase.co
-   SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodGxtYW5veHJmZGVmZWxweWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTQ5MjEsImV4cCI6MjA3NjM3MDkyMX0.K4D40jXz3Q3T_iq4bGmm1AeOqOzft1hpTi7eVb2siR0
-   STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiMZmK7o8dUvwrn5iUEhGLxB11jTxrNcjjN328ElOwX00jJnAr3zv
-   ```
+2. **Configurar Propiedades Locales**
 
-3. **Open in Android Studio**
-   - Launch Android Studio
-   - Select "Open" and navigate to the project directory
-   - Wait for Gradle sync to complete
+Crear o editar `local.properties` en la raíz del proyecto:
+```properties
+sdk.dir=C:\\Android\\SDK
+SUPABASE_URL=https://uhtlmanoxrfdefelpybs.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodGxtYW5veHJmZGVmZWxweWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTQ5MjEsImV4cCI6MjA3NjM3MDkyMX0.K4D40jXz3Q3T_iq4bGmm1AeOqOzft1hpTi7eVb2siR0
+STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiMZmK7o8dUvwrn5iUEhGLxB11jTxrNcjjN328ElOwX00jJnAr3zv
+```
 
-4. **Build the Project**
-   ```bash
-   ./gradlew assembleDebug
-   ```
+3. **Abrir en Android Studio**
+   - Lanzar Android Studio
+   - Seleccionar "Open" y navegar al directorio del proyecto
+   - Esperar a que se complete la sincronización de Gradle
 
-5. **Run on Emulator or Device**
-   - Connect an Android device or start an emulator
-   - Click "Run" in Android Studio or use:
-   ```bash
-   ./gradlew installDebug
-   ```
+4. **Compilar el Proyecto**
+```bash
+./gradlew assembleDebug
+```
 
-### Building for Release
+5. **Ejecutar en Emulador o Dispositivo**
+   - Conectar un dispositivo Android o iniciar un emulador
+   - Hacer clic en "Run" en Android Studio o usar:
+```bash
+./gradlew installDebug
+```
 
+### Compilación para Producción
 ```bash
 ./gradlew assembleRelease
 ```
 
-To generate a signed APK:
-1. Create a keystore file
-2. Configure signing in `build.gradle.kts`
-3. Build release variant
+Para generar un APK firmado:
+1. Crear un archivo keystore
+2. Configurar la firma en `build.gradle.kts`
+3. Compilar la variante de release
 
 ---
 
-## Database Information
+## Información de la Base de Datos
 
-### Database Name
+### Nombre de la Base de Datos
 
-The application uses two database systems:
+La aplicación utiliza dos sistemas de base de datos:
 
 #### 1. **Supabase (PostgreSQL)**
-- **Database**: PostgreSQL 15+ (hosted on Supabase)
-- **Cloud URL**: `https://uhtlmanoxrfdefelpybs.supabase.co`
-- **Connection**: Via Supabase REST API and PostgREST
+- **Base de datos**: PostgreSQL 15+ (alojada en Supabase)
+- **URL en la nube**: `https://uhtlmanoxrfdefelpybs.supabase.co`
+- **Conexión**: Vía API REST de Supabase y PostgREST
 
 #### 2. **Room Database (Local)**
-- **Database Name**: `offline_pos_database`
-- **Type**: SQLite (via Room)
-- **Location**: Device internal storage
-- **Tables**:
-  - `offline_sales` - Sales transactions
-  - `offline_sale_details` - Sale line items
-  - `offline_cash_register_history` - Cash register operations
-  - `offline_product_stock` - Product inventory
-  - `sync_queue` - Synchronization queue
+- **Nombre de la base de datos**: `offline_pos_database`
+- **Tipo**: SQLite (vía Room)
+- **Ubicación**: Almacenamiento interno del dispositivo
+- **Tablas**:
+  - `offline_sales` - Transacciones de venta
+  - `offline_sale_details` - Artículos de línea de venta
+  - `offline_cash_register_history` - Operaciones de caja registradora
+  - `offline_product_stock` - Inventario de productos
+  - `sync_queue` - Cola de sincronización
 
-### Database Schema
+### Esquema de la Base de Datos
 
-#### Main Tables (Supabase)
+#### Tablas Principales (Supabase)
 
-| Table | Description |
+| Tabla | Descripción |
 |-------|-------------|
-| `users` | User accounts with authentication |
-| `roles` | User roles and permissions |
-| `branches` | Business locations/branches |
-| `categories` | Product categories |
-| `products` | Product inventory |
-| `suppliers` | Vendor management |
-| `sales` | Sales transactions |
-| `sale_details` | Individual sale items |
-| `cash_register_history` | Cash drawer operations |
-| `credit_notes` | Refund credits |
-| `refunds` | Return transactions |
+| `users` | Cuentas de usuario con autenticación |
+| `roles` | Roles y permisos de usuario |
+| `branches` | Ubicaciones/sucursales del negocio |
+| `categories` | Categorías de productos |
+| `products` | Inventario de productos |
+| `suppliers` | Gestión de proveedores |
+| `sales` | Transacciones de venta |
+| `sale_details` | Artículos individuales de venta |
+| `cash_register_history` | Operaciones de cajón de efectivo |
+| `credit_notes` | Créditos de reembolso |
+| `refunds` | Transacciones de devolución |
 
-#### Entity Classes
-
+#### Clases de Entidad
 ```kotlin
-// Core entities defined in:
+// Entidades principales definidas en:
 app/src/main/java/com/dev/point_of_sale_sistem_with_kotlin_pos/data/local/entities/
-
 - OfflineSaleEntity
 - OfflineSaleDetailEntity
 - OfflineCashRegisterHistoryEntity
@@ -196,18 +192,18 @@ app/src/main/java/com/dev/point_of_sale_sistem_with_kotlin_pos/data/local/entiti
 
 ---
 
-### Authentication Flow
+### Flujo de Autenticación
 
-1. **Login Screen**: Email/password authentication via Supabase Auth
-2. **Biometric Option**: Fingerprint/Face authentication (if enabled)
-3. **Session Management**: JWT token-based sessions
-4. **Auto-Logout**: Configurable timeout for security
+1. **Pantalla de Login**: Autenticación con email/contraseña vía Supabase Auth
+2. **Opción Biométrica**: Autenticación con huella digital/rostro (si está habilitada)
+3. **Gestión de Sesión**: Sesiones basadas en tokens JWT
+4. **Cierre de Sesión Automático**: Timeout configurable para seguridad
 
 ---
 
-## Dependencies
+## Dependencias
 
-### Core Dependencies
+### Dependencias Principales
 
 #### AndroidX & Jetpack
 ```kotlin
@@ -222,7 +218,7 @@ implementation("androidx.navigation:navigation-compose:2.8.0")
 implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
 ```
 
-#### Database
+#### Base de Datos
 ```kotlin
 implementation("androidx.room:room-runtime:2.6.1")
 implementation("androidx.room:room-ktx:2.6.1")
@@ -238,7 +234,7 @@ implementation("io.github.jan-tennert.supabase:storage-kt")
 implementation("io.github.jan-tennert.supabase:functions-kt")
 ```
 
-#### Payments
+#### Pagos
 ```kotlin
 implementation("com.stripe:stripe-android:20.49.0")
 ```
@@ -249,7 +245,7 @@ implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
 implementation("com.google.firebase:firebase-messaging")
 ```
 
-#### Camera & Scanning
+#### Cámara y Escaneo
 ```kotlin
 implementation("androidx.camera:camera-camera2:1.4.0")
 implementation("androidx.camera:camera-lifecycle:1.4.0")
@@ -257,117 +253,111 @@ implementation("androidx.camera:camera-view:1.4.0")
 implementation("com.google.mlkit:barcode-scanning:17.3.0")
 ```
 
-#### Coroutines & Serialization
+#### Coroutines y Serialización
 ```kotlin
 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
 ```
 
-#### Security
+#### Seguridad
 ```kotlin
 implementation("androidx.security:security-crypto:1.1.0-alpha06")
 implementation("androidx.biometric:biometric:1.2.0-alpha05")
 ```
 
-#### Network
+#### Red
 ```kotlin
 implementation("io.ktor:ktor-client-core:3.3.1")
 implementation("io.ktor:ktor-client-android:3.3.1")
 ```
 
-### Full Dependency List
+### Lista Completa de Dependencias
 
-See `app/build.gradle.kts` for the complete list of dependencies.
+Ver `app/build.gradle.kts` para la lista completa de dependencias.
 
-### Dependency Versions
+### Versiones de Dependencias
 
-| Dependency | Version | Purpose |
-|------------|---------|---------|
-| Kotlin | 1.9.24 | Language |
-| Compose BOM | 2024.09.00 | UI Framework |
-| Room | 2.6.1 | Local Database |
-| Supabase | 3.2.4 | Backend Services |
-| Stripe | 20.49.0 | Payment Processing |
-| Firebase | 33.5.1 | Push Notifications |
-| CameraX | 1.4.0 | Barcode Scanning |
-| Ktor | 3.3.1 | HTTP Client |
+| Dependencia | Versión | Propósito |
+|------------|---------|-----------|
+| Kotlin | 1.9.24 | Lenguaje |
+| Compose BOM | 2024.09.00 | Framework de UI |
+| Room | 2.6.1 | Base de datos local |
+| Supabase | 3.2.4 | Servicios de backend |
+| Stripe | 20.49.0 | Procesamiento de pagos |
+| Firebase | 33.5.1 | Notificaciones push |
+| CameraX | 1.4.0 | Escaneo de códigos de barras |
+| Ktor | 3.3.1 | Cliente HTTP |
 
 ---
 
-## API Implementation Details
+## Detalles de Implementación de API
 
-### 1. **Supabase Authentication API**
+### 1. **API de Autenticación Supabase**
 
-**File**: `repository/admin/users/UserRepository.kt`
-
+**Archivo**: `repository/admin/users/UserRepository.kt`
 ```kotlin
 class UserRepository(private val supabase: SupabaseClient) {
-    
-    // Login and session management
+    // Gestión de login y sesión
     suspend fun getCurrentUser(): UserModel?
-    suspend fun getAllActiveUsers(): List<UserModel>
+    suspend fun getAllActiveUsers(): List
     suspend fun createUser(email, roleId, companyId, branchId): UserModel
     suspend fun updateUser(authId, branchId, roleId): UserModel
     suspend fun deleteUser(authId)
 }
 ```
 
-**Features**:
-- JWT token-based authentication
-- Session persistence with `AndroidSessionManager`
-- Role-based access control
-- Soft delete support
+**Características**:
+- Autenticación basada en tokens JWT
+- Persistencia de sesión con `AndroidSessionManager`
+- Control de acceso basado en roles
+- Soporte para eliminación suave
 
-### 2. **Supabase Database API (PostgREST)**
+### 2. **API de Base de Datos Supabase (PostgREST)**
 
-**Files**:
+**Archivos**:
 - `repository/admin/products/ProductRepository.kt`
 - `repository/admin/categories/CategoryRepository.kt`
 - `repository/admin/branches/BranchRepository.kt`
-
 ```kotlin
 class ProductRepository(private val supabase: SupabaseClient) {
-    
-    suspend fun getAllProducts(): List<Product>
+    suspend fun getAllProducts(): List
     suspend fun getProductById(id: Int): Product?
     suspend fun createProduct(product: Product): Product
     suspend fun updateProduct(id: Int, product: Product)
     suspend fun deleteProduct(id: Int)
-    suspend fun searchProducts(query: String): List<Product>
+    suspend fun searchProducts(query: String): List
 }
 ```
 
-**Operations**:
-- CRUD operations via PostgREST
-- Filtering and sorting
-- Real-time subscriptions
-- Batch operations
+**Operaciones**:
+- Operaciones CRUD vía PostgREST
+- Filtrado y ordenamiento
+- Suscripciones en tiempo real
+- Operaciones por lotes
 
-### 3. **Stripe Payment API**
+### 3. **API de Pagos Stripe**
 
-**File**: `repository/sales/sales_orders/StripePaymentRepository.kt`
-
+**Archivo**: `repository/sales/sales_orders/StripePaymentRepository.kt`
 ```kotlin
 class StripePaymentRepository(
     private val context: Context,
     private val publishableKey: String,
     private val supabase: SupabaseClient
 ) {
-    suspend fun createPaymentIntent(amount, currency, saleId): Result<PaymentIntentResponse>
-    suspend fun confirmPayment(paymentIntentId): Result<StripePaymentConfirmation>
+    suspend fun createPaymentIntent(amount, currency, saleId): Result
+    suspend fun confirmPayment(paymentIntentId): Result
 }
 ```
 
-**Flow**:
-1. Create PaymentIntent via Supabase Edge Function
-2. Present Stripe payment sheet
-3. Confirm payment and verify status
-4. Record payment proof in database
+**Flujo**:
+1. Crear PaymentIntent vía Edge Function de Supabase
+2. Presentar hoja de pago de Stripe
+3. Confirmar pago y verificar estado
+4. Registrar comprobante de pago en la base de datos
 
-### 4. **Firebase Cloud Messaging API**
+### 4. **API de Firebase Cloud Messaging**
 
-**File**: `FcmService.kt`
-
+**Archivo**: `FcmService.kt`
 ```kotlin
 class FcmService : FirebaseMessagingService() {
     override fun onNewToken(token: String)
@@ -375,19 +365,18 @@ class FcmService : FirebaseMessagingService() {
 }
 ```
 
-**Features**:
-- Push notifications for sync updates
-- Real-time sale notifications
-- System-wide alerts
+**Características**:
+- Notificaciones push para actualizaciones de sincronización
+- Notificaciones de ventas en tiempo real
+- Alertas del sistema
 
-### 5. **Local Database API (Room)**
+### 5. **API de Base de Datos Local (Room)**
 
-**Files**:
+**Archivos**:
 - `data/local/dao/OfflineSalesDao.kt`
 - `data/local/dao/CashRegisterDao.kt`
 - `data/local/dao/StockDao.kt`
 - `data/local/dao/SyncQueueDao.kt`
-
 ```kotlin
 @Dao
 interface OfflineSalesDao {
@@ -396,175 +385,168 @@ interface OfflineSalesDao {
     
     @Transaction
     @Query("SELECT * FROM offline_sales WHERE pendingSync = 1")
-    suspend fun getPendingSalesWithDetails(): List<OfflineSaleWithDetails>
+    suspend fun getPendingSalesWithDetails(): List
     
     @Query("UPDATE offline_sales SET pendingSync = 0 WHERE localSaleId = :localSaleId")
     suspend fun markAsSynced(localSaleId: String)
 }
 ```
 
-**Features**:
-- Offline-first sales recording
-- Automatic sync queue management
-- Conflict resolution
-- Local caching
+**Características**:
+- Registro de ventas offline-first
+- Gestión automática de cola de sincronización
+- Resolución de conflictos
+- Caché local
 
 ### 6. **Edge Functions API**
 
 **Supabase Edge Functions**:
-- `create-stripe-payment-intent` - Create Stripe payments
-- `confirm-stripe-payment` - Confirm payments
-- `sync-data` - Synchronize offline data
+- `create-stripe-payment-intent` - Crear pagos Stripe
+- `confirm-stripe-payment` - Confirmar pagos
+- `sync-data` - Sincronizar datos offline
 
-### 7. **Sales Management API**
+### 7. **API de Gestión de Ventas**
 
-**File**: `repository/sales/sales_orders/SalesRepository.kt`
-
+**Archivo**: `repository/sales/sales_orders/SalesRepository.kt`
 ```kotlin
 class SalesRepository(private val supabase: SupabaseClient) {
     suspend fun createSale(sale: SaleRequest): SaleResponse
     suspend fun getSaleById(id: String): Sale?
-    suspend fun getSalesByDateRange(start, end): List<Sale>
+    suspend fun getSalesByDateRange(start, end): List
     suspend fun cancelSale(id: String)
     suspend fun refundSale(id: String, amount: Double)
 }
 ```
 
-### 8. **Cash Register API**
+### 8. **API de Caja Registradora**
 
-**File**: `repository/sales/cash_register/CashRegisterRepository.kt`
-
+**Archivo**: `repository/sales/cash_register/CashRegisterRepository.kt`
 ```kotlin
 class CashRegisterRepository(private val supabase: SupabaseClient) {
     suspend fun openRegister(amount: Double): CashRegisterSession
     suspend fun closeRegister(sessionId: String, finalAmount: Double)
-    suspend fun getRegisterHistory(branchId): List<CashRegisterHistory>
+    suspend fun getRegisterHistory(branchId): List
     suspend fun addTransaction(sessionId, transaction: Transaction)
 }
 ```
 
-### 9. **Report Generation API**
+### 9. **API de Generación de Reportes**
 
-**File**: `repository/sales/reports/SalesReportRepository.kt`
-
+**Archivo**: `repository/sales/reports/SalesReportRepository.kt`
 ```kotlin
 class SalesReportRepository(private val supabase: SupabaseClient) {
     suspend fun getDailySalesReport(date: LocalDate): SalesReport
     suspend fun getMonthlySalesReport(year: Int, month: Int): MonthlyReport
-    suspend fun getTopProducts(limit: Int): List<TopProduct>
-    suspend fun getSalesByCategory(): Map<Category, Double>
+    suspend fun getTopProducts(limit: Int): List
+    suspend fun getSalesByCategory(): Map
 }
 ```
 
 ---
 
-## Configuration Guide
+## Guía de Configuración
 
-### 1. **Supabase Configuration**
+### 1. **Configuración de Supabase**
 
-#### Environment Variables (local.properties)
-
+#### Variables de Entorno (local.properties)
 ```properties
-# Supabase Configuration
+# Configuración de Supabase
 SUPABASE_URL=https://uhtlmanoxrfdefelpybs.supabase.co
 SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodGxtYW5veHJmZGVmZWxweWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTQ5MjEsImV4cCI6MjA3NjM3MDkyMX0.K4D40jXz3Q3T_iq4bGmm1AeOqOzft1hpTi7eVb2siR0
 ```
 
-#### Database Setup
+#### Configuración de la Base de Datos
 
-1. **Create Supabase Project**
-   - Go to: https://supabase.com
-   - Create new project
+1. **Crear Proyecto Supabase**
+   - Ir a: https://supabase.com
+   - Crear nuevo proyecto
 
-2. **Run Database Migrations**
-   Execute SQL scripts in Supabase SQL Editor:
-   ```sql
-   -- Enable Row Level Security
-   alter table users enable row level security;
-   
-   -- Create tables (see database schema)
-   ```
+2. **Ejecutar Migraciones de Base de Datos**
 
-3. **Configure RLS Policies**
-   ```sql
-   create policy "Users can view own data"
-   on users for select
-   using (auth.uid() = auth_id);
-   ```
+Ejecutar scripts SQL en el Editor SQL de Supabase:
+```sql
+-- Habilitar Row Level Security
+alter table users enable row level security;
 
-#### Edge Functions Setup
+-- Crear tablas (ver esquema de base de datos)
+```
 
-Deploy Supabase Edge Functions:
+3. **Configurar Políticas RLS**
+```sql
+create policy "Los usuarios pueden ver sus propios datos"
+on users for select
+using (auth.uid() = auth_id);
+```
+
+#### Configuración de Edge Functions
+
+Desplegar Supabase Edge Functions:
 ```bash
 supabase functions new create-stripe-payment-intent
 supabase functions new confirm-stripe-payment
 ```
 
-### 2. **Stripe Configuration**
+### 2. **Configuración de Stripe**
 
-#### Get Stripe Keys
+#### Obtener Claves de Stripe
 
-1. Create Stripe account: https://stripe.com
-2. Get test API keys from Dashboard
-3. Add publishable key to `local.properties`:
-   ```properties
-   STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiMZmK7o8dUvwrn5iUEhGLxB11jTxrNcjjN328ElOwX00jJnAr3zv
-   ```
-
-#### Configure Stripe in Dashboard
-
-1. Enable Stripe in Supabase
-2. Configure webhooks for payment events
-3. Set up currency and payment methods
-
-### 3. **Firebase Configuration**
-
-#### Create Firebase Project
-
-1. Go to: https://console.firebase.google.com
-2. Create new project
-3. Add Android app with package name: `com.dev.point_of_sale_sistem_with_kotlin_pos`
-4. Download `google-services.json` and place in `app/`
-
-#### Enable FCM
-
-1. Enable Cloud Messaging in Firebase Console
-2. Configure notification channel
-3. Set up topic subscriptions for multi-device sync
-
-### 4. **Camera Configuration**
-
-The app uses CameraX for barcode scanning. Ensure these permissions in `AndroidManifest.xml`:
-
-```xml
-<uses-feature android:name="android.hardware.camera" android:required="false" />
-<uses-permission android:name="android.permission.CAMERA" />
+1. Crear cuenta Stripe: https://stripe.com
+2. Obtener claves API de prueba desde el Dashboard
+3. Agregar clave publicable a `local.properties`:
+```properties
+STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiMZmK7o8dUvwrn5iUEhGLxB11jTxrNcjjN328ElOwX00jJnAr3zv
 ```
 
-### 5. **Security Configuration**
+#### Configurar Stripe en el Dashboard
 
-#### Biometric Setup
+1. Habilitar Stripe en Supabase
+2. Configurar webhooks para eventos de pago
+3. Configurar moneda y métodos de pago
 
+### 3. **Configuración de Firebase**
+
+#### Crear Proyecto Firebase
+
+1. Ir a: https://console.firebase.google.com
+2. Crear nuevo proyecto
+3. Agregar app Android con nombre de paquete: `com.dev.point_of_sale_sistem_with_kotlin_pos`
+4. Descargar `google-services.json` y colocarlo en `app/`
+
+#### Habilitar FCM
+
+1. Habilitar Cloud Messaging en Firebase Console
+2. Configurar canal de notificaciones
+3. Configurar suscripciones a temas para sincronización multi-dispositivo
+
+### 4. **Configuración de Cámara**
+
+La aplicación usa CameraX para escaneo de códigos de barras. Asegurar estos permisos en `AndroidManifest.xml`:
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-feature android:name="android.hardware.camera" android:required="false" />
+```
+
+### 5. **Configuración de Seguridad**
+
+#### Configuración Biométrica
 ```kotlin
 val biometricManager = BiometricManager.from(context)
 val canAuthenticate = biometricManager.canAuthenticate(
-    BiometricManager.Authenticators.BIOMETRIC_WEAK or
+    BiometricManager.Authenticators.BIOMETRIC_WEAK or 
     BiometricManager.Authenticators.DEVICE_CREDENTIAL
 )
 ```
 
-#### Encrypted Storage
-
+#### Almacenamiento Encriptado
 ```kotlin
 implementation("androidx.security:security-crypto:1.1.0-alpha06")
 ```
 
-### 6. **Build Configuration**
+### 6. **Configuración de Compilación**
 
-#### Version Configuration
+#### Configuración de Versión
 
-Edit `app/build.gradle.kts`:
-
+Editar `app/build.gradle.kts`:
 ```kotlin
 android {
     defaultConfig {
@@ -577,10 +559,9 @@ android {
 }
 ```
 
-#### ProGuard Rules
+#### Reglas ProGuard
 
-Add to `app/proguard-rules.pro`:
-
+Agregar a `app/proguard-rules.pro`:
 ```proguard
 # Supabase
 -keep class io.github.jan.supabase.** { *; }
@@ -594,128 +575,120 @@ Add to `app/proguard-rules.pro`:
 -keep class com.stripe.** { *; }
 ```
 
-### 7. **Network Configuration**
+### 7. **Configuración de Red**
 
-#### Network Security
+#### Seguridad de Red
 
-Allow cleartext for development in `AndroidManifest.xml`:
-
+Permitir cleartext para desarrollo en `AndroidManifest.xml`:
 ```xml
 <application
-    android:usesCleartextTraffic="true"
-    >
+    android:usesCleartextTraffic="true">
 </application>
 ```
 
-For production, use HTTPS only.
+Para producción, usar solo HTTPS.
 
-#### Network Monitor
+#### Monitor de Red
 
-The app includes automatic network detection:
-
+La aplicación incluye detección automática de red:
 ```kotlin
 val networkMonitor = NetworkMonitor(context)
-val isOnline = networkMonitor.isOnline // StateFlow<Boolean>
+val isOnline = networkMonitor.isOnline // StateFlow
 ```
 
-### 8. **Sync Configuration**
+### 8. **Configuración de Sincronización**
 
-#### Automatic Sync Settings
+#### Configuración de Sincronización Automática
 
-Configure sync behavior in `SyncManager.kt`:
-
+Configurar comportamiento de sincronización en `SyncManager.kt`:
 ```kotlin
 class SyncManager {
     companion object {
-        const val SYNC_INTERVAL = 15 * 60 * 1000L // 15 minutes
+        const val SYNC_INTERVAL = 15 * 60 * 1000L // 15 minutos
         const val MAX_RETRIES = 3
     }
 }
 ```
 
-#### Manual Sync Trigger
-
+#### Activar Sincronización Manual
 ```kotlin
 syncManager.triggerSync()
 ```
 
 ---
 
-## Testing
+## Pruebas
 
-### Unit Tests
-
+### Pruebas Unitarias
 ```bash
 ./gradlew test
 ```
 
-### Instrumented Tests
-
+### Pruebas Instrumentadas
 ```bash
 ./gradlew connectedAndroidTest
 ```
 
-### Lint Checks
-
+### Verificaciones de Lint
 ```bash
 ./gradlew lint
 ```
 
 ---
 
-## Troubleshooting
+## Solución de Problemas
 
-### Common Issues
+### Problemas Comunes
 
-1. **Gradle Sync Failed**
-   - Clean project: `./gradlew clean`
-   - Invalidate caches and restart Android Studio
+1. **Fallo en Sincronización de Gradle**
+   - Limpiar proyecto: `./gradlew clean`
+   - Invalidar cachés y reiniciar Android Studio
 
-2. **Supabase Connection Error**
-   - Verify URL and key in `local.properties`
-   - Check internet connection
-   - Verify RLS policies
+2. **Error de Conexión Supabase**
+   - Verificar URL y clave en `local.properties`
+   - Verificar conexión a internet
+   - Verificar políticas RLS
 
-3. **Stripe Payment Failed**
-   - Check Stripe test mode keys
-   - Verify Edge Function deployment
+3. **Fallo en Pago Stripe**
+   - Verificar claves de modo de prueba Stripe
+   - Verificar despliegue de Edge Function
 
-4. **FCM Not Working**
-   - Verify `google-services.json` is correct
-   - Check notification channel configuration
+4. **FCM No Funciona**
+   - Verificar que `google-services.json` sea correcto
+   - Verificar configuración del canal de notificaciones
 
-### Logs
+### Registros
 
-View logs with:
+Ver registros con:
 ```bash
 adb logcat | grep -E "Supabase|Stripe|POS"
 ```
 
 ---
 
-## License
+## Licencia
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Support
-
-For support, please open an issue in the repository or contact the development team.
+Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
 ---
 
-## Changelog
+## Soporte
 
-### Version 1.0.0
-- Initial release
-- Complete POS functionality
-- Offline support
-- Multi-payment integration
-- Biometric authentication
+Para soporte, por favor abre un issue en el repositorio o contacta al equipo de desarrollo.
+
+---
+
+## Registro de Cambios
+
+### Versión 1.0.0
+- Lanzamiento inicial
+- Funcionalidad POS completa
+- Soporte offline
+- Integración de múltiples métodos de pago
+- Autenticación biométrica
 
 ---
 
 <div align="center">
-  <p>Built with ❤️ using Kotlin, Jetpack Compose, and Supabase</p>
+  <p>Construido con ❤️ usando Kotlin, Jetpack Compose y Supabase</p>
 </div>
