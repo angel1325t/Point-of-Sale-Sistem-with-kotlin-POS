@@ -7,10 +7,10 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
-class DashboardRepository(private val supabase: SupabaseClient) {
+class DashboardRepository(
+    private val supabase: SupabaseClient
+) {
 
     companion object {
         private const val TAG = "DASHBOARD_REPO"
@@ -24,35 +24,27 @@ class DashboardRepository(private val supabase: SupabaseClient) {
     suspend fun getDashboardData(
         startDate: String,
         endDate: String,
-        branchId: Int? = null
+        branchId: String? = null
     ): Result<DashboardData> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "📊 Obteniendo datos del dashboard - Rango: $startDate a $endDate")
+            Log.d(TAG, "📊 Obteniendo datos del dashboard - Rango: $startDate a $endDate, BranchId: $branchId")
 
-            // Obtener ventas del período
             val sales = getSales(startDate, endDate, branchId)
-
-            // Obtener productos más vendidos
             val topProducts = getTopProducts(startDate, endDate, branchId)
-
-            // Obtener datos de ingresos por fecha
             val revenueData = getRevenueByDate(startDate, endDate, branchId)
-
-            // Calcular márgenes (esto requiere información de costos)
             val profitMargins = calculateProfitMargins(sales)
 
-            val dashboardData = DashboardData(
-                sales = sales,
-                topProducts = topProducts,
-                revenueData = revenueData,
-                profitMargins = profitMargins
+            Result.success(
+                DashboardData(
+                    sales = sales,
+                    topProducts = topProducts,
+                    revenueData = revenueData,
+                    profitMargins = profitMargins
+                )
             )
 
-            Log.d(TAG, "Datos del dashboard obtenidos exitosamente")
-            Result.success(dashboardData)
-
         } catch (e: Exception) {
-            Log.e(TAG, "Error obteniendo datos del dashboard: ${e.message}", e)
+            Log.e(TAG, "❌ Error obteniendo datos del dashboard: ${e.message}", e)
             Result.failure(DashboardError.UnknownError(exception = e))
         }
     }
@@ -63,7 +55,7 @@ class DashboardRepository(private val supabase: SupabaseClient) {
     private suspend fun getSales(
         startDate: String,
         endDate: String,
-        branchId: Int?
+        branchId: String?
     ): List<SaleDTO> {
         return try {
             val allSales = supabase
@@ -77,13 +69,13 @@ class DashboardRepository(private val supabase: SupabaseClient) {
                             sale.saleDate <= endDate
 
                 val sameBranch =
-                    branchId == null || sale.branchId == branchId
+                    branchId == null || sale.branchId.toString() == branchId
 
                 inDateRange && sameBranch
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error obteniendo ventas: ${e.message}", e)
+            Log.e(TAG, "❌ Error obteniendo ventas: ${e.message}", e)
             emptyList()
         }
     }
@@ -94,14 +86,12 @@ class DashboardRepository(private val supabase: SupabaseClient) {
     private suspend fun getTopProducts(
         startDate: String,
         endDate: String,
-        branchId: Int?,
+        branchId: String?,
         limit: Int = 5
     ): List<TopProductDTO> {
         return try {
-            // Nota: Esto es una aproximación. En producción, deberías usar una vista
-            // o una función de PostgreSQL que haga el JOIN y agregación correctamente
-
-            val items = supabase.from(SALE_ITEMS_TABLE)
+            val items = supabase
+                .from(SALE_ITEMS_TABLE)
                 .select(
                     columns = Columns.list(
                         "product_id",
@@ -113,14 +103,14 @@ class DashboardRepository(private val supabase: SupabaseClient) {
                 )
                 .decodeList<SaleItemDTO>()
 
-            // Agrupar y agregar en el cliente
-            items.groupBy { it.productId }
-                .map { (productId, items) ->
+            items
+                .groupBy { it.productId }
+                .map { (_, productItems) ->
                     TopProductDTO(
-                        productId = productId,
-                        productName = items.first().productName,
-                        totalQuantity = items.sumOf { it.quantity },
-                        totalRevenue = items.sumOf { it.subtotal }
+                        productId = productItems.first().productId,
+                        productName = productItems.first().productName,
+                        totalQuantity = productItems.sumOf { it.quantity },
+                        totalRevenue = productItems.sumOf { it.subtotal }
                     )
                 }
                 .sortedByDescending { it.totalRevenue }
@@ -138,13 +128,13 @@ class DashboardRepository(private val supabase: SupabaseClient) {
     private suspend fun getRevenueByDate(
         startDate: String,
         endDate: String,
-        branchId: Int?
+        branchId: String?
     ): List<RevenueDateDTO> {
         return try {
             val sales = getSales(startDate, endDate, branchId)
 
-            // Agrupar por fecha
-            sales.groupBy { it.saleDate.take(10) } // YYYY-MM-DD
+            sales
+                .groupBy { it.saleDate.take(10) } // YYYY-MM-DD
                 .map { (date, salesOfDay) ->
                     RevenueDateDTO(
                         saleDate = date,
@@ -162,17 +152,20 @@ class DashboardRepository(private val supabase: SupabaseClient) {
 
     /**
      * Calcula los márgenes de ganancia
-     * Nota: Esto requiere tener información de costos de productos
-     * Por ahora retorna valores simulados
+     * Nota: requiere costos reales de productos
      */
-    private fun calculateProfitMargins(sales: List<SaleDTO>): ProfitMargins {
+    private fun calculateProfitMargins(
+        sales: List<SaleDTO>
+    ): ProfitMargins {
         val totalRevenue = sales.sumOf { it.totalAmount }
 
-        // TODO: Implementar cálculo real de costos cuando esté disponible
-        // Por ahora asumimos un margen de 30%
+        // Margen estimado del 30%
         val estimatedCost = totalRevenue * 0.70
         val grossProfit = totalRevenue - estimatedCost
-        val profitMargin = if (totalRevenue > 0) (grossProfit / totalRevenue) * 100 else 0.0
+        val profitMargin =
+            if (totalRevenue > 0)
+                (grossProfit / totalRevenue) * 100
+            else 0.0
 
         return ProfitMargins(
             totalCost = estimatedCost,
@@ -184,7 +177,7 @@ class DashboardRepository(private val supabase: SupabaseClient) {
 }
 
 /**
- * Clase contenedora para todos los datos del dashboard
+ * Contenedor de datos del dashboard
  */
 data class DashboardData(
     val sales: List<SaleDTO>,

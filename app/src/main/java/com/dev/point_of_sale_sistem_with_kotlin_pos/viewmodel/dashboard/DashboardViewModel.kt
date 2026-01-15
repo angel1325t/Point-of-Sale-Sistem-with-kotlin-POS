@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.dashboard.DashboardIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +17,7 @@ import java.util.*
 
 class DashboardViewModel(
     private val repository: DashboardRepository,
-    private val branchId: Int? = null
+    private val branchId: String? = null
 ) : ViewModel() {
 
     companion object {
@@ -28,9 +29,8 @@ class DashboardViewModel(
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
     init {
-        Log.d(TAG, "🚀 DashboardViewModel inicializado")
+        Log.d(TAG, "🚀 DashboardViewModel inicializado con branchId: $branchId")
 
-        // Cargar datos del último mes por defecto
         val calendar = Calendar.getInstance()
         val endDate = formatDate(calendar.time)
 
@@ -55,7 +55,8 @@ class DashboardViewModel(
         when (intent) {
             is DashboardIntent.LoadDashboard -> loadDashboard()
             is DashboardIntent.RefreshData -> refreshData()
-            is DashboardIntent.SelectDateRange -> selectDateRange(intent.startDate, intent.endDate)
+            is DashboardIntent.SelectDateRange ->
+                selectDateRange(intent.startDate, intent.endDate)
             is DashboardIntent.ClearError -> clearError()
         }
     }
@@ -65,7 +66,7 @@ class DashboardViewModel(
      */
     private fun loadDashboard() {
         viewModelScope.launch {
-            Log.d(TAG, "📊 Cargando dashboard...")
+            Log.d(TAG, "📊 Cargando dashboard con branchId: $branchId")
             _state.update { it.copy(isLoading = true, error = null) }
 
             val startDate = _state.value.selectedStartDate
@@ -75,15 +76,11 @@ class DashboardViewModel(
                 .onSuccess { data ->
                     Log.d(TAG, "✅ Dashboard cargado exitosamente")
 
-                    val summary = calculateSummary(data)
-                    val topProducts = mapTopProducts(data.topProducts)
-                    val revenueData = mapRevenueData(data.revenueData)
-
                     _state.update {
                         it.copy(
-                            summary = summary,
-                            topProducts = topProducts,
-                            revenueData = revenueData,
+                            summary = calculateSummary(data),
+                            topProducts = mapTopProducts(data.topProducts),
+                            revenueData = mapRevenueData(data.revenueData),
                             profitMargins = data.profitMargins,
                             isLoading = false,
                             lastUpdated = System.currentTimeMillis()
@@ -120,15 +117,11 @@ class DashboardViewModel(
                 .onSuccess { data ->
                     Log.d(TAG, "✅ Datos refrescados")
 
-                    val summary = calculateSummary(data)
-                    val topProducts = mapTopProducts(data.topProducts)
-                    val revenueData = mapRevenueData(data.revenueData)
-
                     _state.update {
                         it.copy(
-                            summary = summary,
-                            topProducts = topProducts,
-                            revenueData = revenueData,
+                            summary = calculateSummary(data),
+                            topProducts = mapTopProducts(data.topProducts),
+                            revenueData = mapRevenueData(data.revenueData),
                             profitMargins = data.profitMargins,
                             isRefreshing = false,
                             lastUpdated = System.currentTimeMillis()
@@ -175,31 +168,23 @@ class DashboardViewModel(
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FUNCIONES DE MAPEO Y CÁLCULO
+    // CÁLCULOS Y MAPEOS
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Calcula el resumen general
-     */
-    private fun calculateSummary(data: com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardData): DashboardSummary {
+    private fun calculateSummary(data: DashboardData): DashboardSummary {
         val totalRevenue = data.sales.sumOf { it.totalAmount }
         val totalSales = data.sales.size
-        val averageTicket = if (totalSales > 0) totalRevenue / totalSales else 0.0
-
-        // TODO: Calcular crecimiento comparando con período anterior
-        val growthPercentage = 0.0
+        val averageTicket =
+            if (totalSales > 0) totalRevenue / totalSales else 0.0
 
         return DashboardSummary(
             totalRevenue = totalRevenue,
             totalSales = totalSales,
             averageTicket = averageTicket,
-            growthPercentage = growthPercentage
+            growthPercentage = 0.0
         )
     }
 
-    /**
-     * Mapea los productos más vendidos
-     */
     private fun mapTopProducts(dtos: List<TopProductDTO>): List<TopProduct> {
         val totalRevenue = dtos.sumOf { it.totalRevenue }
 
@@ -209,31 +194,29 @@ class DashboardViewModel(
                 productName = dto.productName,
                 quantitySold = dto.totalQuantity,
                 revenue = dto.totalRevenue,
-                percentage = if (totalRevenue > 0) (dto.totalRevenue / totalRevenue) * 100 else 0.0
+                percentage =
+                    if (totalRevenue > 0)
+                        (dto.totalRevenue / totalRevenue) * 100
+                    else 0.0
             )
         }
     }
 
-    /**
-     * Mapea los datos de ingresos
-     */
-    private fun mapRevenueData(dtos: List<RevenueDateDTO>): List<RevenueDataPoint> {
-        return dtos.map { dto ->
+    private fun mapRevenueData(
+        dtos: List<RevenueDateDTO>
+    ): List<RevenueDataPoint> =
+        dtos.map { dto ->
             RevenueDataPoint(
                 date = dto.saleDate,
                 revenue = dto.totalRevenue,
                 salesCount = dto.salesCount
             )
         }
-    }
 
     // ═══════════════════════════════════════════════════════════
-    // FUNCIONES AUXILIARES DE FECHA
+    // FECHAS
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Formatea una fecha al formato ISO (yyyy-MM-dd)
-     */
     private fun formatDate(date: Date): String {
         val formatter = SimpleDateFormat(DATE_FORMAT, Locale.getDefault())
         return formatter.format(date)
