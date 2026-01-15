@@ -30,7 +30,6 @@ fun PurchaseOrderListScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var orderToDelete by remember { mutableStateOf<PurchaseOrder?>(null) }
     var searchQuery by remember { mutableStateOf("") }
-    var showFilterMenu by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -79,10 +78,6 @@ fun PurchaseOrderListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showFilterMenu = true }) {
-                        Icon(Icons.Default.FilterList, "Filtrar")
-                    }
-
                     IconButton(onClick = {
                         viewModel.handleIntent(PurchaseOrderIntent.LoadOrders)
                     }) {
@@ -135,7 +130,7 @@ fun PurchaseOrderListScreen(
                     .padding(16.dp)
             )
 
-            // Chips de filtro rápido
+            // Chips de filtro rápido - SIMPLIFICADO: solo 2 estados
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -155,25 +150,6 @@ fun PurchaseOrderListScreen(
                     leadingIcon = {
                         Icon(
                             Icons.Default.Schedule,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                )
-
-                FilterChip(
-                    selected = state.filterStatus == OrderStatus.SENT,
-                    onClick = {
-                        if (state.filterStatus == OrderStatus.SENT) {
-                            viewModel.handleIntent(PurchaseOrderIntent.FilterByStatus(null))
-                        } else {
-                            viewModel.handleIntent(PurchaseOrderIntent.FilterByStatus(OrderStatus.SENT))
-                        }
-                    },
-                    label = { Text("Enviados (${state.sentOrders.size})") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.LocalShipping,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
@@ -209,7 +185,7 @@ fun PurchaseOrderListScreen(
                     .weight(1f)
             ) {
                 when {
-                    state.isLoading -> LoadingIndicator()
+                    state.isLoading && state.orders.isEmpty() -> LoadingIndicator()
 
                     state.error != null -> ErrorMessage(
                         error = state.error!!,
@@ -235,11 +211,6 @@ fun PurchaseOrderListScreen(
                                     onDelete = {
                                         orderToDelete = order
                                         showDeleteDialog = true
-                                    },
-                                    onMarkAsSent = {
-                                        viewModel.handleIntent(
-                                            PurchaseOrderIntent.MarkAsSent(order.orderId)
-                                        )
                                     },
                                     onMarkAsReceived = {
                                         val today = LocalDate.now()

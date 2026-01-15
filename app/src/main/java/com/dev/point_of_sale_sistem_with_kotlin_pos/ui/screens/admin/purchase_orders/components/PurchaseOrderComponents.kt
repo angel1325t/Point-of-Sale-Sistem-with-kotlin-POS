@@ -13,14 +13,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.*
 
-/* -------------------- ORDER LIST ITEM ---------------------- */
+/* -------------------- ORDER LIST ITEM - SIMPLIFICADO ---------------------- */
 
 @Composable
 fun PurchaseOrderListItem(
     order: PurchaseOrder,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    onMarkAsSent: () -> Unit,
     onMarkAsReceived: () -> Unit
 ) {
     Card(
@@ -93,7 +92,7 @@ fun PurchaseOrderListItem(
                 )
             }
 
-            // Acciones según el estado
+            // Acciones según el estado - SIMPLIFICADO
             Divider()
 
             Row(
@@ -103,21 +102,22 @@ fun PurchaseOrderListItem(
             ) {
                 when {
                     order.isPending -> {
-                        IconButton(onClick = onMarkAsSent) {
-                            Icon(
-                                Icons.Default.Send,
-                                "Marcar como enviado",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    order.isSent -> {
-                        IconButton(onClick = onMarkAsReceived) {
+                        // Botón prominente para recibir pedido
+                        Button(
+                            onClick = onMarkAsReceived,
+                            modifier = Modifier.padding(end = 8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
                             Icon(
                                 Icons.Default.CheckCircle,
-                                "Marcar como recibido",
-                                tint = MaterialTheme.colorScheme.tertiary
+                                "Recibir pedido",
+                                modifier = Modifier.size(18.dp)
                             )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Recibir")
                         }
                     }
                 }
@@ -171,13 +171,12 @@ private fun InfoRow(
     }
 }
 
-/* -------------------- STATUS BADGE ---------------------- */
+/* -------------------- STATUS BADGE - SIMPLIFICADO ---------------------- */
 
 @Composable
 fun OrderStatusBadge(status: OrderStatus) {
     val (color, icon) = when (status) {
         OrderStatus.PENDING -> MaterialTheme.colorScheme.secondary to Icons.Default.Schedule
-        OrderStatus.SENT -> MaterialTheme.colorScheme.primary to Icons.Default.LocalShipping
         OrderStatus.RECEIVED -> MaterialTheme.colorScheme.tertiary to Icons.Default.CheckCircle
     }
 
