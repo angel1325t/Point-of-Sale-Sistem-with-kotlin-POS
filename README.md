@@ -108,9 +108,9 @@ Before running the project, ensure you have the following installed:
    Create or edit `local.properties` in the project root:
    ```properties
    sdk.dir=C:\\Android\\SDK
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_KEY=your-anon-key
-   STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+   SUPABASE_URL=[https://your-project.supabase.co](https://uhtlmanoxrfdefelpybs.supabase.co)
+   SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVodGxtYW5veHJmZGVmZWxweWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3OTQ5MjEsImV4cCI6MjA3NjM3MDkyMX0.K4D40jXz3Q3T_iq4bGmm1AeOqOzft1hpTi7eVb2siR0
+   STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiMZmK7o8dUvwrn5iUEhGLxB11jTxrNcjjN328ElOwX00jJnAr3zv
    ```
 
 3. **Open in Android Studio**
