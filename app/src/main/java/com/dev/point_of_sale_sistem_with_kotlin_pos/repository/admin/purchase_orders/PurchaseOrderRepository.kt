@@ -8,8 +8,6 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 class PurchaseOrderRepository(private val supabase: SupabaseClient) {
 
@@ -24,12 +22,6 @@ class PurchaseOrderRepository(private val supabase: SupabaseClient) {
      */
     suspend fun getAllOrders(): Result<List<PurchaseOrder>> = withContext(Dispatchers.IO) {
         try {
-            // Opción 1: Si tienes una vista en Supabase con JOIN
-            // val response = supabase.from("purchase_orders_view")
-            //     .select()
-            //     .decodeList<PurchaseOrderWithDetailsDTO>()
-
-            // Opción 2: Obtener pedidos y hacer queries adicionales
             val ordersDTO = supabase.from(TABLE_NAME)
                 .select()
                 .decodeList<PurchaseOrderDTO>()
@@ -151,30 +143,6 @@ class PurchaseOrderRepository(private val supabase: SupabaseClient) {
 
         } catch (e: Exception) {
             Log.e(TAG, "Error creating order", e)
-            Result.failure(handleException(e))
-        }
-    }
-
-    /**
-     * Marca un pedido como enviado
-     */
-    suspend fun markAsSent(orderId: Int): Result<PurchaseOrder> = withContext(Dispatchers.IO) {
-        try {
-            val updateDTO = PurchaseOrderUpdateDTO(status = "SENT")
-
-            val response = supabase.from(TABLE_NAME)
-                .update(updateDTO) {
-                    filter { eq("order_id", orderId) }
-                    select()
-                }
-                .decodeSingleOrNull<PurchaseOrderDTO>()
-
-            response?.let {
-                getOrderById(orderId)
-            } ?: Result.failure(PurchaseOrderError.RecordNotFound())
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error marking as sent", e)
             Result.failure(handleException(e))
         }
     }

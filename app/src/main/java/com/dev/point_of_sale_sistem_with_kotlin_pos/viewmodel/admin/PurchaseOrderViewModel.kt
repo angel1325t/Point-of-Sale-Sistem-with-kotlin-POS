@@ -43,7 +43,6 @@ class PurchaseOrderViewModel(
                 notes = intent.notes
             )
 
-            is PurchaseOrderIntent.MarkAsSent -> markAsSent(intent.orderId)
             is PurchaseOrderIntent.MarkAsReceived -> markAsReceived(
                 orderId = intent.orderId,
                 receivedDate = intent.receivedDate
@@ -286,38 +285,6 @@ class PurchaseOrderViewModel(
                             isLoading = false,
                             error = err,
                             operationSuccess = false
-                        )
-                    }
-                }
-        }
-    }
-
-    private fun markAsSent(orderId: Int) {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
-            repository.markAsSent(orderId)
-                .onSuccess { order ->
-                    _state.update {
-                        it.copy(
-                            orders = it.orders.map { o ->
-                                if (o.orderId == orderId) order else o
-                            },
-                            filteredOrders = it.filteredOrders.map { o ->
-                                if (o.orderId == orderId) order else o
-                            },
-                            isLoading = false,
-                            operationSuccess = true,
-                            successMessage = "Pedido marcado como enviado"
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error as? PurchaseOrderError
-                                ?: PurchaseOrderError.UnknownError(cause = error)
                         )
                     }
                 }
