@@ -33,10 +33,8 @@ sealed class PurchaseOrderIntent {
     ) : PurchaseOrderIntent()
 
     // ───────────────────────────────
-    // Actualización de Estado
+    // Actualización de Estado - SIMPLIFICADO
     // ───────────────────────────────
-
-    data class MarkAsSent(val orderId: Int) : PurchaseOrderIntent()
 
     data class MarkAsReceived(
         val orderId: Int,
