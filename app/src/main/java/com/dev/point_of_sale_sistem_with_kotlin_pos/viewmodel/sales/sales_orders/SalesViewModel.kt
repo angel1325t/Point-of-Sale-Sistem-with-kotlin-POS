@@ -1,6 +1,7 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders
 
 import android.app.Activity
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -15,10 +16,10 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Sa
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.credit_notes.CreditNoteRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.InvoiceRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.HybridCashRegisterRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.HybridSalesRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.StripePaymentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,33 +33,36 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 class SalesViewModel(
-    private val salesRepository: SalesRepository,
+    private val context: Context,
+    private val hybridSalesRepository: HybridSalesRepository,
+    private val hybridCashRegisterRepository: HybridCashRegisterRepository,
     private val salesProductRepository: SalesProductRepository,
     private val paymentProofRepository: PaymentProofRepository,
     private val stripePaymentRepository: StripePaymentRepository,
     private val invoiceRepository: InvoiceRepository,
     private val creditNoteRepository: CreditNoteRepository,
-    private val cashRegisterRepository: CashRegisterRepository,
     private val activityRef: WeakReference<Activity>? = null
 ) : ViewModel() {
 
     constructor(
-        salesRepository: SalesRepository,
+        context: Context,
+        hybridSalesRepository: HybridSalesRepository,
+        hybridCashRegisterRepository: HybridCashRegisterRepository,
         salesProductRepository: SalesProductRepository,
         paymentProofRepository: PaymentProofRepository,
         stripePaymentRepository: StripePaymentRepository,
         invoiceRepository: InvoiceRepository,
         creditNoteRepository: CreditNoteRepository,
-        cashRegisterRepository: CashRegisterRepository,
         activity: Activity
     ) : this(
-        salesRepository,
+        context,
+        hybridSalesRepository,
+        hybridCashRegisterRepository,
         salesProductRepository,
         paymentProofRepository,
         stripePaymentRepository,
         invoiceRepository,
         creditNoteRepository,
-        cashRegisterRepository,
         WeakReference(activity)
     )
 
@@ -126,12 +130,13 @@ class SalesViewModel(
     }
 
     // ═══════════════════════════════════════════════════
-    // 🔓 VALIDACIÓN DE CAJA ABIERTA
+    // 🔓 VALIDACIÓN DE CAJA ABIERTA (HÍBRIDO)
     // ═══════════════════════════════════════════════════
 
     private suspend fun validateCashRegisterOpen(): String? {
         return try {
-            val openRegister = cashRegisterRepository.getOpenCashRegister()
+            // ✅ USAR HYBRID REPOSITORY
+            val openRegister = hybridCashRegisterRepository.getOpenCashRegister()
             if (openRegister == null) {
                 Log.w(TAG, "⚠️ No hay caja abierta")
                 null
@@ -145,15 +150,15 @@ class SalesViewModel(
         }
     }
 
-// ═══════════════════════════════════════════════════
-// 📟 LECTOR DE CÓDIGOS DE BARRA
-// ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════
+    // 📟 LECTOR DE CÓDIGOS DE BARRA
+    // ═══════════════════════════════════════════════════
 
     private fun toggleBarcodeReader() {
         val newState = !_state.value.isBarcodeReaderActive
         _state.value = _state.value.copy(
             isBarcodeReaderActive = newState,
-            barcodeReaderBuffer = "" // Limpiar buffer al activar/desactivar
+            barcodeReaderBuffer = ""
         )
         Log.d(TAG, "Barcode reader toggled: $newState")
     }
@@ -170,7 +175,6 @@ class SalesViewModel(
                     if (product != null) {
                         Log.d(TAG, "Product found via reader: ${product.name}")
 
-                        // Agregar producto automáticamente
                         addProductToSale(
                             SalesIntent.AddSaleDetail(
                                 productId = product.productId,
@@ -180,7 +184,6 @@ class SalesViewModel(
                             )
                         )
 
-                        // Limpiar buffer
                         _state.value = _state.value.copy(barcodeReaderBuffer = "")
                     } else {
                         Log.w(TAG, "Product not found: $barcode")
@@ -199,9 +202,9 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🎫 GESTIÓN DE NOTAS DE CRÉDITO
     // ═══════════════════════════════════════════════════
+
     private fun applyCreditNote(creditNoteId: String, amountApplied: Double) {
         viewModelScope.launch {
-            // Validar que el monto no exceda el total pendiente
             val remainingToPay = _state.value.remainingToPay
             if (amountApplied > remainingToPay) {
                 setError(SaleError.ValidationFailed)
@@ -210,7 +213,7 @@ class SalesViewModel(
 
             val newCreditNote = AppliedCreditNote(
                 creditNoteId = UUID.fromString(creditNoteId),
-                invoiceNumber = "", // Se puede obtener del scan
+                invoiceNumber = "",
                 amountApplied = amountApplied
             )
 
@@ -234,6 +237,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🔍 BÚSQUEDA DE PRODUCTOS
     // ═══════════════════════════════════════════════════
+
     private fun searchByName(query: String) {
         if (query.isBlank()) {
             _state.value = _state.value.copy(searchResults = emptyList())
@@ -300,6 +304,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🛍️ GESTIÓN DE PRODUCTOS EN LA VENTA
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun addProductToSale(intent: SalesIntent.AddSaleDetail) {
         if (intent.quantity <= 0) {
@@ -398,6 +403,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 💳 GESTIÓN DE MÉTODOS DE PAGO
     // ═══════════════════════════════════════════════════
+
     private fun updatePaymentMethod(method: String) {
         val currentSale = _state.value.sale ?: return
         _state.value = _state.value.copy(
@@ -409,6 +415,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🚀 INICIO DEL PROCESO DE PAGO
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun initiateSaleCompletion() {
         val sale = _state.value.sale
@@ -418,7 +425,7 @@ class SalesViewModel(
             return
         }
 
-        // 🔐 VALIDAR QUE HAYA CAJA ABIERTA
+        // 🔐 VALIDAR QUE HAYA CAJA ABIERTA (HÍBRIDO)
         viewModelScope.launch {
             val cashRegisterHistoryId = validateCashRegisterOpen()
 
@@ -427,7 +434,6 @@ class SalesViewModel(
                 return@launch
             }
 
-            // Actualizar sale con el ID de la caja
             _state.value = _state.value.copy(
                 sale = sale.copy(cashRegisterHistoryId = cashRegisterHistoryId)
             )
@@ -463,6 +469,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 💵 PAGO EN EFECTIVO
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun processCashPayment(amountReceived: Double) {
         val remainingToPay = _state.value.remainingToPay
@@ -481,6 +488,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 💳 PAGO CON TARJETA (STRIPE)
     // ═══════════════════════════════════════════════════
+
     private fun initiateCardPayment() {
         val remainingToPay = _state.value.remainingToPay
 
@@ -603,6 +611,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🏦 PAGO POR TRANSFERENCIA CON EVIDENCIA
     // ═══════════════════════════════════════════════════
+
     private fun captureTransferEvidence() {
         val sale = _state.value.sale ?: return
 
@@ -672,7 +681,7 @@ class SalesViewModel(
     }
 
     // ═══════════════════════════════════════════════════
-    // 🧾 FINALIZACIÓN DE VENTA CON FACTURACIÓN Y CRÉDITOS
+    // 🧾 FINALIZACIÓN DE VENTA CON FACTURACIÓN Y CRÉDITOS (HÍBRIDO)
     // ═══════════════════════════════════════════════════
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -685,12 +694,13 @@ class SalesViewModel(
         viewModelScope.launch {
             val saleToCreate = sale.copy(status = "completed")
 
-            salesRepository.createSale(saleToCreate)
+            // ✅ USAR HYBRID SALES REPOSITORY
+            hybridSalesRepository.createSale(saleToCreate)
                 .onSuccess { result ->
 
                     Log.d(TAG, "Sale created: ${result.saleId}, invoice: ${result.invoiceNumber}")
 
-                    // 🎫 APLICAR NOTAS DE CRÉDITO
+                    // 🎫 APLICAR NOTAS DE CRÉDITO (solo online)
                     if (appliedCredits.isNotEmpty()) {
                         appliedCredits.forEach { credit ->
                             creditNoteRepository.applyCreditNote(
@@ -745,6 +755,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🔄 CICLO DE VIDA
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createSale(paymentMethod: String, globalDiscount: Double, userId: UUID) {
         val nowUtc = currentUtcDateTime()

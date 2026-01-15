@@ -1,22 +1,20 @@
 import java.io.FileReader
 import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    kotlin("plugin.serialization") version "2.2.20"
+    alias(libs.plugins.kotlin.serialization)  // Si lo necesitas
     id("com.google.gms.google-services")
+    alias(libs.plugins.google.devtools.ksp)
 }
-
 val localProperties = rootProject.file("local.properties").takeIf { it.exists() }?.let {
     Properties().apply { load(FileReader(it)) }
 } ?: Properties()
 
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: "DEFAULT_URL"
 val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: "DEFAULT_KEY"
-val stripePublishableKey =
-    localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") ?: "DEFAULT_KEY"
+val stripePublishableKey = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") ?: "DEFAULT_KEY"
 
 android {
     namespace = "com.dev.point_of_sale_sistem_with_kotlin_pos"
@@ -31,11 +29,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // 🔹 Supabase
+        // Supabase keys como BuildConfig
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
 
-        // 🔹 Stripe
+        // Stripe
         buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
@@ -49,15 +47,14 @@ android {
         }
     }
 
-    // ✅ DESUGARING ACTIVADO (CLAVE)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        jvmToolchain(17)
     }
 
     buildFeatures {
@@ -67,33 +64,29 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.ui.text.google.fonts)
+    // Desugaring (Java 8+ APIs en versiones antiguas de Android)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 
-    // ✅ DESUGARING (PERMITE java.time EN API 24+)
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
-
-    // Firebase Messaging
-    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
-    implementation("com.google.firebase:firebase-messaging")
-
-    // Core Android
+    // ── CORE ANDROID ───────────────────────────────────────
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.material3)
 
-    // CameraX
-    val cameraxVersion = "1.3.1"
+    // ── FIREBASE ───────────────────────────────────────────
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1")) // Actualiza a 34.x si ya existe en 2026
+    implementation("com.google.firebase:firebase-messaging")
+
+    // ── CAMERA & ML ────────────────────────────────────────
+    val cameraxVersion = "1.4.0"
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // ML Kit Barcode Scanning
-    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
-    // Accompanist Permissions
-    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-
-    // Compose
+    // ── COMPOSE ────────────────────────────────────────────
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -102,44 +95,55 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.ui.text)
 
-    // Coroutines & ZXing
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementation("com.google.zxing:core:3.5.3")
+    // ── PERMISSIONS & UTILS ────────────────────────────────
+    implementation("com.google.accompanist:accompanist-permissions:0.37.0")
 
-    // Navigation & Lifecycle
-    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
-    implementation("androidx.navigation:navigation-compose:2.9.5")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
-    implementation("androidx.biometric:biometric:1.1.0")
-
-    // Image Loading & DataStore
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // Security
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // ── NAVIGATION & LIFECYCLE ─────────────────────────────
+    implementation("androidx.navigation:navigation-compose:2.8.0") // Baja a estable (beta puede dar problemas)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.6")
 
-    // Stripe
+    // ── SECURITY & BIOMETRIC ───────────────────────────────
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+
+    // ── COROUTINES & SERIALIZATION ─────────────────────────
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+
+    // ── ROOM (con KSP - ya no usa kapt) ────────────────────
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // Opcional: si quieres schemaLocation para migraciones (muy útil)
+    // ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
+    // ── STRIPE ─────────────────────────────────────────────
     implementation("com.stripe:stripe-android:20.49.0")
 
-    // Supabase
+    // ── SUPABASE ───────────────────────────────────────────
     implementation(platform("io.github.jan-tennert.supabase:bom:3.2.4"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
     implementation("io.github.jan-tennert.supabase:functions-kt")
 
-    // Ktor
+    // ── KTOR ───────────────────────────────────────────────
     implementation("io.ktor:ktor-client-core:3.3.1")
     implementation("io.ktor:ktor-client-android:3.3.1")
     implementation("io.ktor:ktor-client-content-negotiation:3.3.1")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.1")
 
-    // Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    // ── ZXING ──────────────────────────────────────────────
+    implementation("com.google.zxing:core:3.5.3")
 
-    // Tests
+    // ── WORK MANAGER ───────────────────────────────────────
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // ── TESTS ──────────────────────────────────────────────
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

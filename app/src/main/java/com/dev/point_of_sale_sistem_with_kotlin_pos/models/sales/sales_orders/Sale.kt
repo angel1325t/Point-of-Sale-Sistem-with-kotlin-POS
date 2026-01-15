@@ -28,12 +28,14 @@ data class Sale(
 
     val saleDetails: List<SaleDetail> = emptyList()
 )
+
 data class AppliedCreditNote(
     val creditNoteId: UUID,
     val invoiceNumber: String,
     val amountApplied: Double,
     val appliedAt: Long = System.currentTimeMillis()
 )
+
 @Serializable
 data class SaleInsertDTO(
     @SerialName("user_id")
@@ -68,8 +70,13 @@ data class SaleInsertDTO(
 
     @SerialName("credit_remaining")
     val creditRemaining: Double? = null,
+
     @SerialName("cash_register_history_id")
-    val cashRegisterHistoryId: String
+    val cashRegisterHistoryId: String,
+
+    // ✅ OPCIONAL: Solo se usa en modo offline para tracking
+    @SerialName("local_id")
+    val localId: String? = null
 )
 
 @Serializable

@@ -66,9 +66,11 @@ class ReportPrintManager(private val context: Context) {
             </style>
         </head>
         <body>
-            ${generateHeader(businessInfo, reportType, summary)}
-            ${generateSummarySection(summary)}
-            ${generateDetailSection(reportType, state)}
+            <div class="content-wrapper">
+                ${generateHeader(businessInfo, reportType, summary)}
+                ${generateSummarySection(summary)}
+                ${generateDetailSection(reportType, state)}
+            </div>
             ${generateFooter(businessInfo)}
         </body>
         </html>
@@ -78,55 +80,53 @@ class ReportPrintManager(private val context: Context) {
     private fun getCommonStyles(): String = """
         @page {
             size: letter;
-            margin: 1cm;
+            margin: 1.5cm 1cm 2cm 1cm;
         }
         
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 10pt;
-            color: #333;
+            color: #1a1a1a;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            position: relative;
+            min-height: 100vh;
         }
         
         .header {
-            border-bottom: 3px solid #2196F3;
+            border-bottom: 3px solid #6A5AF9;
             padding-bottom: 20px;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
         }
         
         .header-top {
             display: grid;
             grid-template-columns: 1fr auto;
             gap: 20px;
-            margin-bottom: 15px;
-        }
-        
-        .business-info {
-            text-align: left;
         }
         
         .business-name {
-            font-size: 22pt;
-            font-weight: bold;
-            color: #1976D2;
-            margin: 0 0 8px 0;
-            text-transform: uppercase;
+            font-size: 24pt;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0 0 12px 0;
         }
         
         .business-details {
             font-size: 9pt;
             color: #666;
-            line-height: 1.6;
+            line-height: 1.8;
         }
         
         .business-details div {
-            margin: 3px 0;
+            margin: 4px 0;
         }
         
         .business-details strong {
             color: #333;
             font-weight: 600;
+            min-width: 70px;
+            display: inline-block;
         }
         
         .report-info {
@@ -135,15 +135,16 @@ class ReportPrintManager(private val context: Context) {
         
         .report-title {
             font-size: 16pt;
-            font-weight: bold;
-            color: #333;
-            margin: 0 0 8px 0;
+            font-weight: 700;
+            color: #6A5AF9;
+            margin: 0 0 10px 0;
         }
         
         .report-period {
             font-size: 11pt;
-            color: #666;
-            margin: 3px 0;
+            color: #333;
+            margin: 5px 0;
+            font-weight: 500;
         }
         
         .report-meta {
@@ -153,87 +154,85 @@ class ReportPrintManager(private val context: Context) {
         }
         
         .summary-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 30px 0;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #6A5AF9;
         }
         
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 15px;
+            gap: 30px;
+            margin-top: 20px;
         }
         
         .summary-card {
             text-align: center;
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 6px;
+            padding: 20px 15px;
+            border-left: 4px solid #6A5AF9;
+            background: #fafafa;
         }
         
         .summary-label {
-            font-size: 9pt;
-            opacity: 0.9;
-            margin-bottom: 5px;
+            font-size: 9.5pt;
+            color: #666;
+            margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 500;
         }
         
         .summary-value {
-            font-size: 18pt;
-            font-weight: bold;
+            font-size: 22pt;
+            font-weight: 700;
+            color: #1a1a1a;
         }
         
         .detail-section {
             margin-top: 30px;
+            page-break-inside: avoid;
         }
         
         .section-title {
             font-size: 14pt;
-            font-weight: bold;
-            color: #1976D2;
-            border-bottom: 2px solid #2196F3;
+            font-weight: 700;
+            color: #6A5AF9;
             padding-bottom: 8px;
             margin-bottom: 15px;
+            border-bottom: 2px solid #6A5AF9;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            background: white;
+            margin-top: 15px;
+            border: 1px solid #e8e8e8;
         }
         
         thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #f5f5f5;
+            border-bottom: 2px solid #6A5AF9;
         }
         
         th {
-            padding: 12px 8px;
+            padding: 12px 10px;
             text-align: left;
-            font-size: 10pt;
-            font-weight: 600;
+            font-size: 9.5pt;
+            font-weight: 700;
+            color: #333;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
         td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 9.5pt;
+            padding: 12px 10px;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 10pt;
+            color: #1a1a1a;
         }
         
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-        
-        tr:nth-child(even) {
-            background-color: #fafafa;
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
         
         .text-right {
@@ -246,53 +245,54 @@ class ReportPrintManager(private val context: Context) {
         
         .amount {
             font-weight: 600;
-            color: #1976D2;
+            color: #1a1a1a;
         }
         
         .rank {
             display: inline-block;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
+            min-width: 35px;
+            height: 35px;
+            line-height: 35px;
             text-align: center;
-            border-radius: 50%;
-            font-weight: bold;
+            font-weight: 700;
             font-size: 11pt;
         }
         
         .rank-1 {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
+            background: #6A5AF9;
             color: white;
         }
         
         .rank-2 {
-            background: linear-gradient(135deg, #C0C0C0, #A9A9A9);
+            background: #0080FF;
             color: white;
         }
         
         .rank-3 {
-            background: linear-gradient(135deg, #CD7F32, #8B4513);
+            background: #3399FF;
             color: white;
         }
         
         .rank-other {
-            background: #e0e0e0;
+            background: #f0f0f0;
             color: #666;
+            font-weight: 600;
         }
         
         .footer {
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 2px solid #e0e0e0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 1cm;
+            border-top: 2px solid #e8e8e8;
+            background: white;
         }
         
         .footer-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
-        }
-        
-        .footer-section {
             font-size: 9pt;
             color: #666;
             line-height: 1.6;
@@ -300,49 +300,79 @@ class ReportPrintManager(private val context: Context) {
         
         .footer-section h4 {
             font-size: 10pt;
-            color: #1976D2;
+            color: #6A5AF9;
             margin: 0 0 8px 0;
-            font-weight: 600;
+            font-weight: 700;
+        }
+        
+        .footer-section div {
+            margin: 3px 0;
         }
         
         .footer-copyright {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 15px;
             padding-top: 15px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid #e8e8e8;
             font-size: 8pt;
             color: #999;
+        }
+        
+        .footer-copyright p {
+            margin: 3px 0;
         }
         
         .statistics {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: 20px;
             margin: 20px 0;
         }
         
         .stat-card {
-            background: #f8f9fa;
             padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid #6A5AF9;
+            background: #fafafa;
         }
         
         .stat-label {
             font-size: 9pt;
             color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
         }
         
         .stat-value {
-            font-size: 14pt;
-            font-weight: bold;
-            color: #333;
+            font-size: 18pt;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        
+        .content-wrapper {
+            padding-bottom: 200px;
         }
         
         @media print {
             .page-break {
                 page-break-after: always;
+            }
+            
+            thead {
+                display: table-header-group;
+            }
+            
+            tr {
+                page-break-inside: avoid;
+            }
+            
+            .detail-section {
+                page-break-inside: avoid;
+            }
+            
+            table {
+                page-break-inside: auto;
             }
         }
     """.trimIndent()
@@ -362,7 +392,6 @@ class ReportPrintManager(private val context: Context) {
 
         val currentDateTime = java.time.LocalDateTime.now().format(dateFormat)
 
-        // Construir detalles del negocio
         val businessDetails = buildString {
             businessInfo.address?.let { append("<div><strong>Dirección:</strong> $it</div>") }
             businessInfo.city?.let { append("<div><strong>Ciudad:</strong> $it</div>") }
@@ -374,7 +403,7 @@ class ReportPrintManager(private val context: Context) {
         return """
         <div class="header">
             <div class="header-top">
-                <div class="business-info">
+                <div>
                     <h1 class="business-name">${businessInfo.name}</h1>
                     <div class="business-details">
                         $businessDetails
@@ -382,8 +411,8 @@ class ReportPrintManager(private val context: Context) {
                 </div>
                 <div class="report-info">
                     <h2 class="report-title">$reportName</h2>
-                    <p class="report-period">📅 Período: ${summary.period}</p>
-                    <p class="report-meta">🕒 Generado: $currentDateTime</p>
+                    <p class="report-period">Período: ${summary.period}</p>
+                    <p class="report-meta">Fecha de generación: $currentDateTime</p>
                 </div>
             </div>
         </div>
@@ -392,7 +421,7 @@ class ReportPrintManager(private val context: Context) {
 
     private fun generateSummarySection(summary: ReportSummary): String = """
         <div class="summary-section">
-            <h3 style="margin: 0 0 5px 0; font-size: 14pt;">📊 Resumen Ejecutivo</h3>
+            <h3 style="margin: 0 0 5px 0; font-size: 14pt; color: #6A5AF9; font-weight: 700;">Resumen Ejecutivo</h3>
             <div class="summary-grid">
                 <div class="summary-card">
                     <div class="summary-label">Ingresos Totales</div>
@@ -421,7 +450,7 @@ class ReportPrintManager(private val context: Context) {
     }
 
     private fun generateCashRegisterTable(reports: List<CashRegisterSalesReport>): String {
-        if (reports.isEmpty()) return "<p style='text-align: center; color: #999;'>No hay datos disponibles</p>"
+        if (reports.isEmpty()) return "<p style='text-align: center; color: #95A5A6; padding: 40px;'>No hay datos disponibles para este período</p>"
 
         val sortedReports = reports.sortedByDescending { it.totalSales }
         val totalRevenue = reports.sumOf { it.totalSales }
@@ -436,24 +465,24 @@ class ReportPrintManager(private val context: Context) {
                 <td><strong>${report.cashRegisterName}</strong></td>
                 <td class="text-right amount">${currencyFormat.format(report.totalSales)}</td>
                 <td class="text-right">${report.salesCount}</td>
-                <td class="text-right">${currencyFormat.format(report.averageTicket)}</td>
-                <td class="text-right">${String.format("%.1f%%", percentage)}</td>
+                <td class="text-right amount">${currencyFormat.format(report.averageTicket)}</td>
+                <td class="text-right" style="font-weight: 600;">${String.format("%.1f%%", percentage)}</td>
             </tr>
             """
         }.joinToString("")
 
         return """
         <div class="detail-section">
-            <h3 class="section-title">💰 Detalle por Caja Registradora</h3>
+            <h3 class="section-title">Detalle por Caja Registradora</h3>
             <table>
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 60px;">Rank</th>
+                        <th class="text-center" style="width: 80px;">Ranking</th>
                         <th>Caja</th>
                         <th class="text-right">Ventas Totales</th>
-                        <th class="text-right">N° Ventas</th>
-                        <th class="text-right">Ticket Prom.</th>
-                        <th class="text-right">% Total</th>
+                        <th class="text-right">Transacciones</th>
+                        <th class="text-right">Ticket Promedio</th>
+                        <th class="text-right">Participación</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -466,7 +495,7 @@ class ReportPrintManager(private val context: Context) {
     }
 
     private fun generateCashierTable(reports: List<CashierSalesReport>): String {
-        if (reports.isEmpty()) return "<p style='text-align: center; color: #999;'>No hay datos disponibles</p>"
+        if (reports.isEmpty()) return "<p style='text-align: center; color: #95A5A6; padding: 40px;'>No hay datos disponibles para este período</p>"
 
         val sortedReports = reports.sortedByDescending { it.totalSales }
         val totalRevenue = reports.sumOf { it.totalSales }
@@ -481,24 +510,24 @@ class ReportPrintManager(private val context: Context) {
                 <td><strong>${report.username}</strong></td>
                 <td class="text-right amount">${currencyFormat.format(report.totalSales)}</td>
                 <td class="text-right">${report.salesCount}</td>
-                <td class="text-right">${currencyFormat.format(report.averageTicket)}</td>
-                <td class="text-right">${String.format("%.1f%%", percentage)}</td>
+                <td class="text-right amount">${currencyFormat.format(report.averageTicket)}</td>
+                <td class="text-right" style="font-weight: 600;">${String.format("%.1f%%", percentage)}</td>
             </tr>
             """
         }.joinToString("")
 
         return """
         <div class="detail-section">
-            <h3 class="section-title">👥 Detalle por Cajero</h3>
+            <h3 class="section-title">Detalle por Cajero</h3>
             <table>
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 60px;">Rank</th>
+                        <th class="text-center" style="width: 80px;">Ranking</th>
                         <th>Cajero</th>
                         <th class="text-right">Ventas Totales</th>
-                        <th class="text-right">N° Ventas</th>
-                        <th class="text-right">Ticket Prom.</th>
-                        <th class="text-right">% Total</th>
+                        <th class="text-right">Transacciones</th>
+                        <th class="text-right">Ticket Promedio</th>
+                        <th class="text-right">Participación</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -511,7 +540,7 @@ class ReportPrintManager(private val context: Context) {
     }
 
     private fun generateProductTable(reports: List<ProductSalesReport>): String {
-        if (reports.isEmpty()) return "<p style='text-align: center; color: #999;'>No hay datos disponibles</p>"
+        if (reports.isEmpty()) return "<p style='text-align: center; color: #95A5A6; padding: 40px;'>No hay datos disponibles para este período</p>"
 
         val sortedReports = reports.sortedByDescending { it.totalRevenue }
         val totalRevenue = reports.sumOf { it.totalRevenue }
@@ -525,19 +554,19 @@ class ReportPrintManager(private val context: Context) {
             <tr>
                 <td class="text-center">$rank</td>
                 <td><strong>${report.productName}</strong><br>
-                    <small style="color: #666;">${report.categoryName}</small>
+                    <small style="color: #7F8C8D; font-size: 8.5pt;">${report.categoryName}</small>
                 </td>
                 <td class="text-right">${report.quantitySold}</td>
                 <td class="text-right amount">${currencyFormat.format(report.totalRevenue)}</td>
-                <td class="text-right">${currencyFormat.format(report.averagePrice)}</td>
-                <td class="text-right">${String.format("%.1f%%", percentage)}</td>
+                <td class="text-right amount">${currencyFormat.format(report.averagePrice)}</td>
+                <td class="text-right" style="font-weight: 600;">${String.format("%.1f%%", percentage)}</td>
             </tr>
             """
         }.joinToString("")
 
         return """
         <div class="detail-section">
-            <h3 class="section-title">📦 Detalle por Producto</h3>
+            <h3 class="section-title">Detalle por Producto</h3>
             
             <div class="statistics">
                 <div class="stat-card">
@@ -553,12 +582,12 @@ class ReportPrintManager(private val context: Context) {
             <table>
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 60px;">Rank</th>
+                        <th class="text-center" style="width: 80px;">Ranking</th>
                         <th>Producto</th>
                         <th class="text-right">Cantidad</th>
                         <th class="text-right">Ingresos</th>
-                        <th class="text-right">Precio Prom.</th>
-                        <th class="text-right">% Total</th>
+                        <th class="text-right">Precio Promedio</th>
+                        <th class="text-right">Participación</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -570,7 +599,7 @@ class ReportPrintManager(private val context: Context) {
     }
 
     private fun generateCategoryTable(reports: List<CategorySalesReport>): String {
-        if (reports.isEmpty()) return "<p style='text-align: center; color: #999;'>No hay datos disponibles</p>"
+        if (reports.isEmpty()) return "<p style='text-align: center; color: #95A5A6; padding: 40px;'>No hay datos disponibles para este período</p>"
 
         val sortedReports = reports.sortedByDescending { it.totalRevenue }
         val totalRevenue = reports.sumOf { it.totalRevenue }
@@ -586,23 +615,23 @@ class ReportPrintManager(private val context: Context) {
                 <td class="text-right">${report.productsSold}</td>
                 <td class="text-right">${report.salesCount}</td>
                 <td class="text-right amount">${currencyFormat.format(report.totalRevenue)}</td>
-                <td class="text-right">${String.format("%.1f%%", percentage)}</td>
+                <td class="text-right" style="font-weight: 600;">${String.format("%.1f%%", percentage)}</td>
             </tr>
             """
         }.joinToString("")
 
         return """
         <div class="detail-section">
-            <h3 class="section-title">🏷️ Detalle por Categoría</h3>
+            <h3 class="section-title">Detalle por Categoría</h3>
             <table>
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 60px;">Rank</th>
+                        <th class="text-center" style="width: 80px;">Ranking</th>
                         <th>Categoría</th>
-                        <th class="text-right">Productos</th>
-                        <th class="text-right">N° Ventas</th>
+                        <th class="text-right">Productos Vendidos</th>
+                        <th class="text-right">Transacciones</th>
                         <th class="text-right">Ingresos Totales</th>
-                        <th class="text-right">% Total</th>
+                        <th class="text-right">Participación</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -615,13 +644,13 @@ class ReportPrintManager(private val context: Context) {
     }
 
     private fun getRankBadge(position: Int): String {
-        val (rankClass, icon) = when (position) {
-            1 -> "rank-1" to "🥇"
-            2 -> "rank-2" to "🥈"
-            3 -> "rank-3" to "🥉"
-            else -> "rank-other" to "#$position"
+        val (rankClass, display) = when (position) {
+            1 -> "rank-1" to "1"
+            2 -> "rank-2" to "2"
+            3 -> "rank-3" to "3"
+            else -> "rank-other" to "$position"
         }
-        return """<span class="rank $rankClass">$icon</span>"""
+        return """<span class="rank $rankClass">$display</span>"""
     }
 
     private fun generateStatistics(values: List<Double>): String {
@@ -631,7 +660,7 @@ class ReportPrintManager(private val context: Context) {
         val min = values.minOrNull() ?: 0.0
 
         return """
-        <div class="statistics" style="margin-top: 20px;">
+        <div class="statistics" style="margin-top: 25px;">
             <div class="stat-card">
                 <div class="stat-label">Valor Máximo</div>
                 <div class="stat-value">${currencyFormat.format(max)}</div>
@@ -648,35 +677,34 @@ class ReportPrintManager(private val context: Context) {
     private fun generateFooter(businessInfo: BusinessInfo): String {
         val timestamp = java.time.LocalDateTime.now().format(dateFormat)
 
-        // Información de contacto del negocio
         val contactInfo = buildString {
             append("<h4>Información de Contacto</h4>")
-            businessInfo.address?.let { append("<div>📍 $it</div>") }
-            businessInfo.city?.let { append("<div>🏙️ $it</div>") }
-            businessInfo.phone?.let { append("<div>📞 $it</div>") }
-            businessInfo.email?.let { append("<div>📧 $it</div>") }
+            businessInfo.address?.let { append("<div><strong>Dirección:</strong> $it</div>") }
+            businessInfo.city?.let { append("<div><strong>Ciudad:</strong> $it</div>") }
+            businessInfo.phone?.let { append("<div><strong>Teléfono:</strong> $it</div>") }
+            businessInfo.email?.let { append("<div><strong>Email:</strong> $it</div>") }
         }
 
         val legalInfo = buildString {
             append("<h4>Información Legal</h4>")
-            append("<div><strong>${businessInfo.name}</strong></div>")
-            businessInfo.taxId?.let { append("<div>RNC: $it</div>") }
-            append("<div>Generado: $timestamp</div>")
+            append("<div><strong>Razón Social:</strong> ${businessInfo.name}</div>")
+            businessInfo.taxId?.let { append("<div><strong>RNC:</strong> $it</div>") }
+            append("<div><strong>Fecha de emisión:</strong> $timestamp</div>")
         }
 
         return """
         <div class="footer">
             <div class="footer-content">
-                <div class="footer-section">
+                <div>
                     $contactInfo
                 </div>
-                <div class="footer-section">
+                <div>
                     $legalInfo
                 </div>
             </div>
             <div class="footer-copyright">
-                <p>Este reporte fue generado automáticamente por el Sistema de Punto de Venta</p>
-                <p>© ${java.time.Year.now().value} ${businessInfo.name} - Todos los derechos reservados</p>
+                <p>Este documento fue generado automáticamente por el Sistema de Punto de Venta</p>
+                <p>© ${java.time.Year.now().value} ${businessInfo.name}. Todos los derechos reservados.</p>
             </div>
         </div>
         """.trimIndent()
