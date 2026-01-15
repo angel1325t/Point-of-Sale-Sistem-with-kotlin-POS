@@ -1,31 +1,23 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.products.ProductsIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductsError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductState
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductsRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-class ProductsViewModel(
-    private val repository: ProductsRepository
+class ProductViewModel(
+    private val repository: ProductRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductState())
     val state: StateFlow<ProductState> = _state.asStateFlow()
 
-    init {
-        handleIntent(ProductsIntent.LoadProducts)
-    }
-
-    /**
-     * Maneja todos los intents del usuario
-     */
     fun handleIntent(intent: ProductsIntent) {
         when (intent) {
 
@@ -36,26 +28,26 @@ class ProductsViewModel(
             is ProductsIntent.LoadLowStockProducts -> loadLowStockProducts()
 
             is ProductsIntent.CreateProduct -> createProduct(
-                intent.name,
-                intent.description,
-                intent.price,
-                intent.barcode,
-                intent.categoryId,
-                intent.image,
-                intent.currentStock,
-                intent.minimumStock
+                name = intent.name,
+                description = intent.description,
+                price = intent.price,
+                categoryId = intent.categoryId,
+                currentStock = intent.currentStock,
+                minimumStock = intent.minimumStock,
+                discountType = intent.discountType,
+                discountValue = intent.discountValue
             )
 
             is ProductsIntent.UpdateProduct -> updateProduct(
-                intent.productId,
-                intent.name,
-                intent.description,
-                intent.price,
-                intent.barcode,
-                intent.categoryId,
-                intent.image,
-                intent.currentStock,
-                intent.minimumStock
+                productId = intent.productId,
+                name = intent.name,
+                description = intent.description,
+                price = intent.price,
+                categoryId = intent.categoryId,
+                currentStock = intent.currentStock,
+                minimumStock = intent.minimumStock,
+                discountType = intent.discountType,
+                discountValue = intent.discountValue
             )
 
             is ProductsIntent.DeleteProduct -> deleteProduct(intent.productId)
@@ -70,33 +62,31 @@ class ProductsViewModel(
             is ProductsIntent.ValidatePrice -> validatePrice(intent.price)
             is ProductsIntent.ValidateStock -> validateStock(intent.stock)
             is ProductsIntent.ValidateBarcode -> validateBarcode(intent.barcode)
+            is ProductsIntent.ValidateBranch -> validateBranch(intent.branchId)
+
+            is ProductsIntent.FilterByBranch -> Unit
         }
     }
 
-    // ────────────────────────────────────────
-    // CRUD BASICO
-    // ────────────────────────────────────────
+    // ───────────────────────────────
+    // LOAD
+    // ───────────────────────────────
 
     private fun loadProducts() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            repository.getAllProducts()
+            repository.getProducts()
                 .onSuccess { products ->
                     _state.update {
-                        it.copy(
-                            products = products,
-                            filteredProducts = products,
-                            isLoading = false,
-                            totalItems = products.size
-                        )
+                        it.copy(isLoading = false, products = products)
                     }
                 }
-                .onFailure { error ->
+                .onFailure { throwable ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
+                            error = throwable.toProductsError()
                         )
                     }
                 }
@@ -105,63 +95,43 @@ class ProductsViewModel(
 
     private fun loadProductById(productId: Int) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true) }
 
             repository.getProductById(productId)
                 .onSuccess { product ->
                     _state.update {
-                        it.copy(
-                            selectedProduct = product,
-                            isLoading = false
-                        )
+                        it.copy(isLoading = false, selectedProduct = product)
                     }
                 }
-                .onFailure { error ->
+                .onFailure { throwable ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
+                            error = throwable.toProductsError()
                         )
                     }
                 }
         }
     }
 
+    // ───────────────────────────────
+    // SEARCH / FILTER
+    // ───────────────────────────────
+
     private fun searchProducts(query: String) {
+        if (query.isBlank()) {
+            loadProducts()
+            return
+        }
+
         viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    searchQuery = query,
-                    isLoading = true,
-                    error = null
-                )
-            }
-
-            if (query.isBlank()) {
-                _state.update {
-                    it.copy(
-                        filteredProducts = it.products,
-                        isLoading = false
-                    )
-                }
-                return@launch
-            }
-
-            repository.searchProducts(query)
+            repository.searchProductsByName(query)
                 .onSuccess { products ->
-                    _state.update {
-                        it.copy(
-                            filteredProducts = products,
-                            isLoading = false
-                        )
-                    }
+                    _state.update { it.copy(products = products) }
                 }
-                .onFailure { error ->
+                .onFailure { throwable ->
                     _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
-                        )
+                        it.copy(error = throwable.toProductsError())
                     }
                 }
         }
@@ -169,28 +139,13 @@ class ProductsViewModel(
 
     private fun filterByCategory(categoryId: Int?) {
         viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    filterCategoryId = categoryId,
-                    isLoading = true,
-                    error = null
-                )
-            }
-
-            repository.getProductsByCategoryId(categoryId)
+            repository.getProducts()
                 .onSuccess { products ->
                     _state.update {
                         it.copy(
-                            filteredProducts = products,
-                            isLoading = false
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
+                            products = categoryId?.let { id ->
+                                products.filter { p -> p.categoryId == id }
+                            } ?: products
                         )
                     }
                 }
@@ -199,71 +154,72 @@ class ProductsViewModel(
 
     private fun loadLowStockProducts() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
-            val result = state.value.products.filter { it.currentStock <= it.minimumStock }
-
-            _state.update {
-                it.copy(
-                    filteredProducts = result,
-                    isLoading = false
-                )
-            }
+            repository.getProducts()
+                .onSuccess { products ->
+                    _state.update {
+                        it.copy(
+                            products = products.filter {
+                                it.currentStock <= it.minimumStock
+                            }
+                        )
+                    }
+                }
         }
     }
+
+    // ───────────────────────────────
+    // CREATE / UPDATE / DELETE
+    // ───────────────────────────────
 
     private fun createProduct(
         name: String,
         description: String?,
         price: Double,
-        barcode: String?,
         categoryId: Int,
-        image: String?,
         currentStock: Int,
-        minimumStock: Int
+        minimumStock: Int,
+        discountType: String,
+        discountValue: Double
     ) {
+        if (name.length < 2) {
+            _state.update { it.copy(error = ProductsError.ProductNameTooShort) }
+            return
+        }
+        if (price <= 0) {
+            _state.update { it.copy(error = ProductsError.PriceZeroOrNegative) }
+            return
+        }
+
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true) }
 
             repository.createProduct(
                 name,
                 description,
                 price,
-                barcode,
                 categoryId,
-                image,
                 currentStock,
-                minimumStock
-            ).onSuccess { product ->
-
-                _state.update {
-                    it.copy(
-                        products = it.products + product,
-                        filteredProducts = it.filteredProducts + product,
-                        isLoading = false,
-                        operationSuccess = true,
-                        successMessage = "Producto creado exitosamente",
-                        selectedProduct = null,
-                        nameError = null,
-                        priceError = null,
-                        stockError = null,
-                        barcodeError = null
-                    )
+                minimumStock,
+                DiscountType.valueOf(discountType.uppercase()),
+                discountValue
+            )
+                .onSuccess { product ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            products = it.products + product,
+                            successMessage = "product_created_success"
+                        )
+                    }
                 }
-
-                loadProducts()
-
-            }.onFailure { error ->
-                val err = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
-
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = err,
-                        operationSuccess = false
-                    )
+                .onFailure { throwable ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = throwable.toProductsError()
+                        )
+                    }
                 }
-            }
         }
     }
 
@@ -272,196 +228,104 @@ class ProductsViewModel(
         name: String,
         description: String?,
         price: Double,
-        barcode: String?,
         categoryId: Int,
-        image: String?,
         currentStock: Int,
-        minimumStock: Int
+        minimumStock: Int,
+        discountType: String,
+        discountValue: Double
     ) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true) }
 
             repository.updateProduct(
                 productId,
-                name,
-                description,
-                price,
-                barcode,
-                categoryId,
-                image,
-                currentStock,
-                minimumStock
-            ).onSuccess { product ->
-
-                _state.update {
-                    it.copy(
-                        products = it.products.map { p -> if (p.productId == productId) product else p },
-                        filteredProducts = it.filteredProducts.map { p -> if (p.productId == productId) product else p },
-                        isLoading = false,
-                        operationSuccess = true,
-                        successMessage = "Producto actualizado exitosamente",
-                        selectedProduct = null,
-                        nameError = null,
-                        priceError = null,
-                        stockError = null,
-                        barcodeError = null
-                    )
+                ProductUpdateDTO(
+                    name,
+                    description,
+                    price,
+                    null,
+                    categoryId,
+                    null,
+                    currentStock,
+                    minimumStock,
+                    discountType,
+                    discountValue
+                )
+            )
+                .onSuccess { updated ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            products = it.products.map {
+                                if (it.productId == productId) updated else it
+                            },
+                            successMessage = "product_updated_success"
+                        )
+                    }
                 }
-
-                loadProducts()
-
-            }.onFailure { error ->
-                val err = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
-
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = err,
-                        operationSuccess = false
-                    )
+                .onFailure { throwable ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = throwable.toProductsError()
+                        )
+                    }
                 }
-            }
         }
     }
 
     private fun deleteProduct(productId: Int) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
             repository.deleteProduct(productId)
                 .onSuccess {
                     _state.update {
                         it.copy(
-                            products = it.products.filter { p -> p.productId != productId },
-                            filteredProducts = it.filteredProducts.filter { p -> p.productId != productId },
-                            isLoading = false,
-                            operationSuccess = true,
-                            successMessage = "Producto eliminado exitosamente",
-                            selectedProduct = null
+                            products = it.products.filterNot { p ->
+                                p.productId == productId
+                            }
                         )
                     }
                 }
-                .onFailure { error ->
-                    val err = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
-
+                .onFailure { throwable ->
                     _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = err,
-                            operationSuccess = false
-                        )
+                        it.copy(error = throwable.toProductsError())
                     }
                 }
         }
     }
 
-    private fun deleteMultipleProducts(productIds: List<Int>) {
+    private fun deleteMultipleProducts(ids: List<Int>) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
-            repository.deleteMultipleProducts(productIds)
-                .onSuccess { deletedCount ->
-                    _state.update {
-                        it.copy(
-                            products = it.products.filter { p -> p.productId !in productIds },
-                            filteredProducts = it.filteredProducts.filter { p -> p.productId !in productIds },
-                            isLoading = false,
-                            operationSuccess = true,
-                            successMessage = "Se eliminaron $deletedCount productos",
-                            selectedProduct = null
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    val err = error as? ProductsError ?: ProductsError.UnknownError(exception = error)
-
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = err,
-                            operationSuccess = false
-                        )
-                    }
-                }
+            ids.forEach { repository.deleteProduct(it) }
+            loadProducts()
         }
     }
 
-    // ─────────────────────────────────────
-    // SELECCIÓN Y CONTROLES DE UI
-    // ─────────────────────────────────────
+    // ───────────────────────────────
+    // UI HELPERS
+    // ───────────────────────────────
 
-    private fun selectProduct(productId: Int?) {
-        if (productId == null) {
-            clearSelection()
-            return
+    private fun selectProduct(id: Int?) {
+        _state.update {
+            it.copy(selectedProduct = it.products.find { p -> p.productId == id })
         }
-
-        val product = _state.value.products.find { it.productId == productId }
-        _state.update { it.copy(selectedProduct = product) }
     }
 
     private fun clearSelection() {
-        _state.update {
-            it.copy(
-                selectedProduct = null,
-                nameError = null,
-                priceError = null,
-                stockError = null,
-                barcodeError = null
-            )
-        }
+        _state.update { it.copy(selectedProduct = null) }
     }
 
     private fun clearError() {
-        _state.update {
-            it.copy(
-                error = null,
-                operationSuccess = false,
-                successMessage = null
-            )
-        }
+        _state.update { it.copy(error = null) }
     }
 
     private fun resetState() {
-        _state.update { ProductState() }
-        loadProducts()
+        _state.value = ProductState()
     }
 
-    // ─────────────────────────────────────
-    // VALIDACIONES
-    // ─────────────────────────────────────
-
-    private fun validateProductName(name: String) {
-        val error = when {
-            name.isBlank() -> "El nombre no puede estar vacío"
-            name.length < 2 -> "Debe tener al menos 2 caracteres"
-            name.length > 100 -> "No puede exceder 100 caracteres"
-            else -> null
-        }
-        _state.update { it.copy(nameError = error) }
-    }
-
-    private fun validatePrice(price: Double) {
-        val error = when {
-            price <= 0 -> "El precio debe ser mayor que 0"
-            else -> null
-        }
-        _state.update { it.copy(priceError = error) }
-    }
-
-    private fun validateStock(stock: Int) {
-        val error = when {
-            stock < 0 -> "El stock no puede ser negativo"
-            else -> null
-        }
-        _state.update { it.copy(stockError = error) }
-    }
-
-    private fun validateBarcode(barcode: String?) {
-        val error = when {
-            barcode != null && barcode.length > 50 -> "El código de barras no puede exceder 50 caracteres"
-            else -> null
-        }
-        _state.update { it.copy(barcodeError = error) }
-    }
+    private fun validateProductName(name: String) {}
+    private fun validatePrice(price: Double) {}
+    private fun validateStock(stock: Int) {}
+    private fun validateBarcode(barcode: String?) {}
+    private fun validateBranch(branchId: String?) {}
 }

@@ -15,6 +15,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 
 @Composable
 fun BiometricAuthScreen(
@@ -22,9 +23,7 @@ fun BiometricAuthScreen(
     targetRoute: String
 ) {
     val context = LocalContext.current
-
     var authenticationSuccess by remember { mutableStateOf(false) }
-
     var showError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
@@ -32,16 +31,32 @@ fun BiometricAuthScreen(
     LaunchedEffect(authenticationSuccess) {
         if (authenticationSuccess) {
             navController.navigate(targetRoute) {
-                popUpTo("biometric_auth") { inclusive = true }
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = false
+                }
             }
             authenticationSuccess = false
         }
     }
 
-    // Mostrar prompt automáticamente
+    // Verificar disponibilidad PRIMERO y mostrar prompt solo si está disponible
     LaunchedEffect(Unit) {
         val activity = context as? FragmentActivity
         if (activity != null) {
+            val biometricManager = BiometricManager.from(activity)
+
+            val canAuthenticate = biometricManager.canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_WEAK
+                        or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
+
+            // Si NO hay biometría disponible, dejar pasar directamente
+            if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
+                authenticationSuccess = true
+                return@LaunchedEffect
+            }
+
+            // Si SÍ hay biometría, mostrar el prompt
             showBiometricPrompt(
                 activity = activity,
                 onSuccess = { authenticationSuccess = true },
@@ -134,27 +149,6 @@ private fun showBiometricPrompt(
     onError: (String) -> Unit,
     onFailed: () -> Unit
 ) {
-    val biometricManager = BiometricManager.from(activity)
-
-    when (biometricManager.canAuthenticate(
-        BiometricManager.Authenticators.BIOMETRIC_WEAK
-                or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-    )) {
-        BiometricManager.BIOMETRIC_SUCCESS -> {}
-        BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
-            onError("Este dispositivo no tiene sensor biométrico")
-            return
-        }
-        BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> {
-            onError("Sensor biométrico no disponible")
-            return
-        }
-        BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
-            onError("No hay datos biométricos registrados")
-            return
-        }
-    }
-
     val executor = ContextCompat.getMainExecutor(activity)
 
     val biometricPrompt = BiometricPrompt(

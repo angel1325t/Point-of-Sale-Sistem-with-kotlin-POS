@@ -1,14 +1,34 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -17,7 +37,10 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.cash_register.CashRegisterIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegister
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegisterError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components.CashRegisterCard
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components.CreateEditCashRegisterDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components.EmptyCashRegistersContent
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.components.OpenCashRegisterContent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
 import kotlinx.coroutines.launch
 
@@ -75,6 +98,7 @@ fun CashRegisterManagementScreen(
                 is CashRegisterError.CashRegisterNotFound -> "Caja no encontrada"
                 is CashRegisterError.UnauthorizedError -> "No autorizado"
                 is CashRegisterError.UnknownError -> "Error desconocido"
+                CashRegisterError.CashRegisterAlreadyOpen -> "Ya tienes una caja abierta"
             }
             coroutineScope.launch {
                 snackbarHostState.showSnackbar(message)
