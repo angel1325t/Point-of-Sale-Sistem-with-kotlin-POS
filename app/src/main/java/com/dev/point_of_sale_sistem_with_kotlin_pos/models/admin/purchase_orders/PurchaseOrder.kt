@@ -4,16 +4,14 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Estados posibles de un pedido
+ * Estados posibles de un pedido - SIMPLIFICADO
  */
 enum class OrderStatus {
     PENDING,    // Pendiente
-    SENT,       // Enviado
     RECEIVED;   // Recibido
 
     fun toSpanish(): String = when (this) {
         PENDING -> "Pendiente"
-        SENT -> "Enviado"
         RECEIVED -> "Recibido"
     }
 }
@@ -38,9 +36,6 @@ data class PurchaseOrder(
 
     val isPending: Boolean
         get() = status == OrderStatus.PENDING
-
-    val isSent: Boolean
-        get() = status == OrderStatus.SENT
 }
 
 /**
@@ -199,9 +194,6 @@ data class PurchaseOrderState(
 
     val pendingOrders: List<PurchaseOrder>
         get() = orders.filter { it.isPending }
-
-    val sentOrders: List<PurchaseOrder>
-        get() = orders.filter { it.isSent }
 
     val receivedOrders: List<PurchaseOrder>
         get() = orders.filter { it.isReceived }
