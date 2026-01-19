@@ -276,3 +276,5 @@ class ProductRepository(
             bucket.publicUrl(fileName)
         }
 }
+
+annotation class ProductRepository

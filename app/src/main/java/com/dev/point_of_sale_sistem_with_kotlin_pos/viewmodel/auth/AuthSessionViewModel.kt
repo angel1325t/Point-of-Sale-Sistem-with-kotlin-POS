@@ -93,6 +93,30 @@ class AuthSessionViewModel(
             capabilities = capabilities
         )
     }
+    // ============================================
+    //        MÉTODOS DE BIOMÉTRICO
+    // ============================================
+
+    /**
+     * Guarda si el dispositivo tiene datos biométricos configurados
+     */
+    fun setHasBiometric(hasBiometric: Boolean) {
+        viewModelScope.launch {
+            sessionPreferences.setHasBiometric(hasBiometric)
+            Log.d(TAG, "Biometric availability saved: $hasBiometric")
+        }
+    }
+
+    /**
+     * Obtiene si el dispositivo tiene datos biométricos configurados
+     */
+    suspend fun getHasBiometric(): Boolean {
+        return sessionPreferences.getHasBiometric()
+    }
+
+    // ============================================
+    //        MÉTODOS EXISTENTES
+    // ============================================
 
     private fun handleCheckSession() {
         viewModelScope.launch {

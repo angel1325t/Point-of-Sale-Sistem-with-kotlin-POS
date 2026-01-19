@@ -36,6 +36,7 @@ object AppLifecycleObserver : DefaultLifecycleObserver {
             Log.d(TAG, "REGRESÓ DEL BACKGROUND → pedir biometría")
             _requireBiometric.value = true
         }
+
         wasInBackground = false
         isFirstLaunch = false
     }
@@ -43,5 +44,9 @@ object AppLifecycleObserver : DefaultLifecycleObserver {
     fun reset() {
         Log.d(TAG, "RESET biometric trigger")
         _requireBiometric.value = false
+    }
+
+    fun resetFirstLaunch() {
+        _isFirstLaunch = true
     }
 }
