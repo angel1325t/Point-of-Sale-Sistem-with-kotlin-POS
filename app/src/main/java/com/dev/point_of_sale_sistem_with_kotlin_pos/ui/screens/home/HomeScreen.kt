@@ -2,14 +2,64 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.KeyboardReturn
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.ManageAccounts
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Store
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,13 +72,14 @@ import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.components.BranchSelectorDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.components.DashboardSection
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.MyApplication
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.dashboard.DashboardViewModel
 import kotlinx.coroutines.launch
 
@@ -36,16 +87,24 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    sessionViewModel: AuthSessionViewModel
+    sessionViewModel: AuthSessionViewModel,
+    branchRepository: HybridBranchRepository? = null
 ) {
     val state by sessionViewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val localContext = LocalContext.current
 
-    // ✅ ViewModel de branches para obtener la lista
-    val branchViewModel = remember { BranchViewModel(BranchRepository(supabase)) }
+    val app = localContext.applicationContext as MyApplication
+    val sessionPreferences = remember { app.sessionPreferences }
+
+    val branchViewModel = remember(branchRepository, sessionPreferences) {
+        branchRepository?.let {
+            BranchViewModel(it)
+        } ?: BranchViewModel(HybridBranchRepository(localContext, supabase, sessionPreferences))
+    }
     val branchState by branchViewModel.state.collectAsState()
 
     // ✅ ViewModel del Dashboard - CORREGIDO: usa directamente el branchId String
@@ -98,13 +157,11 @@ fun HomeScreen(
     }
 
     // Mostrar mensaje de éxito
-    val context = LocalContext.current
-
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { msg ->
             val displayMessage = when (msg) {
-                "BRANCH_CHANGED" -> context.getString(R.string.branch_changed_success)
-                "LOGOUT_SUCCESS" -> context.getString(R.string.logout_success)
+                "BRANCH_CHANGED" -> localContext.getString(R.string.branch_changed_success)
+                "LOGOUT_SUCCESS" -> localContext.getString(R.string.logout_success)
                 else -> msg
             }
             snackbarHostState.showSnackbar(displayMessage, duration = SnackbarDuration.Short)
@@ -228,7 +285,6 @@ fun HomeScreen(
                         }
                     )
 
-                    // ✅ NUEVO: Item de Devoluciones
                     DrawerItem(
                         icon = Icons.Default.KeyboardReturn,
                         title = stringResource(R.string.returns),
@@ -247,10 +303,12 @@ fun HomeScreen(
                         }
                     )
 
+                    // ✅ NUEVO: Item de Reportes
                     DrawerItem(
                         icon = Icons.Default.Assessment,
                         title = stringResource(R.string.reports),
                         onClick = {
+                            navController.navigate("reports")
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -437,7 +495,6 @@ fun HomeScreen(
                                 }
                             }
 
-                            // Botón de notificaciones
                             IconButton(
                                 onClick = {
                                     // TODO: Navegar a pantalla de notificaciones
@@ -479,9 +536,7 @@ fun HomeScreen(
                     }
                 }
 
-                // ═══════════════════════════════════════════════════
-                // OVERLAY DE CARGA (Cambio de sucursal)
-                // ═══════════════════════════════════════════════════
+                // Overlay de carga cuando está cambiando de sucursal
                 if (state.isLoading && state.isAuthenticated) {
                     LoadingOverlay()
                 }

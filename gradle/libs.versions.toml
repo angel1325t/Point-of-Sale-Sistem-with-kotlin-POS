@@ -1,19 +1,19 @@
 [versions]
-agp = "8.12.3"
-kotlin = "2.2.20"
+agp = "8.12.3"                  # Última estable conocida (puedes subir si sale 8.13.x)
+kotlin = "2.3.0"                # Estable desde diciembre 2025 – recomendada
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.9.4"
 activityCompose = "1.11.0"
-composeBom = "2024.09.00"
+composeBom = "2025.12.00"       # Estable diciembre 2025 – con fixes y performance
 uiText = "1.9.3"
-firebase-bom = "33.6.0"
-firebase-messaging = "24.1.0"
-google-services = "4.4.2"
-firebaseCrashlyticsBuildtools = "3.0.6"
-
+material3 = "1.4.0"
+room = "2.8.4"                  # Estable y compatible con KSP 2.3.0
+workRuntimeKtx = "2.11.0"
+ksp = "2.3.0"
+uiTextGoogleFonts = "1.10.1"                   # Independiente, estable y recomendada para Kotlin 2.3.0
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,12 +31,18 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
-firebase-messaging = { module = "com.google.firebase:firebase-messaging-ktx", version.ref = "firebase-messaging" }
-firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
+material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+
+# Correcciones clave: ambas usan la misma versión "room"
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }  # ← Esto resuelve tu error
+
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
+androidx-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }  # Si usas serialization
+google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
