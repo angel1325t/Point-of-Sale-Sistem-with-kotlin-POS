@@ -1,0 +1,316 @@
+package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.inventory
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.inventory.InventoryIntent
+import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.inventory.SortMode
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.inventory.InventoryViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.inventory.components.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InventoryScreen(
+    viewModel: InventoryViewModel,
+    onBack: () -> Unit
+) {
+    val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var showSortDialog by remember { mutableStateOf(false) }
+    var showTestDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Mostrar feedback de notificaciones
+    LaunchedEffect(state.lastNotificationMessage) {
+        state.lastNotificationMessage?.let { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(id = R.string.inventory_title),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = stringResource(id = R.string.back)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showTestDialog = true }) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = "Test Notifications",
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    IconButton(onClick = { showSortDialog = true }) {
+                        Icon(
+                            Icons.Default.Sort,
+                            contentDescription = stringResource(id = R.string.sort)
+                        )
+                    }
+                    IconButton(
+                        onClick = { viewModel.handleIntent(InventoryIntent.LoadInventory) }
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Actualizar"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
+            // SEARCH BAR
+            InventorySearchBar(
+                query = searchQuery,
+                onQueryChange = {
+                    searchQuery = it
+                    viewModel.handleIntent(InventoryIntent.Search(it))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            )
+
+            // CONTENT
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    state.isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    state.error != null -> {
+                        InventoryErrorView(
+                            error = state.error!!,
+                            onRetry = {
+                                viewModel.handleIntent(InventoryIntent.LoadInventory)
+                            },
+                            onDismiss = {
+                                viewModel.handleIntent(InventoryIntent.ClearError)
+                            }
+                        )
+                    }
+
+                    state.filteredItems.isEmpty() -> {
+                        InventoryEmptyState()
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(state.filteredItems, key = { it.id }) { item ->
+                                InventoryCard(
+                                    item = item,
+                                    onIncrease = {
+                                        viewModel.handleIntent(
+                                            InventoryIntent.IncreaseStock(item.id, 1)
+                                        )
+                                    },
+                                    onDecrease = {
+                                        viewModel.handleIntent(
+                                            InventoryIntent.DecreaseStock(item.id, 1)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Sort Dialog
+    if (showSortDialog) {
+        InventorySortDialog(
+            selected = state.sortMode,
+            onSelect = {
+                viewModel.handleIntent(InventoryIntent.SortBy(it))
+                showSortDialog = false
+            },
+            onDismiss = { showSortDialog = false }
+        )
+    }
+
+    // Test Notification Dialog
+    if (showTestDialog) {
+        TestNotificationDialog(
+            onSendTest = {
+                viewModel.handleIntent(InventoryIntent.SendTestNotification)
+                showTestDialog = false
+            },
+            onDismiss = { showTestDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun TestNotificationDialog(
+    onSendTest: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Notifications,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                text = "Test de Notificaciones",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Esto enviará una notificación de prueba a todos los dispositivos registrados.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "📱 Título: \"🔔 Test de Notificación\"",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "💬 Mensaje: \"Esta es una prueba del sistema POS\"",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onSendTest) {
+                Icon(Icons.Default.Send, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Enviar Prueba")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+private fun InventoryEmptyState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Inventory,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+            Text(
+                text = "No hay productos en el inventario",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun InventoryErrorView(
+    error: String,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = "Error",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cerrar")
+                    }
+                    Button(onClick = onRetry) {
+                        Text("Reintentar")
+                    }
+                }
+            }
+        }
+    }
+}

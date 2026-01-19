@@ -4,6 +4,8 @@ import android.content.Context
 import com.dev.point_of_sale_sistem_with_kotlin_pos.BuildConfig
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils.AndroidSessionManager
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils.UUIDSerializer
+import io.github.jan.supabase.functions.Functions
+import io.github.jan.supabase.SupabaseClientBuilder
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.createSupabaseClient
@@ -32,9 +34,10 @@ fun createSupabaseClient(context: Context) = createSupabaseClient(
                 serializersModule = SerializersModule {
                     contextual(UUID::class, UUIDSerializer)
                 }
-                ignoreUnknownKeys = true
-            }
-        )
+            )
+        }
+
+        install(Functions)
     }
 
     install(Storage)

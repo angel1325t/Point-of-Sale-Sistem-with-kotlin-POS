@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -21,15 +19,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import coil.compose.AsyncImage
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.components.BranchSelectorDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.components.DashboardSection
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.dashboard.DashboardViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,7 +39,7 @@ fun HomeScreen(
     sessionViewModel: AuthSessionViewModel
 ) {
     val state by sessionViewModel.state.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -47,6 +47,20 @@ fun HomeScreen(
     // ✅ ViewModel de branches para obtener la lista
     val branchViewModel = remember { BranchViewModel(BranchRepository(supabase)) }
     val branchState by branchViewModel.state.collectAsState()
+
+    // ✅ ViewModel del Dashboard - CORREGIDO: usa directamente el branchId String
+    val dashboardViewModel = remember(state.branchId) {
+        if (state.branchId != null) {
+            DashboardViewModel(
+                repository = DashboardRepository(supabase),
+                branchId = state.branchId // Ya es String, no necesita conversión
+            )
+        } else {
+            null
+        }
+    }
+
+    val dashboardState = dashboardViewModel?.state?.collectAsState()
 
     // ✅ Determinar si mostrar selector de sucursal
     val showBranchSelector = state.isAuthenticated && state.branchId == null && !state.isLoading
@@ -97,7 +111,6 @@ fun HomeScreen(
         }
     }
 
-
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -110,7 +123,9 @@ fun HomeScreen(
                         .fillMaxSize()
                         .verticalScroll(scrollState)
                 ) {
-                    // Header del drawer
+                    // ═══════════════════════════════════════════════════
+                    // HEADER DEL DRAWER
+                    // ═══════════════════════════════════════════════════
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primaryContainer
@@ -124,34 +139,66 @@ fun HomeScreen(
                                 Icons.Default.AccountCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(64.dp),
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 text = state.email ?: stringResource(R.string.user),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
                                 text = stringResource(R.string.pos_system),
                                 fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
 
                             Spacer(Modifier.height(8.dp))
+
+                            // Sucursal actual
                             currentBranch?.let { branch ->
                                 Surface(
-                                    color = Color.White.copy(alpha = 0.2f),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Store,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.current_branch),
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                            )
+                                            Text(
+                                                text = branch.name,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
 
+                    // ═══════════════════════════════════════════════════
+                    // SECCIÓN: OPERACIONES
+                    // ═══════════════════════════════════════════════════
                     DrawerSection(stringResource(R.string.operations))
 
                     DrawerItem(
@@ -195,6 +242,7 @@ fun HomeScreen(
                         icon = Icons.Default.Inventory,
                         title = stringResource(R.string.inventory),
                         onClick = {
+                            navController.navigate(route = "inventory")
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -211,6 +259,9 @@ fun HomeScreen(
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(Modifier.height(8.dp))
 
+                    // ═══════════════════════════════════════════════════
+                    // SECCIÓN: ADMINISTRACIÓN
+                    // ═══════════════════════════════════════════════════
                     DrawerSection(stringResource(R.string.administration))
 
                     DrawerItem(
@@ -248,6 +299,7 @@ fun HomeScreen(
                             scope.launch { drawerState.close() }
                         }
                     )
+
                     DrawerItem(
                         icon = Icons.Default.Inventory2,
                         title = "Productos",
@@ -265,6 +317,17 @@ fun HomeScreen(
                             scope.launch { drawerState.close() }
                         }
                     )
+
+                    DrawerItem(
+                        icon = Icons.Default.ShoppingCart,
+                        title = "Pedidos de Reposición",
+                        onClick = {
+                            navController.navigate("purchase_orders")
+                            scope.launch { drawerState.close() }
+                        }
+                    )
+
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }
@@ -277,13 +340,23 @@ fun HomeScreen(
                     tonalElevation = 4.dp
                 ) {
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.home)) },
+                        icon = {
+                            Icon(
+                                Icons.Default.Home,
+                                contentDescription = stringResource(R.string.home)
+                            )
+                        },
                         label = { Text(stringResource(R.string.home)) },
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Store, contentDescription = stringResource(R.string.branches)) },
+                        icon = {
+                            Icon(
+                                Icons.Default.Store,
+                                contentDescription = stringResource(R.string.branches)
+                            )
+                        },
                         label = { Text(stringResource(R.string.branches)) },
                         selected = selectedTab == 1,
                         onClick = {
@@ -292,7 +365,12 @@ fun HomeScreen(
                         }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+                        icon = {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Perfil"
+                            )
+                        },
                         label = { Text("Perfil") },
                         selected = selectedTab == 2,
                         onClick = {
@@ -307,13 +385,16 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(paddingValues)
                 ) {
-                    // Top bar
+                    // ═══════════════════════════════════════════════════
+                    // TOP BAR
+                    // ═══════════════════════════════════════════════════
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 2.dp
                     ) {
                         Row(
                             modifier = Modifier
@@ -322,6 +403,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Botón del menú
                             IconButton(
                                 onClick = {
                                     scope.launch {
@@ -333,15 +415,17 @@ fun HomeScreen(
                                 Icon(
                                     Icons.Default.Menu,
                                     contentDescription = stringResource(R.string.menu),
-                                    tint = Color.Gray
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
+                            // Título y sucursal
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = stringResource(R.string.dashboard),
                                     fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 currentBranch?.let {
                                     Text(
@@ -353,94 +437,61 @@ fun HomeScreen(
                                 }
                             }
 
-                            // ✅ Ícono de notificaciones simple (sin dropdown)
+                            // Botón de notificaciones
                             IconButton(
                                 onClick = {
                                     // TODO: Navegar a pantalla de notificaciones
-                                    // navController.navigate("notifications")
                                 }
                             ) {
                                 Icon(
                                     Icons.Default.Notifications,
                                     contentDescription = "Notificaciones",
-                                    tint = Color.Gray,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
                         }
                     }
 
-                    // Contenido principal
+                    // ═══════════════════════════════════════════════════
+                    // CONTENIDO PRINCIPAL
+                    // ═══════════════════════════════════════════════════
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Dashboard,
-                                contentDescription = null,
-                                modifier = Modifier.size(80.dp),
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
-                            Text(
-                                text = stringResource(R.string.welcome_pos_system),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = stringResource(R.string.use_bottom_menu_navigate),
-                                fontSize = 16.sp,
-                                color = Color.Gray
-                            )
-                            if (state.isLoading) {
-                                Spacer(Modifier.height(16.dp))
-                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        when {
+                            // Dashboard con datos
+                            dashboardViewModel != null && dashboardState != null -> {
+                                DashboardSection(
+                                    viewModel = dashboardViewModel,
+                                    state = dashboardState.value,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            // Mensaje de bienvenida (sin sucursal)
+                            else -> {
+                                WelcomeContent()
                             }
                         }
                     }
                 }
 
-                // ✅ Overlay de carga cuando está cambiando de sucursal
+                // ═══════════════════════════════════════════════════
+                // OVERLAY DE CARGA (Cambio de sucursal)
+                // ═══════════════════════════════════════════════════
                 if (state.isLoading && state.isAuthenticated) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(60.dp),
-                                strokeWidth = 6.dp
-                            )
-                            Text(
-                                text = stringResource(R.string.changing_branch),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = stringResource(R.string.please_wait),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    LoadingOverlay()
                 }
             }
         }
     }
 
-    // ✅ Mostrar selector de sucursal si es necesario
+    // ═══════════════════════════════════════════════════
+    // SELECTOR DE SUCURSAL (Dialog)
+    // ═══════════════════════════════════════════════════
     if (showBranchSelector) {
         BranchSelectorDialog(
             branches = branchState.branches,
@@ -452,17 +503,110 @@ fun HomeScreen(
     }
 }
 
+// ═══════════════════════════════════════════════════════════
+// COMPONENTES AUXILIARES
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Contenido de bienvenida cuando no hay sucursal seleccionada
+ */
+@Composable
+private fun WelcomeContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)
+    ) {
+        Icon(
+            Icons.Default.Dashboard,
+            contentDescription = null,
+            modifier = Modifier.size(96.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        )
+        Text(
+            text = stringResource(R.string.welcome_pos_system),
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = "Selecciona una sucursal para ver el dashboard",
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Icon(
+            Icons.Default.ArrowDownward,
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+        )
+
+        Text(
+            text = "Usa el menú inferior para navegar",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+    }
+}
+
+/**
+ * Overlay de carga cuando se está cambiando de sucursal
+ */
+@Composable
+private fun LoadingOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(64.dp),
+                strokeWidth = 6.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(R.string.changing_branch),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(R.string.please_wait),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Sección del drawer (título de grupo)
+ */
 @Composable
 private fun DrawerSection(title: String) {
     Text(
         text = title,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
-        color = MaterialTheme.colorScheme.inverseSurface
+        color = MaterialTheme.colorScheme.primary,
+        letterSpacing = 0.5.sp
     )
 }
 
+/**
+ * Item individual del drawer
+ */
 @Composable
 private fun DrawerItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -478,21 +622,21 @@ private fun DrawerItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 20.dp),
+                .padding(vertical = 14.dp, horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
             Text(
                 text = title,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.inverseSurface
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
