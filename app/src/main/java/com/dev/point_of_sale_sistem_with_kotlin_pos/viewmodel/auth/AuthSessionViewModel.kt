@@ -87,39 +87,59 @@ class AuthSessionViewModel(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
 
-            val user = supabase.auth.currentUserOrNull()
-            if (user != null) {
-                // ✅ Consultar en la DB si el usuario sigue deshabilitado
-                val isDisabledInDB = repository.isUserDisabled(UUID.fromString(user.id))
+            val authUser = supabase.auth.currentUserOrNull()
 
-                // Actualizar SharedPreferences para mantenerlo sincronizado
-                sessionPreferences.setUserDisabled(isDisabledInDB)
+            if (authUser == null) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    isAuthenticated = false
+                )
+                return@launch
+            }
 
-                if (!isDisabledInDB) {
-                    val savedBranchId = sessionPreferences.getBranchId()
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        userId = user.id,
-                        email = user.email,
-                        branchId = savedBranchId,
-                        isUserDisabled = false,
-                        error = null,
-                        successMessage = null
-                    )
-                } else {
+            try {
+                val authId = UUID.fromString(authUser.id)
+
+                // 🔥 Buscar user interno usando la VIEW
+                val userInfo = repository.getUserByAuthId(authId)
+
+                if (!userInfo.active) {
+                    sessionPreferences.setUserDisabled(true)
+
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isAuthenticated = false,
                         isUserDisabled = true,
                         error = AuthError.Other("USER_DISABLED")
                     )
+                    return@launch
                 }
-            } else {
+
+                sessionPreferences.setUserDisabled(false)
+
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    isAuthenticated = true,
+
+                    // 🔐 Auth
+                    authId = authUser.id,
+                    email = authUser.email,
+
+                    // 🧠 Usuario interno
+                    userId = userInfo.user_id,
+                    branchId = userInfo.branch_id,
+
+                    isUserDisabled = false,
+                    error = null
+                )
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading session", e)
+
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isAuthenticated = false,
-                    isUserDisabled = false
+                    error = AuthError.Other("SESSION_LOAD_FAILED")
                 )
             }
         }

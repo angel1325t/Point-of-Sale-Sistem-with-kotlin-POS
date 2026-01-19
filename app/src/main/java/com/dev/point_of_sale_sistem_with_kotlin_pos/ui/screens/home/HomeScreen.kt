@@ -205,6 +205,7 @@ fun HomeScreen(
                         icon = Icons.Default.ShoppingCart,
                         title = stringResource(R.string.sales),
                         onClick = {
+                            navController.navigate("sales")
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -227,10 +228,12 @@ fun HomeScreen(
                         }
                     )
 
+                    // ✅ NUEVO: Item de Devoluciones
                     DrawerItem(
                         icon = Icons.Default.KeyboardReturn,
                         title = stringResource(R.string.returns),
                         onClick = {
+                            navController.navigate("refunds")
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -290,7 +293,7 @@ fun HomeScreen(
 
                     DrawerItem(
                         icon = Icons.Default.Category,
-                        title = "Categorías",
+                        title = "Categorias",
                         onClick = {
                             navController.navigate("categories")
                             scope.launch { drawerState.close() }

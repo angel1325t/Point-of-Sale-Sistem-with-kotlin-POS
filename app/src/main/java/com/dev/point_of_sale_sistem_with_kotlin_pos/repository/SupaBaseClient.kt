@@ -7,40 +7,45 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.utils.UUIDSe
 import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.SupabaseClientBuilder
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.serializer.KotlinXSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import java.util.UUID
 
-// El ÚNICO cliente supabase global correcto
-lateinit var supabase: io.github.jan.supabase.SupabaseClient
+// Función para crear el cliente con contexto
+fun createSupabaseClient(context: Context) = createSupabaseClient(
+    supabaseUrl = BuildConfig.SUPABASE_URL,
+    supabaseKey = BuildConfig.SUPABASE_KEY
+) {
 
-// Función para inicializar Supabase
-fun initSupabase(context: Context) {
-    supabase = createSupabaseClient(
-        supabaseUrl = BuildConfig.SUPABASE_URL,
-        supabaseKey = BuildConfig.SUPABASE_KEY
-    ) {
+    install(Auth) {
+        sessionManager = AndroidSessionManager(context)
+        autoSaveToStorage = true
+        autoLoadFromStorage = true
+    }
 
-        install(Auth) {
-            sessionManager = AndroidSessionManager(context)
-            autoSaveToStorage = true
-            autoLoadFromStorage = true
-        }
-
-        install(Postgrest) {
-            serializer = KotlinXSerializer(
-                Json {
-                    serializersModule = SerializersModule {
-                        contextual(UUID::class, UUIDSerializer)
-                    }
-                    ignoreUnknownKeys = true
+    install(Postgrest) {
+        serializer = KotlinXSerializer(
+            Json {
+                serializersModule = SerializersModule {
+                    contextual(UUID::class, UUIDSerializer)
                 }
             )
         }
 
         install(Functions)
     }
+
+    install(Storage)
+
+    // 🔥 ESTO ES LO QUE FALTABA
+    install(Functions)
 }
+
+
+// Variable global para usar en los ViewModels
+lateinit var supabase: io.github.jan.supabase.SupabaseClient
