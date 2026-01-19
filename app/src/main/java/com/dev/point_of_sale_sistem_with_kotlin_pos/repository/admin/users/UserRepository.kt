@@ -4,7 +4,6 @@ import android.util.Log
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.result.PostgrestResult
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -216,6 +215,7 @@ class UserRepository(private val supabase: SupabaseClient) {
 
     @Serializable
     data class UserModel(
+        @Contextual val user_id: UUID,
         @Contextual val auth_id: UUID,
         val phone: String? = null,
         val username: String,

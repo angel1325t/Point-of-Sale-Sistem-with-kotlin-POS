@@ -9,7 +9,6 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkMonitor
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkObserver
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.SupabaseClientProvider
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.initSupabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.createSupabaseClient
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.google.firebase.Firebase

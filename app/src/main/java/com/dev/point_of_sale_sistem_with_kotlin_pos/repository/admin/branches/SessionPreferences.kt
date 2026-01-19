@@ -19,6 +19,7 @@ class SessionPreferences(private val context: Context) {
     companion object {
         private const val TAG = "SessionPreferences"
 
+        private val HAS_BIOMETRIC_KEY = booleanPreferencesKey("has_biometric")
         private val BRANCH_ID_KEY = stringPreferencesKey("branch_id")
         private val COMPANY_ID_KEY = stringPreferencesKey("company_id")
 
@@ -54,6 +55,19 @@ class SessionPreferences(private val context: Context) {
 
     suspend fun saveCompanyId(companyId: String) {
         context.dataStore.edit { preferences -> preferences[COMPANY_ID_KEY] = companyId }
+    }
+    suspend fun setHasBiometric(hasBiometric: Boolean) {
+        Log.d(TAG, "Guardando disponibilidad de biometría: hasBiometric=$hasBiometric")
+        context.dataStore.edit { preferences ->
+            preferences[HAS_BIOMETRIC_KEY] = hasBiometric
+        }
+        Log.d(TAG, "Disponibilidad biométrica guardada correctamente")
+    }
+
+    suspend fun getHasBiometric(): Boolean {
+        val hasBiometric = context.dataStore.data.map { it[HAS_BIOMETRIC_KEY] ?: false }.first()
+        Log.d(TAG, "Obteniendo disponibilidad de biometría: hasBiometric=$hasBiometric")
+        return hasBiometric
     }
 
     suspend fun getCompanyId(): String? =

@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Dashboard
@@ -56,7 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -69,17 +70,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.dev.point_of_sale_sistem_with_kotlin_pos.MyApplication
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.components.BranchSelectorDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.components.DashboardSection
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.MyApplication
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.dashboard.DashboardViewModel
 import kotlinx.coroutines.launch
 
@@ -97,6 +98,30 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val localContext = LocalContext.current
 
+    // ✅ CORRECCIÓN: Obtener los strings ANTES de usarlos en LaunchedEffect
+    val branchChangedMessage = stringResource(R.string.branch_changed_success)
+    val logoutSuccessMessage = stringResource(R.string.logout_success)
+    val userLabel = stringResource(R.string.user)
+    val posSystemLabel = stringResource(R.string.pos_system)
+    val currentBranchLabel = stringResource(R.string.current_branch)
+    val operationsLabel = stringResource(R.string.operations)
+    val salesLabel = stringResource(R.string.sales)
+    val cashRegisterManagementLabel = stringResource(R.string.cash_register_management)
+    val cashRegisterLabel = stringResource(R.string.cash_register)
+    val returnsLabel = stringResource(R.string.returns)
+    val inventoryLabel = stringResource(R.string.inventory)
+    val reportsLabel = stringResource(R.string.reports)
+    val administrationLabel = stringResource(R.string.administration)
+    val roleManagementLabel = stringResource(R.string.role_management)
+    val usersLabel = stringResource(R.string.users)
+    val branchesLabel = stringResource(R.string.branches)
+    val homeLabel = stringResource(R.string.home)
+    val menuLabel = stringResource(R.string.menu)
+    val dashboardLabel = stringResource(R.string.dashboard)
+    val welcomePosSystemLabel = stringResource(R.string.welcome_pos_system)
+    val changingBranchLabel = stringResource(R.string.changing_branch)
+    val pleaseWaitLabel = stringResource(R.string.please_wait)
+
     val app = localContext.applicationContext as MyApplication
     val sessionPreferences = remember { app.sessionPreferences }
 
@@ -107,12 +132,12 @@ fun HomeScreen(
     }
     val branchState by branchViewModel.state.collectAsState()
 
-    // ✅ ViewModel del Dashboard - CORREGIDO: usa directamente el branchId String
+    // ✅ ViewModel del Dashboard
     val dashboardViewModel = remember(state.branchId) {
         if (state.branchId != null) {
             DashboardViewModel(
                 repository = DashboardRepository(supabase),
-                branchId = state.branchId // Ya es String, no necesita conversión
+                branchId = state.branchId
             )
         } else {
             null
@@ -156,12 +181,12 @@ fun HomeScreen(
         }
     }
 
-    // Mostrar mensaje de éxito
+    // ✅ CORRECCIÓN: Usar las variables declaradas arriba
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { msg ->
             val displayMessage = when (msg) {
-                "BRANCH_CHANGED" -> localContext.getString(R.string.branch_changed_success)
-                "LOGOUT_SUCCESS" -> localContext.getString(R.string.logout_success)
+                "BRANCH_CHANGED" -> branchChangedMessage
+                "LOGOUT_SUCCESS" -> logoutSuccessMessage
                 else -> msg
             }
             snackbarHostState.showSnackbar(displayMessage, duration = SnackbarDuration.Short)
@@ -200,13 +225,13 @@ fun HomeScreen(
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                text = state.email ?: stringResource(R.string.user),
+                                text = state.email ?: userLabel,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = stringResource(R.string.pos_system),
+                                text = posSystemLabel,
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
@@ -234,7 +259,7 @@ fun HomeScreen(
                                         )
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = stringResource(R.string.current_branch),
+                                                text = currentBranchLabel,
                                                 fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                             )
@@ -256,11 +281,11 @@ fun HomeScreen(
                     // ═══════════════════════════════════════════════════
                     // SECCIÓN: OPERACIONES
                     // ═══════════════════════════════════════════════════
-                    DrawerSection(stringResource(R.string.operations))
+                    DrawerSection(operationsLabel)
 
                     DrawerItem(
                         icon = Icons.Default.ShoppingCart,
-                        title = stringResource(R.string.sales),
+                        title = salesLabel,
                         onClick = {
                             navController.navigate("sales")
                             scope.launch { drawerState.close() }
@@ -269,7 +294,7 @@ fun HomeScreen(
 
                     DrawerItem(
                         icon = Icons.Default.ManageAccounts,
-                        title = stringResource(R.string.cash_register_management),
+                        title = cashRegisterManagementLabel,
                         onClick = {
                             navController.navigate("cash_register/manage")
                             scope.launch { drawerState.close() }
@@ -278,7 +303,7 @@ fun HomeScreen(
 
                     DrawerItem(
                         icon = Icons.Default.AccountBalanceWallet,
-                        title = stringResource(R.string.cash_register),
+                        title = cashRegisterLabel,
                         onClick = {
                             navController.navigate("cash_register/history")
                             scope.launch { drawerState.close() }
@@ -287,7 +312,7 @@ fun HomeScreen(
 
                     DrawerItem(
                         icon = Icons.Default.KeyboardReturn,
-                        title = stringResource(R.string.returns),
+                        title = returnsLabel,
                         onClick = {
                             navController.navigate("refunds")
                             scope.launch { drawerState.close() }
@@ -296,17 +321,16 @@ fun HomeScreen(
 
                     DrawerItem(
                         icon = Icons.Default.Inventory,
-                        title = stringResource(R.string.inventory),
+                        title = inventoryLabel,
                         onClick = {
                             navController.navigate(route = "inventory")
                             scope.launch { drawerState.close() }
                         }
                     )
 
-                    // ✅ NUEVO: Item de Reportes
                     DrawerItem(
                         icon = Icons.Default.Assessment,
-                        title = stringResource(R.string.reports),
+                        title = reportsLabel,
                         onClick = {
                             navController.navigate("reports")
                             scope.launch { drawerState.close() }
@@ -320,11 +344,11 @@ fun HomeScreen(
                     // ═══════════════════════════════════════════════════
                     // SECCIÓN: ADMINISTRACIÓN
                     // ═══════════════════════════════════════════════════
-                    DrawerSection(stringResource(R.string.administration))
+                    DrawerSection(administrationLabel)
 
                     DrawerItem(
                         icon = Icons.Default.Security,
-                        title = stringResource(R.string.role_management),
+                        title = roleManagementLabel,
                         onClick = {
                             navController.navigate("roles")
                             scope.launch { drawerState.close() }
@@ -333,7 +357,7 @@ fun HomeScreen(
 
                     DrawerItem(
                         icon = Icons.Default.People,
-                        title = stringResource(R.string.users),
+                        title = usersLabel,
                         onClick = {
                             navController.navigate("users")
                             scope.launch { drawerState.close() }
@@ -342,7 +366,7 @@ fun HomeScreen(
 
                     DrawerItem(
                         icon = Icons.Default.Store,
-                        title = stringResource(R.string.branches),
+                        title = branchesLabel,
                         onClick = {
                             navController.navigate("branches")
                             scope.launch { drawerState.close() }
@@ -401,10 +425,10 @@ fun HomeScreen(
                         icon = {
                             Icon(
                                 Icons.Default.Home,
-                                contentDescription = stringResource(R.string.home)
+                                contentDescription = homeLabel
                             )
                         },
-                        label = { Text(stringResource(R.string.home)) },
+                        label = { Text(homeLabel) },
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 }
                     )
@@ -412,10 +436,10 @@ fun HomeScreen(
                         icon = {
                             Icon(
                                 Icons.Default.Store,
-                                contentDescription = stringResource(R.string.branches)
+                                contentDescription = branchesLabel
                             )
                         },
-                        label = { Text(stringResource(R.string.branches)) },
+                        label = { Text(branchesLabel) },
                         selected = selectedTab == 1,
                         onClick = {
                             selectedTab = 1
@@ -472,7 +496,7 @@ fun HomeScreen(
                             ) {
                                 Icon(
                                     Icons.Default.Menu,
-                                    contentDescription = stringResource(R.string.menu),
+                                    contentDescription = menuLabel,
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -480,7 +504,7 @@ fun HomeScreen(
                             // Título y sucursal
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = stringResource(R.string.dashboard),
+                                    text = dashboardLabel,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -530,7 +554,7 @@ fun HomeScreen(
 
                             // Mensaje de bienvenida (sin sucursal)
                             else -> {
-                                WelcomeContent()
+                                WelcomeContent(welcomePosSystemLabel)
                             }
                         }
                     }
@@ -538,7 +562,7 @@ fun HomeScreen(
 
                 // Overlay de carga cuando está cambiando de sucursal
                 if (state.isLoading && state.isAuthenticated) {
-                    LoadingOverlay()
+                    LoadingOverlay(changingBranchLabel, pleaseWaitLabel)
                 }
             }
         }
@@ -566,7 +590,7 @@ fun HomeScreen(
  * Contenido de bienvenida cuando no hay sucursal seleccionada
  */
 @Composable
-private fun WelcomeContent() {
+private fun WelcomeContent(welcomeMessage: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -581,7 +605,7 @@ private fun WelcomeContent() {
             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
         )
         Text(
-            text = stringResource(R.string.welcome_pos_system),
+            text = welcomeMessage,
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -613,7 +637,7 @@ private fun WelcomeContent() {
  * Overlay de carga cuando se está cambiando de sucursal
  */
 @Composable
-private fun LoadingOverlay() {
+private fun LoadingOverlay(changingBranchMessage: String, pleaseWaitMessage: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -630,13 +654,13 @@ private fun LoadingOverlay() {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = stringResource(R.string.changing_branch),
+                text = changingBranchMessage,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = stringResource(R.string.please_wait),
+                text = pleaseWaitMessage,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

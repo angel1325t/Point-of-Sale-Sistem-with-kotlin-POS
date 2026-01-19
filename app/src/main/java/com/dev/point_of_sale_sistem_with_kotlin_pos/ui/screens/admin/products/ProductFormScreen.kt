@@ -1,13 +1,42 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -16,10 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.products.ProductsIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.Category
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.DiscountType
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.utils.toDiscountType
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.components.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.components.CategoryPickerDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.components.DiscountPickerDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +63,22 @@ fun ProductFormScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val isEditMode = productId != null
+
+    // ✅ CORRECCIÓN: Declarar todos los strings ANTES de LaunchedEffect
+    val productCreatedMessage = stringResource(R.string.product_created_success)
+    val productUpdatedMessage = stringResource(R.string.product_updated_success)
+    val errorMessage = stringResource(R.string.error_unknown_simple)
+    val productEditTitle = stringResource(R.string.product_edit)
+    val productNewTitle = stringResource(R.string.product_new)
+    val productNameLabel = stringResource(R.string.product_name_required)
+    val productDescriptionLabel = stringResource(R.string.product_description_optional)
+    val productPriceLabel = stringResource(R.string.product_price_required)
+    val productDiscountLabel = stringResource(R.string.product_discount)
+    val productStockCurrentLabel = stringResource(R.string.product_stock_current_required)
+    val productStockMinimumLabel = stringResource(R.string.product_stock_minimum_required)
+    val productSelectCategoryLabel = stringResource(R.string.product_select_category)
+    val updateButtonText = stringResource(R.string.update_text)
+    val createButtonText = stringResource(R.string.create_text)
 
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -80,20 +126,20 @@ fun ProductFormScreen(
         }
     }
 
-    // Mensajes
+    // ✅ CORRECCIÓN: Usar las variables declaradas arriba
     LaunchedEffect(state.successMessage, state.error) {
         state.successMessage?.let {
             snackbarHostState.showSnackbar(
                 if (it == "product_created_success")
-                    context.getString(R.string.product_created_success)
+                    productCreatedMessage
                 else
-                    context.getString(R.string.product_updated_success)
+                    productUpdatedMessage
             )
             onNavigateBack()
         }
 
         state.error?.let {
-            snackbarHostState.showSnackbar(context.getString(R.string.error_unknown_simple))
+            snackbarHostState.showSnackbar(errorMessage)
         }
     }
 
@@ -102,8 +148,7 @@ fun ProductFormScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (isEditMode) stringResource(R.string.product_edit)
-                        else stringResource(R.string.product_new),
+                        if (isEditMode) productEditTitle else productNewTitle,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -128,7 +173,7 @@ fun ProductFormScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.product_name_required)) },
+                label = { Text(productNameLabel) },
                 leadingIcon = { Icon(Icons.Default.Inventory, null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -138,7 +183,7 @@ fun ProductFormScreen(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text(stringResource(R.string.product_description_optional)) },
+                label = { Text(productDescriptionLabel) },
                 leadingIcon = { Icon(Icons.Default.Description, null) },
                 modifier = Modifier.fillMaxWidth().height(120.dp),
                 shape = RoundedCornerShape(12.dp)
@@ -147,7 +192,7 @@ fun ProductFormScreen(
             OutlinedTextField(
                 value = price,
                 onValueChange = { price = it },
-                label = { Text(stringResource(R.string.product_price_required)) },
+                label = { Text(productPriceLabel) },
                 leadingIcon = { Icon(Icons.Default.AttachMoney, null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -167,11 +212,11 @@ fun ProductFormScreen(
 
             OutlinedCard(onClick = { showDiscountPicker = true }) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(stringResource(R.string.product_discount))
+                    Text(productDiscountLabel)
                     Icon(Icons.Default.ArrowDropDown, null)
                 }
             }
@@ -179,7 +224,7 @@ fun ProductFormScreen(
             OutlinedTextField(
                 value = currentStock,
                 onValueChange = { currentStock = it },
-                label = { Text(stringResource(R.string.product_stock_current_required)) },
+                label = { Text(productStockCurrentLabel) },
                 leadingIcon = { Icon(Icons.Default.Inventory2, null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -189,7 +234,7 @@ fun ProductFormScreen(
             OutlinedTextField(
                 value = minimumStock,
                 onValueChange = { minimumStock = it },
-                label = { Text(stringResource(R.string.product_stock_minimum_required)) },
+                label = { Text(productStockMinimumLabel) },
                 leadingIcon = { Icon(Icons.Default.Warning, null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -198,13 +243,13 @@ fun ProductFormScreen(
 
             OutlinedCard(onClick = { showCategoryPicker = true }) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         categories.find { it.categoryId == categoryId }?.name
-                            ?: stringResource(R.string.product_select_category)
+                            ?: productSelectCategoryLabel
                     )
                     Icon(Icons.Default.ArrowDropDown, null)
                 }
@@ -251,7 +296,7 @@ fun ProductFormScreen(
                     }
                 }
             ) {
-                Text(if (isEditMode) stringResource(R.string.update_text) else stringResource(R.string.create_text))
+                Text(if (isEditMode) updateButtonText else createButtonText)
             }
         }
     }

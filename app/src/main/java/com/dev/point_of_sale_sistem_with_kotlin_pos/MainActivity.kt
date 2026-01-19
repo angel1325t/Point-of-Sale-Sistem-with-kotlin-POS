@@ -1,5 +1,10 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
+// Theme
+
+// Repositories
+
+// ViewModels
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -33,10 +38,12 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.Hy
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories.CategoryRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.purchase_orders.PurchaseOrderRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.credit_notes.CreditNoteRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.inventory.InventoryRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.CreditNoteInvoiceRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.InvoiceRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.refunds.RefundRepository
@@ -56,12 +63,12 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.categories.
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.categories.CategoryFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.ProductFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.products.ProductsListScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_orders.PurchaseOrderFormScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_orders.PurchaseOrderListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RoleFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolePermissionsScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.roles.RolesListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierFormScreen
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_orders.PurchaseOrderListScreen
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_orders.PurchaseOrderFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.SupplierListScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UserFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users.UsersListScreen
@@ -71,37 +78,17 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScre
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.UserDisabledScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.profile.ProfileScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.inventory.InventoryScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.refunds.RefundScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.reports.ReportsScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterHistoryScreen
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.inventory.InventoryScreen
-
-// Theme
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
-
-// Repositories
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories.CategoryRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductsRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.purchase_orders.PurchaseOrderRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.inventory.InventoryRepository
-
-// ViewModels
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.*
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.*
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.inventory.InventoryViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterManagementScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.SalesScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.CategoryViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.ProductViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.PurchaseOrderViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.SupplierViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
@@ -110,6 +97,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.LoginViewMode
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.RegisterViewModelFactory
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.credit_notes.CreditNoteUsageViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.inventory.InventoryViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.refunds.RefundViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register.CashRegisterViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.reports.ReportsViewModel
@@ -237,7 +225,6 @@ class MainActivity : FragmentActivity() {
                     val productsViewModel = remember { ProductViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
                     val purchaseOrderViewModel = remember { PurchaseOrderViewModel(purchaseOrderRepository) }
-                    val cashRegisterViewModel = remember { CashRegisterViewModel(cashRegisterRepository) }
                     val inventoryViewModel = remember { InventoryViewModel(inventoryRepository) }
                     val creditNoteUsageViewModel = remember { CreditNoteUsageViewModel(creditNoteRepository) }
 
@@ -305,7 +292,7 @@ class MainActivity : FragmentActivity() {
                         supplierViewModel = supplierViewModel,
                         purchaseOrderViewModel = purchaseOrderViewModel,
                         inventoryViewModel = inventoryViewModel,
-                        cashRegisterViewModel = cashRegisterViewModel
+                        cashRegisterViewModel = cashRegisterViewModel,
                         salesViewModel = salesViewModel,
                         refundViewModel = refundViewModel,
                         reportsViewModel = reportsViewModel,
@@ -333,7 +320,7 @@ fun AppNavigation(
     supplierViewModel: SupplierViewModel,
     purchaseOrderViewModel: PurchaseOrderViewModel,
     inventoryViewModel: InventoryViewModel,
-    cashRegisterViewModel: CashRegisterViewModel
+    cashRegisterViewModel: CashRegisterViewModel,
     salesViewModel: SalesViewModel?,
     refundViewModel: RefundViewModel?,
     reportsViewModel: ReportsViewModel,
@@ -378,9 +365,6 @@ fun AppNavigation(
                 }
             }
 
-            AppLifecycleObserver.reset()
-        } else if (requireBiometric && !hasBiometric) {
-            // Si no tiene biométrico, solo resetear sin hacer nada
             AppLifecycleObserver.reset()
         }
     }
