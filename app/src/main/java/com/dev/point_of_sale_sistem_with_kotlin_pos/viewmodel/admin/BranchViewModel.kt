@@ -6,13 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.braches.BranchIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.BranchError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.BranchState
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class BranchViewModel(private val repository: BranchRepository) : ViewModel() {
+class BranchViewModel(private val repository: HybridBranchRepository) : ViewModel() {
 
     private val TAG = "BranchViewModel"
 

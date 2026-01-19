@@ -20,6 +20,7 @@ class SessionPreferences(private val context: Context) {
         private const val TAG = "SessionPreferences"
 
         private val BRANCH_ID_KEY = stringPreferencesKey("branch_id")
+        private val COMPANY_ID_KEY = stringPreferencesKey("company_id")
 
         private val FCM_TOKEN_KEY = stringPreferencesKey("fcm_token")
         private val USER_DISABLED_KEY = stringPreferencesKey("user_disabled")
@@ -50,6 +51,18 @@ class SessionPreferences(private val context: Context) {
     suspend fun clearBranchId() {
         context.dataStore.edit { it.remove(BRANCH_ID_KEY) }
     }
+
+    suspend fun saveCompanyId(companyId: String) {
+        context.dataStore.edit { preferences -> preferences[COMPANY_ID_KEY] = companyId }
+    }
+
+    suspend fun getCompanyId(): String? =
+        context.dataStore.data.map { it[COMPANY_ID_KEY] }.first()
+
+    suspend fun clearCompanyId() {
+        context.dataStore.edit { it.remove(COMPANY_ID_KEY) }
+    }
+
     suspend fun clearBiometric() {
         context.dataStore.edit { it.remove(BIOMETRIC_ENABLED_KEY) }
     }

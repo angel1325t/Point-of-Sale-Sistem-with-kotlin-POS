@@ -4,7 +4,12 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import androidx.lifecycle.ProcessLifecycleOwner
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkMonitor
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkObserver
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.SupabaseClientProvider
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.initSupabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.createSupabaseClient
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.google.firebase.Firebase
@@ -16,11 +21,12 @@ import kotlinx.coroutines.launch
 
 class MyApplication : Application() {
 
-    // ✅ Instancia global de SessionPreferences
     companion object {
         const val NOTIFICATION_CHANNEL_ID = "notification_fcm"
     }
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     lateinit var sessionPreferences: SessionPreferences
         private set
 
@@ -30,6 +36,7 @@ class MyApplication : Application() {
         // 🔹 Supabase
         try {
             supabase = createSupabaseClient(applicationContext)
+            SupabaseClientProvider.client = supabase
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -41,6 +48,7 @@ class MyApplication : Application() {
             e.printStackTrace()
         }
 
+        // 🔹 FCM Token
         Firebase.messaging.token.addOnCompleteListener { task ->
             if (!task.isSuccessful) return@addOnCompleteListener
 
@@ -51,9 +59,23 @@ class MyApplication : Application() {
             }
         }
 
-
+        // 🔹 Notification Channel
         createNotificationChannel()
+
+        // ✅ 🆕 NETWORK OBSERVER PARA SINCRONIZACIÓN AUTOMÁTICA
+        setupNetworkObserver()
     }
+
+    private fun setupNetworkObserver() {
+        val networkMonitor = NetworkMonitor(this)
+
+        NetworkObserver(
+            context = this,
+            owner = ProcessLifecycleOwner.get(),
+            networkMonitor = networkMonitor
+        )
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -66,4 +88,4 @@ class MyApplication : Application() {
             notificationManager.createNotificationChannel(channel)
         }
     }
-    }
+}

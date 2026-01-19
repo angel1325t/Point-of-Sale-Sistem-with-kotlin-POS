@@ -77,20 +77,20 @@ app/src/main/java/com/dev/point_of_sale_sistem_with_kotlin_pos/
 Antes de ejecutar el proyecto, asegúrate de tener instalado lo siguiente:
 
 1. **Android Studio** (Se recomienda la última versión)
-   - Descargar desde: https://developer.android.com/studio
-   - Versión: Hedgehog (2023.1.1) o más reciente
+    - Descargar desde: https://developer.android.com/studio
+    - Versión: Hedgehog (2023.1.1) o más reciente
 
 2. **Java Development Kit (JDK) 17**
-   - OpenJDK 17: https://adoptium.net/
-   - O usar el JDK incluido en Android Studio
+    - OpenJDK 17: https://adoptium.net/
+    - O usar el JDK incluido en Android Studio
 
 3. **Android SDK**
-   - SDK Mínimo: 24 (Android 7.0)
-   - SDK Objetivo: 36
-   - SDK de Compilación: 36
+    - SDK Mínimo: 24 (Android 7.0)
+    - SDK Objetivo: 36
+    - SDK de Compilación: 36
 
 4. **Gradle**
-   - Versión: 8.4 o más reciente (incluido en gradle wrapper)
+    - Versión: 8.4 o más reciente (incluido en gradle wrapper)
 
 ### Pasos de Instalación
 
@@ -111,9 +111,9 @@ STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiM
 ```
 
 3. **Abrir en Android Studio**
-   - Lanzar Android Studio
-   - Seleccionar "Open" y navegar al directorio del proyecto
-   - Esperar a que se complete la sincronización de Gradle
+    - Lanzar Android Studio
+    - Seleccionar "Open" y navegar al directorio del proyecto
+    - Esperar a que se complete la sincronización de Gradle
 
 4. **Compilar el Proyecto**
 ```bash
@@ -121,8 +121,8 @@ STRIPE_PUBLISHABLE_KEY=pk_test_51SkQhlAqdnCr1KIDe9wN7kt21QejQp5xxXdg1FZh7oVmlKiM
 ```
 
 5. **Ejecutar en Emulador o Dispositivo**
-   - Conectar un dispositivo Android o iniciar un emulador
-   - Hacer clic en "Run" en Android Studio o usar:
+    - Conectar un dispositivo Android o iniciar un emulador
+    - Hacer clic en "Run" en Android Studio o usar:
 ```bash
 ./gradlew installDebug
 ```
@@ -155,11 +155,11 @@ La aplicación utiliza dos sistemas de base de datos:
 - **Tipo**: SQLite (vía Room)
 - **Ubicación**: Almacenamiento interno del dispositivo
 - **Tablas**:
-  - `offline_sales` - Transacciones de venta
-  - `offline_sale_details` - Artículos de línea de venta
-  - `offline_cash_register_history` - Operaciones de caja registradora
-  - `offline_product_stock` - Inventario de productos
-  - `sync_queue` - Cola de sincronización
+    - `offline_sales` - Transacciones de venta
+    - `offline_sale_details` - Artículos de línea de venta
+    - `offline_cash_register_history` - Operaciones de caja registradora
+    - `offline_product_stock` - Inventario de productos
+    - `sync_queue` - Cola de sincronización
 
 ### Esquema de la Base de Datos
 
@@ -458,8 +458,8 @@ SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi
 #### Configuración de la Base de Datos
 
 1. **Crear Proyecto Supabase**
-   - Ir a: https://supabase.com
-   - Crear nuevo proyecto
+    - Ir a: https://supabase.com
+    - Crear nuevo proyecto
 
 2. **Ejecutar Migraciones de Base de Datos**
 
@@ -641,21 +641,21 @@ syncManager.triggerSync()
 ### Problemas Comunes
 
 1. **Fallo en Sincronización de Gradle**
-   - Limpiar proyecto: `./gradlew clean`
-   - Invalidar cachés y reiniciar Android Studio
+    - Limpiar proyecto: `./gradlew clean`
+    - Invalidar cachés y reiniciar Android Studio
 
 2. **Error de Conexión Supabase**
-   - Verificar URL y clave en `local.properties`
-   - Verificar conexión a internet
-   - Verificar políticas RLS
+    - Verificar URL y clave en `local.properties`
+    - Verificar conexión a internet
+    - Verificar políticas RLS
 
 3. **Fallo en Pago Stripe**
-   - Verificar claves de modo de prueba Stripe
-   - Verificar despliegue de Edge Function
+    - Verificar claves de modo de prueba Stripe
+    - Verificar despliegue de Edge Function
 
 4. **FCM No Funciona**
-   - Verificar que `google-services.json` sea correcto
-   - Verificar configuración del canal de notificaciones
+    - Verificar que `google-services.json` sea correcto
+    - Verificar configuración del canal de notificaciones
 
 ### Registros
 

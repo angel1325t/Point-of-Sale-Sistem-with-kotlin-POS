@@ -1,5 +1,6 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.cash_register
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,12 +8,17 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.cash_register.
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegisterError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegisterState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.HybridCashRegisterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class CashRegisterViewModel(private val repository: CashRegisterRepository) : ViewModel() {
+class CashRegisterViewModel(
+    private val context: Context,
+    private val repository: CashRegisterRepository,
+    private val hybridRepository: HybridCashRegisterRepository
+) : ViewModel() {
 
     companion object {
         private const val TAG = "CashRegisterVM"
@@ -73,14 +79,25 @@ class CashRegisterViewModel(private val repository: CashRegisterRepository) : Vi
         loadCurrentCashRegister()
     }
 
+    // ═══════════════════════════════════════════════════
+    // 🔓 CARGA DE CAJA ACTUAL (HÍBRIDO)
+    // ═══════════════════════════════════════════════════
+
     private fun loadCurrentCashRegister() = viewModelScope.launch {
         try {
-            val open = repository.getOpenCashRegister()
+            Log.d(TAG, "Loading current cash register...")
+            val open = hybridRepository.getOpenCashRegister()
+            Log.d(TAG, "Cash register loaded: ${open != null}")
             _state.update { it.copy(isLoading = false, currentCashRegister = open) }
         } catch (e: Exception) {
+            Log.e(TAG, "Error loading cash register", e)
             _state.update { it.copy(isLoading = false, error = mapException(e)) }
         }
     }
+
+    // ═══════════════════════════════════════════════════
+    // 🔓 APERTURA DE CAJA (HÍBRIDO)
+    // ═══════════════════════════════════════════════════
 
     private fun openCashRegister(cashRegisterId: String, initialBalance: Double) =
         viewModelScope.launch {
@@ -94,14 +111,27 @@ class CashRegisterViewModel(private val repository: CashRegisterRepository) : Vi
             _state.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val history = repository.openCashRegister(cashRegisterId, initialBalance)
-                _state.update {
-                    it.copy(isLoading = false, currentCashRegister = history, success = true)
-                }
+                // ✅ USAR HYBRID REPOSITORY
+                hybridRepository.openCashRegister(cashRegisterId, initialBalance)
+                    .onSuccess { history ->
+                        _state.update {
+                            it.copy(isLoading = false, currentCashRegister = history, success = true)
+                        }
+                        Log.d(TAG, "Cash register opened successfully: ${history.history_id}")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Error opening cash register", e)
+                        _state.update { it.copy(isLoading = false, error = mapException(e as Exception)) }
+                    }
             } catch (e: Exception) {
+                Log.e(TAG, "Exception opening cash register", e)
                 _state.update { it.copy(isLoading = false, error = mapException(e)) }
             }
         }
+
+    // ═══════════════════════════════════════════════════
+    // 🔒 CIERRE DE CAJA (HÍBRIDO)
+    // ═══════════════════════════════════════════════════
 
     private fun closeCashRegister(realFinalBalance: Double) = viewModelScope.launch {
         val current = _state.value.currentCashRegister ?: run {
@@ -119,21 +149,32 @@ class CashRegisterViewModel(private val repository: CashRegisterRepository) : Vi
         _state.update { it.copy(isLoading = true) }
 
         try {
-            // ✅ Ahora pasamos el saldo real, el repository calcula expected y difference
-            val closedRegister = repository.closeCashRegister(realFinalBalance)
-
-            _state.update {
-                it.copy(
-                    isLoading = false,
-                    currentCashRegister = null,
-                    success = true,
-                    lastClosedRegister = closedRegister // Para mostrar resumen
-                )
-            }
+            // ✅ USAR HYBRID REPOSITORY
+            hybridRepository.closeCashRegister(realFinalBalance)
+                .onSuccess { closedRegister ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            currentCashRegister = null,
+                            success = true,
+                            lastClosedRegister = closedRegister
+                        )
+                    }
+                    Log.d(TAG, "Cash register closed successfully: ${closedRegister.history_id}")
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Error closing cash register", e)
+                    _state.update { it.copy(isLoading = false, error = mapException(e as Exception)) }
+                }
         } catch (e: Exception) {
+            Log.e(TAG, "Exception closing cash register", e)
             _state.update { it.copy(isLoading = false, error = mapException(e)) }
         }
     }
+
+    // ═══════════════════════════════════════════════════
+    // 📋 GESTIÓN DE CAJAS (ONLINE ONLY)
+    // ═══════════════════════════════════════════════════
 
     private fun createCashRegister(name: String) = viewModelScope.launch {
         if (name.isBlank()) {
@@ -189,6 +230,10 @@ class CashRegisterViewModel(private val repository: CashRegisterRepository) : Vi
             _state.update { it.copy(isLoading = false, error = mapException(e)) }
         }
     }
+
+    // ═══════════════════════════════════════════════════
+    // 📜 HISTORIAL DE CAJAS (ONLINE ONLY)
+    // ═══════════════════════════════════════════════════
 
     private fun loadCashRegisterHistory() = viewModelScope.launch {
         Log.d(TAG, "loadCashRegisterHistory(): currentOffset=$currentOffset")
@@ -266,9 +311,17 @@ class CashRegisterViewModel(private val repository: CashRegisterRepository) : Vi
         }
     }
 
+    // ═══════════════════════════════════════════════════
+    // 🔧 HELPERS
+    // ═══════════════════════════════════════════════════
+
     private fun mapException(e: Exception) = when {
-        e.message?.contains("network", ignoreCase = true) == true ->
-            CashRegisterError.NetworkError(e.message ?: "Error de red")
+        e is java.net.UnknownHostException ||
+        e.message?.contains("network", ignoreCase = true) == true ||
+        e.message?.contains("host", ignoreCase = true) == true ||
+        e.message?.contains("connection", ignoreCase = true) == true -> {
+            CashRegisterError.NetworkError("Sin conexión a internet. La operación se guardará localmente.")
+        }
         e.message?.contains("Ya tienes una caja abierta") == true ->
             CashRegisterError.CashRegisterAlreadyOpen
         else -> CashRegisterError.UnknownError(e.message ?: "Error desconocido")

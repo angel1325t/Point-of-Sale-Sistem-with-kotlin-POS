@@ -179,6 +179,11 @@ fun SalesScreen(
         }
     }
 
+    /* ---------------- SYNC PRODUCTS FOR OFFLINE ---------------- */
+    LaunchedEffect(Unit) {
+        viewModel?.handleIntent(SalesIntent.SyncProducts)
+    }
+
     /* ---------------- SEARCH ---------------- */
     LaunchedEffect(searchQuery) {
         if (searchQuery.length >= 2 && !isBarcodeReaderActive) {

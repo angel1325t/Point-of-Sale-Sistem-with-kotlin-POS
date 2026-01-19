@@ -63,4 +63,7 @@ sealed class SalesIntent {
     // Control general
     data object ClearSale : SalesIntent()
     data object ClearError : SalesIntent()
+
+    // Sincronización de productos para offline
+    data object SyncProducts : SalesIntent()
 }
