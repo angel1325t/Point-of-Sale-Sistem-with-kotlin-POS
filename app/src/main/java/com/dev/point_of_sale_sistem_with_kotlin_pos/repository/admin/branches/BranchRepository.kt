@@ -21,7 +21,7 @@ import java.util.UUID
 private const val TAG = "BranchRepository"
 
 @Serializable
-private data class BranchResponse(
+data class BranchResponse(
     @SerialName("branch_id") val branchId: String,
     @SerialName("company_id") val companyId: String,
     val name: String,

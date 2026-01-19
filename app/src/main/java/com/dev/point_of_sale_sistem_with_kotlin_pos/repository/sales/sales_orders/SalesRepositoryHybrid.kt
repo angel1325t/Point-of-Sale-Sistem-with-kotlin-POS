@@ -8,9 +8,6 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.data.sales.data_source.Onlin
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Sale
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleCreatedDTO
 
-/**
- * Repositorio híbrido que decide entre modo online u offline
- */
 class HybridSalesRepository(
     private val context: Context,
     private val onlineRepository: SalesRepository
@@ -21,17 +18,16 @@ class HybridSalesRepository(
     private val offlineDataSource = OfflineSalesDataSource(offlineDb)
     private val onlineDataSource = OnlineSalesDataSource(onlineRepository)
 
-    /**
-     * Crea una venta eligiendo automáticamente entre modo online u offline
-     */
     suspend fun createSale(sale: Sale): Result<SaleCreatedDTO> {
         return if (NetworkUtils.isOnline(context)) {
-            // 🌐 ONLINE: usar repositorio normal
-            onlineRepository.createSale(sale)
+            onlineRepository.createSale(sale).map {
+                SaleCreatedDTO(
+                    saleId = it.saleId.toString(),
+                    invoiceNumber = it.invoiceNumber
+                )
+            }
         } else {
-            // 📴 OFFLINE: guardar localmente
             offlineDataSource.createSale(sale).map {
-                // Retornar un DTO simulado para compatibilidad
                 SaleCreatedDTO(
                     saleId = sale.saleId.toString(),
                     invoiceNumber = "OFFLINE-${System.currentTimeMillis()}"
@@ -40,9 +36,6 @@ class HybridSalesRepository(
         }
     }
 
-    /**
-     * Obtiene el conteo de ventas pendientes de sincronizar
-     */
     suspend fun getPendingSalesCount(): Int {
         return offlineDb.salesDao().getPendingSalesCount()
     }

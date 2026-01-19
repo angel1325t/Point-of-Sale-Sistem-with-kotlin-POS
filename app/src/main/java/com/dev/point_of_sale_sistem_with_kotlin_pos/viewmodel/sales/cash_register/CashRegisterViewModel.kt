@@ -85,10 +85,12 @@ class CashRegisterViewModel(
 
     private fun loadCurrentCashRegister() = viewModelScope.launch {
         try {
-            // ✅ USAR HYBRID REPOSITORY
+            Log.d(TAG, "Loading current cash register...")
             val open = hybridRepository.getOpenCashRegister()
+            Log.d(TAG, "Cash register loaded: ${open != null}")
             _state.update { it.copy(isLoading = false, currentCashRegister = open) }
         } catch (e: Exception) {
+            Log.e(TAG, "Error loading cash register", e)
             _state.update { it.copy(isLoading = false, error = mapException(e)) }
         }
     }
@@ -314,8 +316,12 @@ class CashRegisterViewModel(
     // ═══════════════════════════════════════════════════
 
     private fun mapException(e: Exception) = when {
-        e.message?.contains("network", ignoreCase = true) == true ->
-            CashRegisterError.NetworkError(e.message ?: "Error de red")
+        e is java.net.UnknownHostException ||
+        e.message?.contains("network", ignoreCase = true) == true ||
+        e.message?.contains("host", ignoreCase = true) == true ||
+        e.message?.contains("connection", ignoreCase = true) == true -> {
+            CashRegisterError.NetworkError("Sin conexión a internet. La operación se guardará localmente.")
+        }
         e.message?.contains("Ya tienes una caja abierta") == true ->
             CashRegisterError.CashRegisterAlreadyOpen
         else -> CashRegisterError.UnknownError(e.message ?: "Error desconocido")

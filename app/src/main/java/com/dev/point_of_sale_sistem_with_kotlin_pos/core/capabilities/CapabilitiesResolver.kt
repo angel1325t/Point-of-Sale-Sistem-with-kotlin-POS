@@ -7,22 +7,30 @@ object CapabilitiesResolver {
     ): CapabilitiesState {
 
         return if (isOffline) {
-            // 📴 OFFLINE: solo ventas + inventario
             CapabilitiesState(
                 enabled = setOf(
                     AppCapability.CREATE_SALE,
                     AppCapability.VIEW_PRODUCTS,
-                    AppCapability.UPDATE_STOCK
+                    AppCapability.UPDATE_STOCK,
+                    AppCapability.OPEN_CASH_REGISTER,
+                    AppCapability.CLOSE_CASH_REGISTER,
+                    AppCapability.VIEW_CASH_REGISTER_HISTORY
                 )
             )
         } else {
-            // 🌐 ONLINE: por ahora permitimos lo mismo
-            // (luego aquí entran los permisos)
             CapabilitiesState(
                 enabled = setOf(
                     AppCapability.CREATE_SALE,
                     AppCapability.VIEW_PRODUCTS,
-                    AppCapability.UPDATE_STOCK
+                    AppCapability.UPDATE_STOCK,
+                    AppCapability.OPEN_CASH_REGISTER,
+                    AppCapability.CLOSE_CASH_REGISTER,
+                    AppCapability.VIEW_CASH_REGISTER_HISTORY,
+                    AppCapability.CARD_PAYMENT,
+                    AppCapability.TRANSFER_PAYMENT,
+                    AppCapability.CREDIT_NOTE,
+                    AppCapability.REPORTS,
+                    AppCapability.ADMIN_FUNCTIONS
                 )
             )
         }

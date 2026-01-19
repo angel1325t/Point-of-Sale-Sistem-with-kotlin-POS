@@ -72,27 +72,37 @@ import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.supabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.components.BranchSelectorDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.MyApplication
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    sessionViewModel: AuthSessionViewModel
+    sessionViewModel: AuthSessionViewModel,
+    branchRepository: HybridBranchRepository? = null
 ) {
     val state by sessionViewModel.state.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val localContext = LocalContext.current
 
-    // ✅ ViewModel de branches para obtener la lista
-    val branchViewModel = remember { BranchViewModel(BranchRepository(supabase)) }
+    val app = localContext.applicationContext as MyApplication
+    val sessionPreferences = remember { app.sessionPreferences }
+
+    val branchViewModel = remember(branchRepository, sessionPreferences) {
+        branchRepository?.let {
+            BranchViewModel(it)
+        } ?: BranchViewModel(HybridBranchRepository(localContext, supabase, sessionPreferences))
+    }
     val branchState by branchViewModel.state.collectAsState()
 
     // ✅ Determinar si mostrar selector de sucursal
@@ -131,13 +141,11 @@ fun HomeScreen(
     }
 
     // Mostrar mensaje de éxito
-    val context = LocalContext.current
-
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { msg ->
             val displayMessage = when (msg) {
-                "BRANCH_CHANGED" -> context.getString(R.string.branch_changed_success)
-                "LOGOUT_SUCCESS" -> context.getString(R.string.logout_success)
+                "BRANCH_CHANGED" -> localContext.getString(R.string.branch_changed_success)
+                "LOGOUT_SUCCESS" -> localContext.getString(R.string.logout_success)
                 else -> msg
             }
             snackbarHostState.showSnackbar(displayMessage, duration = SnackbarDuration.Short)

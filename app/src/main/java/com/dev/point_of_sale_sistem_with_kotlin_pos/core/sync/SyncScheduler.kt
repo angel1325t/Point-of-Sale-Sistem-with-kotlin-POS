@@ -1,6 +1,7 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.core.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -8,8 +9,12 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 
 class SyncScheduler(private val context: Context) {
+    companion object {
+        private const val TAG = "SyncScheduler"
+    }
 
     fun schedule() {
+        Log.d(TAG, "Scheduling sync...")
 
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -26,5 +31,7 @@ class SyncScheduler(private val context: Context) {
                 ExistingWorkPolicy.KEEP,
                 request
             )
+
+        Log.d(TAG, "Sync work request scheduled")
     }
 }

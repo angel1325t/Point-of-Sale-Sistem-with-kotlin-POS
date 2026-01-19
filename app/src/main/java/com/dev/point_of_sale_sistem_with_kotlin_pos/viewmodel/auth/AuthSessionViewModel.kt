@@ -1,14 +1,18 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.capabilities.CapabilitiesResolver
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkMonitor
+import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.database.OfflineDatabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.SessionState
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.AuthRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -21,6 +25,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class AuthSessionViewModel(
+    private val context: Context,
     private val supabase: SupabaseClient,
     private val sessionPreferences: SessionPreferences,
     private val networkMonitor: NetworkMonitor
@@ -28,6 +33,11 @@ class AuthSessionViewModel(
 ) : ViewModel() {
 
     private val repository = AuthRepository(supabase)
+    private val userRepository = UserRepository(supabase)
+    private val branchRepository: HybridBranchRepository by lazy {
+        HybridBranchRepository(context, supabase, sessionPreferences)
+    }
+    private val offlineDb = OfflineDatabase.getInstance(context)
 
     private val _state = MutableStateFlow(SessionState())
     val state: StateFlow<SessionState> = _state.asStateFlow()
@@ -101,18 +111,31 @@ class AuthSessionViewModel(
 
                 val userInfo = repository.getUserByAuthId(authId)
 
-                if (!userInfo.active) {
-                    sessionPreferences.setUserDisabled(true)
+                userInfo?.let { user ->
+                    if (!user.active) {
+                        sessionPreferences.setUserDisabled(true)
 
-                    _state.value = SessionState(
-                        isUserDisabled = true,
-                        error = AuthError.Other("USER_DISABLED")
-                    )
-                    updateCapabilities()
-                    return@launch
+                        _state.value = SessionState(
+                            isUserDisabled = true,
+                            error = AuthError.Other("USER_DISABLED")
+                        )
+                        updateCapabilities()
+                        return@launch
+                    }
                 }
 
                 sessionPreferences.setUserDisabled(false)
+
+                val branchId = userInfo?.branch_id?.toString() ?: ""
+                if (branchId.isNotEmpty()) {
+                    sessionPreferences.saveBranchId(branchId)
+                }
+
+                val companyId = branchRepository.getCurrentUserCompanyId()
+                if (companyId != null) {
+                    sessionPreferences.saveCompanyId(companyId)
+                    branchRepository.cacheBranches()
+                }
 
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -120,7 +143,7 @@ class AuthSessionViewModel(
                     authId = authUser.id,
                     email = authUser.email,
                     userId = userInfo.user_id,
-                    branchId = userInfo.branch_id,
+                    branchId = branchId,
                     isUserDisabled = false,
                     error = null
                 )
@@ -188,6 +211,7 @@ class AuthSessionViewModel(
         viewModelScope.launch {
             repository.logout()
             sessionPreferences.clearBranchId()
+            sessionPreferences.clearCompanyId()
 
             _state.value = SessionState()
             updateCapabilities()

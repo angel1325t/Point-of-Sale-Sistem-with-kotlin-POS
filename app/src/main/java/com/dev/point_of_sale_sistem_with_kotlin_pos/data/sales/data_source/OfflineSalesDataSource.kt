@@ -5,15 +5,16 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineS
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineSaleEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.SyncQueueEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Sale
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
 import java.util.UUID
 
 class OfflineSalesDataSource(
-    private val db: OfflineDatabase
+    private val db: OfflineDatabase,
+    private val salesProductRepository: SalesProductRepository? = null
 ) : SalesDataSource {
 
     override suspend fun createSale(sale: Sale): Result<Unit> = runCatching {
 
-        // 1️⃣ Guardar venta
         val saleId = UUID.randomUUID().toString()
 
         db.salesDao().insertSale(
@@ -32,11 +33,10 @@ class OfflineSalesDataSource(
             )
         )
 
-        // 2️⃣ Guardar detalles
         db.salesDao().insertDetails(
             sale.saleDetails.map {
                 OfflineSaleDetailEntity(
-                    localSaleId = saleId,  // ✅ Corregido
+                    localSaleId = saleId,
                     productId = it.productId,
                     quantity = it.quantity,
                     unitPrice = it.unitPrice,
@@ -46,12 +46,18 @@ class OfflineSalesDataSource(
             }
         )
 
-        // 3️⃣ Reducir stock local
         sale.saleDetails.forEach {
-            db.stockDao().reduceStock(it.productId, it.quantity)
+            salesProductRepository?.reduceStock(it.productId, it.quantity)
+                ?: db.stockDao().reduceStock(it.productId, it.quantity)
         }
 
-        // 4️⃣ Encolar sincronización
+        db.syncQueueDao().insert(
+            SyncQueueEntity(
+                entityType = "CASH_REGISTER",
+                entityId = sale.cashRegisterHistoryId
+            )
+        )
+
         db.syncQueueDao().insert(
             SyncQueueEntity(
                 entityType = "SALE",

@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.utils.NetworkUtils
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.AppliedCreditNote
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.PaymentFlowState
@@ -94,7 +95,9 @@ class SalesViewModel(
 
     private fun mapExceptionToSaleError(throwable: Throwable): SaleError {
         return when (throwable) {
-            is java.net.UnknownHostException -> SaleError.Network
+            is java.net.UnknownHostException,
+            is java.net.ConnectException,
+            is java.io.IOException -> SaleError.Network
             is IllegalArgumentException -> SaleError.ValidationFailed
             else -> SaleError.Unknown(throwable)
         }
@@ -126,6 +129,7 @@ class SalesViewModel(
             is SalesIntent.RemoveCreditNote -> removeCreditNote(intent.creditNoteId)
             SalesIntent.ClearSale -> clearSale()
             SalesIntent.ClearError -> clearError()
+            SalesIntent.SyncProducts -> syncProducts()
         }
     }
 
@@ -238,6 +242,17 @@ class SalesViewModel(
     // 🔍 BÚSQUEDA DE PRODUCTOS
     // ═══════════════════════════════════════════════════
 
+    private fun syncProducts() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Syncing products for offline use")
+                salesProductRepository.syncProductsFromOnline()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to sync products", e)
+            }
+        }
+    }
+
     private fun searchByName(query: String) {
         if (query.isBlank()) {
             _state.value = _state.value.copy(searchResults = emptyList())
@@ -254,13 +269,17 @@ class SalesViewModel(
                     val validProducts = products.filterNotNull()
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        searchResults = validProducts
+                        searchResults = validProducts,
+                        error = null
                     )
                 }
                 .onFailure { e ->
                     Log.e(TAG, "searchByName: Error", e)
-                    setError(mapExceptionToSaleError(e))
-                    _state.value = _state.value.copy(searchResults = emptyList())
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        searchResults = emptyList(),
+                        error = mapExceptionToSaleError(e)
+                    )
                 }
         }
     }
@@ -492,6 +511,14 @@ class SalesViewModel(
     private fun initiateCardPayment() {
         val remainingToPay = _state.value.remainingToPay
 
+        if (!NetworkUtils.isOnline(context)) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                paymentFlowState = PaymentFlowState.Error("No es posible realizar pagos con tarjeta sin conexión a internet. Por favor, use efectivo o transfiera a una cuenta cuando tenga conexión.")
+            )
+            return
+        }
+
         _state.value = _state.value.copy(
             isLoading = true,
             paymentFlowState = PaymentFlowState.CardPayment(
@@ -632,6 +659,11 @@ class SalesViewModel(
             return
         }
 
+        if (!NetworkUtils.isOnline(context)) {
+            setError(SaleError.Network)
+            return
+        }
+
         _state.value = _state.value.copy(
             isLoading = true,
             paymentFlowState = PaymentFlowState.ProcessingPayment("transfer")
@@ -688,28 +720,36 @@ class SalesViewModel(
     private fun finalizeSaleWithInvoice(onSuccess: ((String) -> Unit)? = null) {
         val sale = _state.value.sale ?: return
         val appliedCredits = _state.value.appliedCreditNotes
+        val isOffline = !NetworkUtils.isOnline(context)
 
         _state.value = _state.value.copy(isLoading = true)
 
         viewModelScope.launch {
+            // 🔄 Sync pending cash register box first if needed
+            if (!isOffline) {
+                hybridCashRegisterRepository.syncPendingBoxIfNeeded()
+            }
+
             val saleToCreate = sale.copy(status = "completed")
 
-            // ✅ USAR HYBRID SALES REPOSITORY
             hybridSalesRepository.createSale(saleToCreate)
                 .onSuccess { result ->
 
                     Log.d(TAG, "Sale created: ${result.saleId}, invoice: ${result.invoiceNumber}")
 
-                    // 🎫 APLICAR NOTAS DE CRÉDITO (solo online)
                     if (appliedCredits.isNotEmpty()) {
-                        appliedCredits.forEach { credit ->
-                            creditNoteRepository.applyCreditNote(
-                                creditNoteId = credit.creditNoteId.toString(),
-                                appliedToSaleId = result.saleId,
-                                amountApplied = credit.amountApplied
-                            ).onFailure { e ->
-                                Log.e(TAG, "Error applying credit note (non-critical)", e)
+                        if (!isOffline) {
+                            appliedCredits.forEach { credit ->
+                                creditNoteRepository.applyCreditNote(
+                                    creditNoteId = credit.creditNoteId.toString(),
+                                    appliedToSaleId = result.saleId,
+                                    amountApplied = credit.amountApplied
+                                ).onFailure { e ->
+                                    Log.e(TAG, "Error applying credit note (non-critical)", e)
+                                }
                             }
+                        } else {
+                            Log.w(TAG, "Credit notes not applied offline - will sync later")
                         }
                     }
 
@@ -717,10 +757,10 @@ class SalesViewModel(
                         invoiceNumber = result.invoiceNumber
                     )
 
-                    // Generar e imprimir factura
                     if (activityRef?.get() != null) {
                         val productsMap = completedSale.saleDetails.associate { detail ->
                             val name = _state.value.productsCache[detail.productId]?.name
+                                ?: salesProductRepository.getProductName(detail.productId.toString())
                                 ?: "Producto #${detail.productId}"
                             detail.productId.toString() to name
                         }

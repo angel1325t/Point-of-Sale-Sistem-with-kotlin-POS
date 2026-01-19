@@ -29,6 +29,7 @@ import androidx.navigation.navArgument
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkMonitor
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.BusinessInfo
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.BranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories.CategoryRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.products.ProductRepository
@@ -124,7 +125,7 @@ class MainActivity : FragmentActivity() {
 
                     // AUTH
                     val authSessionViewModel = remember {
-                        AuthSessionViewModel(supabase, sessionPreferences, networkMonitor)
+                        AuthSessionViewModel(context, supabase, sessionPreferences, networkMonitor)
                     }
 
                     val loginViewModel = remember {
@@ -142,7 +143,7 @@ class MainActivity : FragmentActivity() {
                     val supplierRepository = remember { SupplierRepository(supabase) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
                     val salesRepository = remember { SalesRepository(supabase) }
-                    val salesProductRepository = remember { SalesProductRepository(supabase, sessionPreferences) }
+                    val salesProductRepository = remember { SalesProductRepository(context, supabase, sessionPreferences) }
                     val paymentProofRepository = remember { PaymentProofRepository(supabase) }
                     val refundRepository = remember { RefundRepository(supabase) }
                     val creditNoteRepository = remember { CreditNoteRepository(supabase) }
@@ -165,7 +166,11 @@ class MainActivity : FragmentActivity() {
                     }
 
                     val hybridCashRegisterRepository = remember {
-                        HybridCashRegisterRepository(context, cashRegisterRepository)
+                        HybridCashRegisterRepository(context, cashRegisterRepository, supabase)
+                    }
+
+                    val hybridBranchRepository = remember {
+                        HybridBranchRepository(context, supabase, sessionPreferences)
                     }
 
                     // 🔥 BUSINESS INFO STATE
@@ -201,7 +206,7 @@ class MainActivity : FragmentActivity() {
                     // ═══════════════════════════════════════════════════
                     val roleViewModel = remember { RoleViewModel(roleRepository, sessionPreferences) }
                     val userViewModel = remember { UserViewModel(userRepository) }
-                    val branchViewModel = remember { BranchViewModel(branchRepository) }
+                    val branchViewModel = remember { BranchViewModel(hybridBranchRepository) }
                     val categoryViewModel = remember { CategoryViewModel(categoryRepository) }
                     val productsViewModel = remember { ProductViewModel(productsRepository) }
                     val supplierViewModel = remember { SupplierViewModel(supplierRepository) }
@@ -273,7 +278,8 @@ class MainActivity : FragmentActivity() {
                         salesViewModel = salesViewModel,
                         refundViewModel = refundViewModel,
                         reportsViewModel = reportsViewModel,
-                        sessionPreferences = sessionPreferences
+                        sessionPreferences = sessionPreferences,
+                        hybridBranchRepository = hybridBranchRepository
                     )
                 }
             }
@@ -298,7 +304,8 @@ fun AppNavigation(
     salesViewModel: SalesViewModel?,
     refundViewModel: RefundViewModel?,
     reportsViewModel: ReportsViewModel,
-    sessionPreferences: SessionPreferences
+    sessionPreferences: SessionPreferences,
+    hybridBranchRepository: HybridBranchRepository
 ) {
     val context = LocalContext.current
     val categoryState by categoryViewModel.state.collectAsState()
@@ -365,7 +372,7 @@ fun AppNavigation(
             RegisterScreen(navController, registerViewModel, authSessionViewModel)
         }
 
-        composable("home") { HomeScreen(navController, authSessionViewModel) }
+        composable("home") { HomeScreen(navController, authSessionViewModel, hybridBranchRepository) }
         composable("profile") { ProfileScreen(navController, authSessionViewModel) }
 
         // ROLES

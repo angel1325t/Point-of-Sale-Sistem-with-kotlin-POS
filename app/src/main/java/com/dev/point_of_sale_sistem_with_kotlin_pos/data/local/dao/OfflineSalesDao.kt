@@ -33,4 +33,13 @@ interface OfflineSalesDao {
 
     @Query("SELECT COUNT(*) FROM offline_sales WHERE pendingSync = 1")
     suspend fun getPendingSalesCount(): Int
+
+    @Query("SELECT * FROM offline_sales WHERE cashRegisterHistoryId = :historyId LIMIT 1")
+    suspend fun getSaleByHistoryId(historyId: String): OfflineSaleEntity?
+
+    @Query("SELECT * FROM offline_sales WHERE cashRegisterHistoryId = :historyId")
+    suspend fun getSalesByHistoryId(historyId: String): List<OfflineSaleEntity>
+
+    @Query("UPDATE offline_sales SET cashRegisterHistoryId = :newHistoryId WHERE localSaleId = :localSaleId")
+    suspend fun updateCashRegisterHistoryId(localSaleId: String, newHistoryId: String)
 }
