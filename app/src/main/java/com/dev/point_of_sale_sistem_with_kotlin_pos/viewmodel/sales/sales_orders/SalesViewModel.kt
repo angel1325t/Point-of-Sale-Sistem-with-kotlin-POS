@@ -1,11 +1,13 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.sales.sales_orders
 
 import android.app.Activity
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.utils.NetworkUtils
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.sales_orders.SalesIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.AppliedCreditNote
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.PaymentFlowState
@@ -15,10 +17,10 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Sa
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.credit_notes.CreditNoteRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.invoice.InvoiceRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.CashRegisterRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.cash_register.HybridCashRegisterRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.HybridSalesRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.PaymentProofRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesProductRepository
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.SalesRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.sales.sales_orders.StripePaymentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,33 +34,36 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 class SalesViewModel(
-    private val salesRepository: SalesRepository,
+    private val context: Context,
+    private val hybridSalesRepository: HybridSalesRepository,
+    private val hybridCashRegisterRepository: HybridCashRegisterRepository,
     private val salesProductRepository: SalesProductRepository,
     private val paymentProofRepository: PaymentProofRepository,
     private val stripePaymentRepository: StripePaymentRepository,
     private val invoiceRepository: InvoiceRepository,
     private val creditNoteRepository: CreditNoteRepository,
-    private val cashRegisterRepository: CashRegisterRepository,
     private val activityRef: WeakReference<Activity>? = null
 ) : ViewModel() {
 
     constructor(
-        salesRepository: SalesRepository,
+        context: Context,
+        hybridSalesRepository: HybridSalesRepository,
+        hybridCashRegisterRepository: HybridCashRegisterRepository,
         salesProductRepository: SalesProductRepository,
         paymentProofRepository: PaymentProofRepository,
         stripePaymentRepository: StripePaymentRepository,
         invoiceRepository: InvoiceRepository,
         creditNoteRepository: CreditNoteRepository,
-        cashRegisterRepository: CashRegisterRepository,
         activity: Activity
     ) : this(
-        salesRepository,
+        context,
+        hybridSalesRepository,
+        hybridCashRegisterRepository,
         salesProductRepository,
         paymentProofRepository,
         stripePaymentRepository,
         invoiceRepository,
         creditNoteRepository,
-        cashRegisterRepository,
         WeakReference(activity)
     )
 
@@ -90,7 +95,9 @@ class SalesViewModel(
 
     private fun mapExceptionToSaleError(throwable: Throwable): SaleError {
         return when (throwable) {
-            is java.net.UnknownHostException -> SaleError.Network
+            is java.net.UnknownHostException,
+            is java.net.ConnectException,
+            is java.io.IOException -> SaleError.Network
             is IllegalArgumentException -> SaleError.ValidationFailed
             else -> SaleError.Unknown(throwable)
         }
@@ -122,16 +129,18 @@ class SalesViewModel(
             is SalesIntent.RemoveCreditNote -> removeCreditNote(intent.creditNoteId)
             SalesIntent.ClearSale -> clearSale()
             SalesIntent.ClearError -> clearError()
+            SalesIntent.SyncProducts -> syncProducts()
         }
     }
 
     // ═══════════════════════════════════════════════════
-    // 🔓 VALIDACIÓN DE CAJA ABIERTA
+    // 🔓 VALIDACIÓN DE CAJA ABIERTA (HÍBRIDO)
     // ═══════════════════════════════════════════════════
 
     private suspend fun validateCashRegisterOpen(): String? {
         return try {
-            val openRegister = cashRegisterRepository.getOpenCashRegister()
+            // ✅ USAR HYBRID REPOSITORY
+            val openRegister = hybridCashRegisterRepository.getOpenCashRegister()
             if (openRegister == null) {
                 Log.w(TAG, "⚠️ No hay caja abierta")
                 null
@@ -145,15 +154,15 @@ class SalesViewModel(
         }
     }
 
-// ═══════════════════════════════════════════════════
-// 📟 LECTOR DE CÓDIGOS DE BARRA
-// ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════
+    // 📟 LECTOR DE CÓDIGOS DE BARRA
+    // ═══════════════════════════════════════════════════
 
     private fun toggleBarcodeReader() {
         val newState = !_state.value.isBarcodeReaderActive
         _state.value = _state.value.copy(
             isBarcodeReaderActive = newState,
-            barcodeReaderBuffer = "" // Limpiar buffer al activar/desactivar
+            barcodeReaderBuffer = ""
         )
         Log.d(TAG, "Barcode reader toggled: $newState")
     }
@@ -170,7 +179,6 @@ class SalesViewModel(
                     if (product != null) {
                         Log.d(TAG, "Product found via reader: ${product.name}")
 
-                        // Agregar producto automáticamente
                         addProductToSale(
                             SalesIntent.AddSaleDetail(
                                 productId = product.productId,
@@ -180,7 +188,6 @@ class SalesViewModel(
                             )
                         )
 
-                        // Limpiar buffer
                         _state.value = _state.value.copy(barcodeReaderBuffer = "")
                     } else {
                         Log.w(TAG, "Product not found: $barcode")
@@ -199,9 +206,9 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🎫 GESTIÓN DE NOTAS DE CRÉDITO
     // ═══════════════════════════════════════════════════
+
     private fun applyCreditNote(creditNoteId: String, amountApplied: Double) {
         viewModelScope.launch {
-            // Validar que el monto no exceda el total pendiente
             val remainingToPay = _state.value.remainingToPay
             if (amountApplied > remainingToPay) {
                 setError(SaleError.ValidationFailed)
@@ -210,7 +217,7 @@ class SalesViewModel(
 
             val newCreditNote = AppliedCreditNote(
                 creditNoteId = UUID.fromString(creditNoteId),
-                invoiceNumber = "", // Se puede obtener del scan
+                invoiceNumber = "",
                 amountApplied = amountApplied
             )
 
@@ -234,6 +241,18 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🔍 BÚSQUEDA DE PRODUCTOS
     // ═══════════════════════════════════════════════════
+
+    private fun syncProducts() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Syncing products for offline use")
+                salesProductRepository.syncProductsFromOnline()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to sync products", e)
+            }
+        }
+    }
+
     private fun searchByName(query: String) {
         if (query.isBlank()) {
             _state.value = _state.value.copy(searchResults = emptyList())
@@ -250,13 +269,17 @@ class SalesViewModel(
                     val validProducts = products.filterNotNull()
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        searchResults = validProducts
+                        searchResults = validProducts,
+                        error = null
                     )
                 }
                 .onFailure { e ->
                     Log.e(TAG, "searchByName: Error", e)
-                    setError(mapExceptionToSaleError(e))
-                    _state.value = _state.value.copy(searchResults = emptyList())
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        searchResults = emptyList(),
+                        error = mapExceptionToSaleError(e)
+                    )
                 }
         }
     }
@@ -300,6 +323,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🛍️ GESTIÓN DE PRODUCTOS EN LA VENTA
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun addProductToSale(intent: SalesIntent.AddSaleDetail) {
         if (intent.quantity <= 0) {
@@ -398,6 +422,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 💳 GESTIÓN DE MÉTODOS DE PAGO
     // ═══════════════════════════════════════════════════
+
     private fun updatePaymentMethod(method: String) {
         val currentSale = _state.value.sale ?: return
         _state.value = _state.value.copy(
@@ -409,6 +434,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🚀 INICIO DEL PROCESO DE PAGO
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun initiateSaleCompletion() {
         val sale = _state.value.sale
@@ -418,7 +444,7 @@ class SalesViewModel(
             return
         }
 
-        // 🔐 VALIDAR QUE HAYA CAJA ABIERTA
+        // 🔐 VALIDAR QUE HAYA CAJA ABIERTA (HÍBRIDO)
         viewModelScope.launch {
             val cashRegisterHistoryId = validateCashRegisterOpen()
 
@@ -427,7 +453,6 @@ class SalesViewModel(
                 return@launch
             }
 
-            // Actualizar sale con el ID de la caja
             _state.value = _state.value.copy(
                 sale = sale.copy(cashRegisterHistoryId = cashRegisterHistoryId)
             )
@@ -463,6 +488,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 💵 PAGO EN EFECTIVO
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun processCashPayment(amountReceived: Double) {
         val remainingToPay = _state.value.remainingToPay
@@ -481,8 +507,17 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 💳 PAGO CON TARJETA (STRIPE)
     // ═══════════════════════════════════════════════════
+
     private fun initiateCardPayment() {
         val remainingToPay = _state.value.remainingToPay
+
+        if (!NetworkUtils.isOnline(context)) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                paymentFlowState = PaymentFlowState.Error("No es posible realizar pagos con tarjeta sin conexión a internet. Por favor, use efectivo o transfiera a una cuenta cuando tenga conexión.")
+            )
+            return
+        }
 
         _state.value = _state.value.copy(
             isLoading = true,
@@ -603,6 +638,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🏦 PAGO POR TRANSFERENCIA CON EVIDENCIA
     // ═══════════════════════════════════════════════════
+
     private fun captureTransferEvidence() {
         val sale = _state.value.sale ?: return
 
@@ -620,6 +656,11 @@ class SalesViewModel(
 
         if (referenceNumber.isBlank()) {
             setError(SaleError.ValidationFailed)
+            return
+        }
+
+        if (!NetworkUtils.isOnline(context)) {
+            setError(SaleError.Network)
             return
         }
 
@@ -672,34 +713,43 @@ class SalesViewModel(
     }
 
     // ═══════════════════════════════════════════════════
-    // 🧾 FINALIZACIÓN DE VENTA CON FACTURACIÓN Y CRÉDITOS
+    // 🧾 FINALIZACIÓN DE VENTA CON FACTURACIÓN Y CRÉDITOS (HÍBRIDO)
     // ═══════════════════════════════════════════════════
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun finalizeSaleWithInvoice(onSuccess: ((String) -> Unit)? = null) {
         val sale = _state.value.sale ?: return
         val appliedCredits = _state.value.appliedCreditNotes
+        val isOffline = !NetworkUtils.isOnline(context)
 
         _state.value = _state.value.copy(isLoading = true)
 
         viewModelScope.launch {
+            // 🔄 Sync pending cash register box first if needed
+            if (!isOffline) {
+                hybridCashRegisterRepository.syncPendingBoxIfNeeded()
+            }
+
             val saleToCreate = sale.copy(status = "completed")
 
-            salesRepository.createSale(saleToCreate)
+            hybridSalesRepository.createSale(saleToCreate)
                 .onSuccess { result ->
 
                     Log.d(TAG, "Sale created: ${result.saleId}, invoice: ${result.invoiceNumber}")
 
-                    // 🎫 APLICAR NOTAS DE CRÉDITO
                     if (appliedCredits.isNotEmpty()) {
-                        appliedCredits.forEach { credit ->
-                            creditNoteRepository.applyCreditNote(
-                                creditNoteId = credit.creditNoteId.toString(),
-                                appliedToSaleId = result.saleId,
-                                amountApplied = credit.amountApplied
-                            ).onFailure { e ->
-                                Log.e(TAG, "Error applying credit note (non-critical)", e)
+                        if (!isOffline) {
+                            appliedCredits.forEach { credit ->
+                                creditNoteRepository.applyCreditNote(
+                                    creditNoteId = credit.creditNoteId.toString(),
+                                    appliedToSaleId = result.saleId,
+                                    amountApplied = credit.amountApplied
+                                ).onFailure { e ->
+                                    Log.e(TAG, "Error applying credit note (non-critical)", e)
+                                }
                             }
+                        } else {
+                            Log.w(TAG, "Credit notes not applied offline - will sync later")
                         }
                     }
 
@@ -707,10 +757,10 @@ class SalesViewModel(
                         invoiceNumber = result.invoiceNumber
                     )
 
-                    // Generar e imprimir factura
                     if (activityRef?.get() != null) {
                         val productsMap = completedSale.saleDetails.associate { detail ->
                             val name = _state.value.productsCache[detail.productId]?.name
+                                ?: salesProductRepository.getProductName(detail.productId.toString())
                                 ?: "Producto #${detail.productId}"
                             detail.productId.toString() to name
                         }
@@ -745,6 +795,7 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
     // 🔄 CICLO DE VIDA
     // ═══════════════════════════════════════════════════
+
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createSale(paymentMethod: String, globalDiscount: Double, userId: UUID) {
         val nowUtc = currentUtcDateTime()

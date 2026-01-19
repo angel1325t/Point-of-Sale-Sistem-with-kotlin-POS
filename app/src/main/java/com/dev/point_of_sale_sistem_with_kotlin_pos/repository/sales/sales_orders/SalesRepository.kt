@@ -62,7 +62,8 @@ class SalesRepository(
             isCreditNote = sale.isCreditNote,
             originalSaleId = sale.originalSaleId?.toString(),
             creditRemaining = sale.creditRemaining,
-            cashRegisterHistoryId = sale.cashRegisterHistoryId // 🆕
+            cashRegisterHistoryId = sale.cashRegisterHistoryId,
+            localId = null // Supabase generará su propio UUID
         )
 
         Log.d(TAG, "Inserting sale - Cash Register History ID: ${sale.cashRegisterHistoryId}")

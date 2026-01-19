@@ -1,12 +1,18 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.capabilities.CapabilitiesResolver
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkMonitor
+import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.database.OfflineDatabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.SessionState
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.AuthRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -19,16 +25,27 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class AuthSessionViewModel(
+    private val context: Context,
     private val supabase: SupabaseClient,
-    private val sessionPreferences: SessionPreferences
+    private val sessionPreferences: SessionPreferences,
+    private val networkMonitor: NetworkMonitor
+
 ) : ViewModel() {
 
     private val repository = AuthRepository(supabase)
+    private val userRepository = UserRepository(supabase)
+    private val branchRepository: HybridBranchRepository by lazy {
+        HybridBranchRepository(context, supabase, sessionPreferences)
+    }
+    private val offlineDb = OfflineDatabase.getInstance(context)
 
     private val _state = MutableStateFlow(SessionState())
     val state: StateFlow<SessionState> = _state.asStateFlow()
 
     private val _intents = Channel<AuthIntent>(Channel.UNLIMITED)
+
+    // 🌐 Estado de conectividad (temporal)
+    private var isOfflineMode: Boolean = false
 
     companion object {
         private const val TAG = "AuthSessionViewModel"
@@ -38,6 +55,13 @@ class AuthSessionViewModel(
         Log.d(TAG, "Initializing AuthSessionViewModel")
         observeIntents()
         sendIntent(AuthIntent.CheckSession)
+        updateCapabilities()
+        viewModelScope.launch {
+            networkMonitor.isOnline().collect { isOnline ->
+                setOfflineMode(!isOnline)
+            }
+        }
+
     }
 
     private fun observeIntents() {
@@ -58,6 +82,17 @@ class AuthSessionViewModel(
         viewModelScope.launch { _intents.send(intent) }
     }
 
+    // 🧠 CAPABILITIES (cálculo central)
+    private fun updateCapabilities() {
+        val capabilities = CapabilitiesResolver.resolve(
+            isOffline = isOfflineMode
+        )
+
+        _state.value = _state.value.copy(
+            isOffline = isOfflineMode,
+            capabilities = capabilities
+        )
+    }
 
     private fun handleCheckSession() {
         viewModelScope.launch {
@@ -66,69 +101,63 @@ class AuthSessionViewModel(
             val authUser = supabase.auth.currentUserOrNull()
 
             if (authUser == null) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isAuthenticated = false
-                )
+                _state.value = SessionState()
+                updateCapabilities()
                 return@launch
             }
 
             try {
                 val authId = UUID.fromString(authUser.id)
 
-                // 🔥 Buscar user interno usando la VIEW
                 val userInfo = repository.getUserByAuthId(authId)
 
-                if (!userInfo.active) {
-                    sessionPreferences.setUserDisabled(true)
+                userInfo?.let { user ->
+                    if (!user.active) {
+                        sessionPreferences.setUserDisabled(true)
 
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        isAuthenticated = false,
-                        isUserDisabled = true,
-                        error = AuthError.Other("USER_DISABLED")
-                    )
-                    return@launch
+                        _state.value = SessionState(
+                            isUserDisabled = true,
+                            error = AuthError.Other("USER_DISABLED")
+                        )
+                        updateCapabilities()
+                        return@launch
+                    }
                 }
 
                 sessionPreferences.setUserDisabled(false)
 
+                val branchId = userInfo?.branch_id?.toString() ?: ""
+                if (branchId.isNotEmpty()) {
+                    sessionPreferences.saveBranchId(branchId)
+                }
+
+                val companyId = branchRepository.getCurrentUserCompanyId()
+                if (companyId != null) {
+                    sessionPreferences.saveCompanyId(companyId)
+                    branchRepository.cacheBranches()
+                }
+
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isAuthenticated = true,
-
-                    // 🔐 Auth
                     authId = authUser.id,
                     email = authUser.email,
-
-                    // 🧠 Usuario interno
                     userId = userInfo.user_id,
-                    branchId = userInfo.branch_id,
-
+                    branchId = branchId,
                     isUserDisabled = false,
                     error = null
                 )
 
+                updateCapabilities()
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading session", e)
 
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isAuthenticated = false,
+                _state.value = SessionState(
                     error = AuthError.Other("SESSION_LOAD_FAILED")
                 )
+                updateCapabilities()
             }
-        }
-    }
-
-    private fun handleUserDisabled(intent: AuthIntent.UserDisabled) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                isLoading = false,
-                isUserDisabled = true,
-                isAuthenticated = false
-            )
-            sessionPreferences.setUserDisabled(true)
         }
     }
 
@@ -142,35 +171,37 @@ class AuthSessionViewModel(
         )
     }
 
+    private fun handleUserDisabled(intent: AuthIntent.UserDisabled) {
+        viewModelScope.launch {
+            _state.value = SessionState(
+                isUserDisabled = true
+            )
+            sessionPreferences.setUserDisabled(true)
+            updateCapabilities()
+        }
+    }
+
+
     private fun handleChangeBranch(branchId: String) {
         viewModelScope.launch {
-            Log.d(TAG, "Changing branch to: $branchId")
-
             _state.value = _state.value.copy(isLoading = true)
 
             try {
-                kotlinx.coroutines.delay(1500)
-
                 sessionPreferences.saveBranchId(branchId)
-                Log.d(TAG, "BranchId saved in preferences")
 
                 _state.value = _state.value.copy(
                     isLoading = false,
                     branchId = branchId,
-                    successMessage = "BRANCH_CHANGED",
-                    error = null
+                    successMessage = "BRANCH_CHANGED"
                 )
-
-                Log.d(TAG, "Branch changed successfully to: $branchId")
 
                 kotlinx.coroutines.delay(2000)
                 _state.value = _state.value.copy(successMessage = null)
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error changing branch: ${e.message}")
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = AuthError.Other("Error al cambiar de sucursal: ${e.message}")
+                    error = AuthError.Other(e.message ?: "BRANCH_CHANGE_FAILED")
                 )
             }
         }
@@ -178,35 +209,20 @@ class AuthSessionViewModel(
 
     private fun handleLogout() {
         viewModelScope.launch {
-            Log.d(TAG, "Logging out")
-            _state.value = _state.value.copy(isLoading = true)
+            repository.logout()
+            sessionPreferences.clearBranchId()
+            sessionPreferences.clearCompanyId()
 
-            val result = repository.logout()
-            result.onSuccess {
-                try {
-                    sessionPreferences.clearBranchId()
-                    Log.d(TAG, "BranchId cleared from preferences")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error clearing branchId: ${e.message}")
-                }
+            _state.value = SessionState()
+            updateCapabilities()
+        }
+    }
 
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isAuthenticated = false,
-                    userId = null,
-                    email = null,
-                    branchId = null,
-                    successMessage = "LOGOUT_SUCCESS",
-                    error = null
-                )
-                Log.d(TAG, "Logout successful")
-            }.onFailure { e ->
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = AuthError.Other(e.message ?: "LOGOUT_FAILED")
-                )
-                Log.e(TAG, "Logout failed: ${e.message}")
-            }
+    // 🔧 Se usará en el Paso 4
+    fun setOfflineMode(isOffline: Boolean) {
+        if (isOfflineMode != isOffline) {
+            isOfflineMode = isOffline
+            updateCapabilities()
         }
     }
 }
