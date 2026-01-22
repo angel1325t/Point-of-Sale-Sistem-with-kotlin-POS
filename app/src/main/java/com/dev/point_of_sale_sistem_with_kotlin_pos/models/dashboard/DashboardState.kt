@@ -4,7 +4,6 @@ data class DashboardState(
     val summary: DashboardSummary = DashboardSummary(),
     val topProducts: List<TopProduct> = emptyList(),
     val revenueData: List<RevenueDataPoint> = emptyList(),
-    val profitMargins: ProfitMargins = ProfitMargins(),
 
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -51,16 +50,3 @@ data class RevenueDataPoint(
     val revenue: Double,
     val salesCount: Int
 )
-
-/**
- * Márgenes de ganancia
- */
-data class ProfitMargins(
-    val totalCost: Double = 0.0,
-    val totalRevenue: Double = 0.0,
-    val grossProfit: Double = 0.0,
-    val profitMargin: Double = 0.0
-) {
-    val hasProfit: Boolean
-        get() = grossProfit > 0
-}

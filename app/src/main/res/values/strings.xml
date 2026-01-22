@@ -77,10 +77,7 @@
     <string name="create_first_role">Crear primer rol</string>
     <string name="confirm_delete_title">Confirmar eliminación</string>
     <string name="confirm_delete_body">¿Estás seguro de eliminar este rol? Esta acción no se puede deshacer.</string>
-    <string name="delete">Eliminar</string>
-    <string name="cancel">Cancelar</string>
     <string name="manage_permissions_description">Gestionar permisos</string>
-    <string name="edit">Editar</string>
     <string name="email_required_validation">El email es obligatorio</string>
     <string name="invalid_format">Formato de email inválido</string>
     <string name="role_validation">Debe seleccionar un rol</string>
@@ -89,8 +86,6 @@
     <string name="edit_user_title">Editar Usuario</string>
     <string name="role">Rol</string>
     <string name="branch">Sucursales</string>
-    <string name="update_text">Actualizar</string>
-    <string name="create_text">Crear</string>
     <string name="user_not_found">Usuario no encontrado</string>
     <string name="email_already_exists">El email ya existe</string>
     <string name="supabase_auth_error">Error en autenticación de Supabase</string>
@@ -100,6 +95,7 @@
     <string name="confirm_user_deletion">¿Está seguro que desea eliminar al usuario %1$s?</string>
     <string name="active">Activo</string>
     <string name="inactive">Inactivo</string>
+    <string name="permission_denied">Permiso denegado</string>
 
     <!-- Success -->
     <string name="success_create_user">Usuario creado</string>
@@ -297,8 +293,6 @@
 
 
     <!-- Errores Inventario -->
-    <string name="error_network">Error de conexión. Verifica tu internet.</string>
-    <string name="error_timeout">La operación tardó demasiado.</string>
     <string name="error_inventory_not_found">El producto no fue encontrado.</string>
     <string name="error_not_enough_stock">Stock insuficiente.</string>
     <string name="error_unknown">Ocurrió un error inesperado.</string>
@@ -312,13 +306,249 @@
     <string name="success_stock_decreased">Stock reducido correctamente.</string>
 
 
+    <!-- Errores de red -->
+    <string name="error_network">Error de conexión. Verifica tu red.</string>
+    <string name="error_timeout">Tiempo de espera agotado. Intenta nuevamente.</string>
+    <string name="error_no_internet">Sin conexión a Internet</string>
+
+    <!-- Errores de validación -->
+    <string name="error_validation_generic">Error en %1$s: %2$s</string>
+    <string name="error_product_name_invalid">Nombre de producto inválido</string>
+    <string name="error_product_name_too_short">El nombre es muy corto</string>
+    <string name="error_product_name_too_long">El nombre es muy largo</string>
+    <string name="error_price_invalid">Precio inválido</string>
+    <string name="error_price_zero_or_negative">El precio debe ser mayor a 0</string>
+    <string name="error_stock_invalid">Stock inválido</string>
+    <string name="error_stock_negative">El stock no puede ser negativo</string>
+    <string name="error_category_invalid">Categoría inválida</string>
+    <string name="error_barcode_invalid">Código de barras inválido</string>
+    <string name="error_discount_invalid">Descuento inválido</string>
+    <string name="error_discount_value_invalid">Valor de descuento inválido</string>
+    <string name="error_discount_percentage_exceeded">El descuento no puede exceder el 100%</string>
+
+    <!-- Errores de base de datos -->
+    <string name="error_product_not_found">Producto no encontrado</string>
+    <string name="error_duplicate_barcode">El código de barras %1$s ya existe</string>
+    <string name="error_database">Error de base de datos</string>
+    <string name="error_unauthorized">No tienes permisos para esta acción</string>
+
+    <!-- Errores de operaciones -->
+    <string name="error_create_product_failed">No se pudo crear el producto</string>
+    <string name="error_update_product_failed">No se pudo actualizar el producto</string>
+    <string name="error_delete_product_failed">No se pudo eliminar el producto</string>
+    <string name="error_load_products_failed">No se pudieron cargar los productos</string>
+    <string name="error_search_products_failed">Error al buscar productos</string>
+
+    <!-- Errores de storage -->
+    <string name="error_image_upload_failed">No se pudo subir la imagen</string>
+    <string name="error_barcode_generation_failed">No se pudo generar el código de barras</string>
+    <string name="error_storage">Error de almacenamiento</string>
+
+    <!-- Errores de stock -->
+    <string name="error_insufficient_stock">Stock insuficiente</string>
+    <string name="error_stock_update_failed">No se pudo actualizar el stock</string>
+
+    <!-- Error genérico -->
+
+    <!-- ════════════════════════════════════════════════════════ -->
+    <!-- PRODUCT LIST SCREEN STRINGS -->
+    <!-- ════════════════════════════════════════════════════════ -->
+
+    <string name="products_title">Productos</string>
+    <string name="action_back">Volver</string>
+    <string name="action_refresh">Actualizar</string>
+    <string name="product_create">Crear producto</string>
+    <string name="product_search_placeholder">Buscar productos…</string>
+    <string name="product_loading">Cargando productos…</string>
+    <string name="processing">Procesando…</string>
+    <string name="product_deleted_success">Producto eliminado exitosamente</string>
+
+    <!-- ════════════════════════════════════════════════════════ -->
+    <!-- STRINGS ADICIONALES ÚTILES -->
+    <!-- ════════════════════════════════════════════════════════ -->
+
+    <!-- Estados vacíos -->
+    <string name="empty_products_title">No hay productos</string>
+    <string name="empty_products_message">Agrega tu primer producto usando el botón +</string>
+    <string name="empty_search_title">Sin resultados</string>
+    <string name="empty_search_message">No se encontraron productos con ese criterio</string>
+
+    <!-- Diálogo de eliminación -->
+    <string name="delete_product_title">¿Eliminar producto?</string>
+    <string name="delete_product_message">Esta acción no se puede deshacer. El producto será eliminado permanentemente.</string>
+    <string name="action_delete_confirm">Eliminar</string>
+
+    <!-- Info de producto -->
+    <string name="product_price_label">Precio: $%1$s</string>
+    <string name="product_low_stock">Stock bajo</string>
+    <string name="product_out_of_stock">Agotado</string>
+
+    <!-- Filtros -->
+    <string name="filter_all">Todos</string>
+    <string name="filter_low_stock">Stock bajo</string>
+    <string name="filter_out_of_stock">Agotados</string>
+    <string name="filter_category">Por categoría</string>
+
+    <!-- Ordenamiento -->
+    <string name="sort_name_asc">Nombre (A-Z)</string>
+    <string name="sort_name_desc">Nombre (Z-A)</string>
+    <string name="sort_price_asc">Precio (menor a mayor)</string>
+    <string name="sort_price_desc">Precio (mayor a menor)</string>
+    <string name="sort_stock_asc">Stock (menor a mayor)</string>
+    <string name="sort_stock_desc">Stock (mayor a menor)</string>
+
+
+    <!-- Delete Product Dialog -->
+    <string name="product_delete_title">¿Eliminar Producto?</string>
+    <string name="product_delete_message">Estás a punto de eliminar el siguiente producto:</string>
+    <string name="product_delete_warning">Esta acción no se puede deshacer</string>
+    <string name="product_delete_confirm">Eliminar</string>
+    <string name="cancel">Cancelar</string>
+
+    <!-- Product List Item -->
+    <string name="product_stock_label">Stock: %1$d</string>
+    <string name="product_barcode_label">Código: %1$s</string>
+    <string name="edit">Editar</string>
+    <string name="delete">Eliminar</string>
+
+    <!-- Empty Products State -->
+    <string name="product_empty_search">Sin resultados</string>
+    <string name="product_empty_list">No hay productos</string>
+    <string name="product_empty_search_message">No se encontraron productos con ese criterio de búsqueda</string>
+    <string name="product_empty_message">Agrega tu primer producto usando el botón +</string>
+
+    <!-- Search Bar -->
+    <string name="action_clear">Limpiar</string>
+
+    <!-- Error Message -->
+
+    <!-- Category Picker Dialog -->
+    <string name="category_select">Seleccionar Categoría</string>
+    <string name="category_close">Cerrar</string>
+
+    <!-- Discount Picker Dialog -->
+    <string name="product_discount_configure">Configurar Descuento</string>
+    <string name="discount_type">Tipo de descuento</string>
+    <string name="discount_percentage_label">Porcentaje de descuento</string>
+    <string name="discount_amount_label">Monto de descuento</string>
+    <string name="discount_helper_percent">Ingresa un valor entre 0 y 100</string>
+
+    <!-- ════════════════════════════════════════════════════════ -->
+    <!-- STRINGS ADICIONALES ÚTILES -->
+    <!-- ════════════════════════════════════════════════════════ -->
+
+    <!-- Product Status -->
+    <string name="product_status_active">Activo</string>
+    <string name="product_status_inactive">Inactivo</string>
+    <string name="product_status_discontinued">Descontinuado</string>
+
+    <!-- Stock Alerts -->
+    <string name="stock_alert_low">Stock bajo: quedan %1$d unidades</string>
+    <string name="stock_alert_critical">Stock crítico: quedan %1$d unidades</string>
+    <string name="stock_alert_out">Producto agotado</string>
+    <string name="stock_minimum_reached">Stock mínimo alcanzado</string>
+
+    <!-- Price Display -->
+    <string name="price_original">Precio original</string>
+    <string name="price_discounted">Precio con descuento</string>
+    <string name="price_saving">Ahorras: RD$ %1$s</string>
+    <string name="price_discount_badge">-%1$d%%</string>
+
+    <!-- Product Details -->
+    <string name="product_details_title">Detalles del Producto</string>
+    <string name="product_category">Categoría</string>
+    <string name="product_barcode">Código de barras</string>
+    <string name="product_sku">SKU</string>
+    <string name="product_created_at">Creado el %1$s</string>
+    <string name="product_updated_at">Actualizado el %1$s</string>
+
+    <!-- Discount Info -->
+    <string name="discount_info_percent">Descuento del %1$d%%</string>
+    <string name="discount_info_fixed">Descuento de RD$ %1$s</string>
+    <string name="discount_active">Descuento activo</string>
+    <string name="discount_expires">Vence el %1$s</string>
+
+    <!-- Bulk Actions -->
+    <string name="bulk_select_all">Seleccionar todos</string>
+    <string name="bulk_deselect_all">Deseleccionar todos</string>
+    <string name="bulk_delete">Eliminar seleccionados</string>
+    <string name="bulk_update_price">Actualizar precios</string>
+    <string name="bulk_update_stock">Actualizar stock</string>
+    <string name="bulk_apply_discount">Aplicar descuento</string>
+    <string name="bulk_items_selected">%1$d productos seleccionados</string>
+
+    <!-- Filters -->
+    <string name="filter_title">Filtros</string>
+    <string name="filter_apply">Aplicar filtros</string>
+    <string name="filter_clear">Limpiar filtros</string>
+    <string name="filter_by_category">Por categoría</string>
+    <string name="filter_by_price">Por precio</string>
+    <string name="filter_by_stock">Por stock</string>
+    <string name="filter_with_discount">Con descuento</string>
+    <string name="filter_without_discount">Sin descuento</string>
+
+    <!-- Sort Options -->
+    <string name="sort_title">Ordenar por</string>
+    <string name="sort_apply">Aplicar orden</string>
+
+    <!-- Export/Import -->
+    <string name="export_products">Exportar productos</string>
+    <string name="import_products">Importar productos</string>
+    <string name="export_success">Productos exportados exitosamente</string>
+    <string name="import_success">Productos importados exitosamente</string>
+    <string name="export_format">Formato: CSV, Excel</string>
+
+    <!-- Image Upload -->
+    <string name="image_upload">Subir imagen</string>
+    <string name="image_change">Cambiar imagen</string>
+    <string name="image_remove">Quitar imagen</string>
+    <string name="image_uploading">Subiendo imagen…</string>
+    <string name="image_error">Error al subir imagen</string>
+
+    <!-- Barcode -->
+    <string name="barcode_generate">Generar código</string>
+    <string name="barcode_scan">Escanear código</string>
+    <string name="barcode_manual">Ingresar manualmente</string>
+    <string name="barcode_invalid">Código de barras inválido</string>
+    <string name="barcode_duplicate">Este código ya existe</string>
+
+    <!-- Validation Messages -->
+    <string name="validation_name_required">El nombre es requerido</string>
+    <string name="validation_price_required">El precio es requerido</string>
+    <string name="validation_price_positive">El precio debe ser mayor a 0</string>
+    <string name="validation_stock_positive">El stock no puede ser negativo</string>
+    <string name="validation_category_required">Selecciona una categoría</string>
+    <string name="validation_discount_invalid">Descuento inválido</string>
+    <string name="validation_discount_max">El descuento no puede exceder el 100%</string>
+
+    <!-- Tooltips -->
+    <string name="tooltip_low_stock">Este producto tiene stock bajo</string>
+    <string name="tooltip_out_of_stock">Este producto está agotado</string>
+    <string name="tooltip_has_discount">Este producto tiene descuento activo</string>
+    <string name="tooltip_edit">Editar este producto</string>
+    <string name="tooltip_delete">Eliminar este producto</string>
+
+    <!-- Confirmation Messages -->
+    <string name="confirm_bulk_delete">¿Eliminar %1$d productos?</string>
+    <string name="confirm_bulk_delete_message">Esta acción no se puede deshacer</string>
+    <string name="confirm_discard_changes">¿Descartar cambios?</string>
+    <string name="confirm_discard_message">Los cambios no guardados se perderán</string>
+
+    <!-- Loading States -->
+    <string name="loading_products">Cargando productos…</string>
+    <string name="loading_categories">Cargando categorías…</string>
+    <string name="loading_details">Cargando detalles…</string>
+    <string name="deleting_product">Eliminando producto…</string>
+    <string name="updating_stock">Actualizando stock…</string>
+
+    <!-- Success Messages (complementarias) -->
+    <string name="success_stock_updated">Stock actualizado</string>
+    <string name="success_price_updated">Precio actualizado</string>
+    <string name="success_discount_applied">Descuento aplicado</string>
+    <string name="success_discount_removed">Descuento removido</string>
     <!-- General Actions -->
     <string name="action_retry">Reintentar</string>
-    <string name="action_cancel">Cancelar</string>
     <string name="action_confirm">Confirmar</string>
-    <string name="action_save">Guardar</string>
-    <string name="action_delete">Eliminar</string>
-    <string name="action_edit">Editar</string>
     <string name="action_create">Crear</string>
         <!-- Error Content -->
         <string name="cash_register_error_title">Error</string>
@@ -429,6 +659,75 @@
     <string name="notifications_low_stock_title">Stock bajo</string>
     <string name="notifications_out_stock_title">Producto agotado</string>
 
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- PRODUCT STRINGS - Strings para ProductFormScreen -->
+        <!-- ════════════════════════════════════════════════════════ -->
+
+        <!-- Mensajes de éxito/error -->
+        <string name="product_created_success">Producto creado exitosamente</string>
+        <string name="product_updated_success">Producto actualizado exitosamente</string>
+        <string name="error_unknown_simple">Ha ocurrido un error</string>
+
+        <!-- Títulos de pantalla -->
+        <string name="product_edit">Editar Producto</string>
+        <string name="product_new">Nuevo Producto</string>
+
+        <!-- Campos del formulario -->
+        <string name="product_name_required">Nombre del producto *</string>
+        <string name="product_description_optional">Descripción (opcional)</string>
+        <string name="product_price_required">Precio *</string>
+        <string name="product_price_final">Precio final: $%s</string>
+        <string name="product_discount">Descuento</string>
+        <string name="product_stock_current_required">Stock actual *</string>
+        <string name="product_stock_minimum_required">Stock mínimo *</string>
+        <string name="product_select_category">Seleccionar categoría *</string>
+
+        <!-- Botones -->
+        <string name="update_text">Actualizar</string>
+        <string name="create_text">Crear</string>
+
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- STRINGS ADICIONALES QUE PODRÍAS NECESITAR -->
+        <!-- ════════════════════════════════════════════════════════ -->
+
+        <!-- Validaciones -->
+        <string name="product_name_empty">El nombre del producto es requerido</string>
+        <string name="product_price_invalid">Precio inválido</string>
+        <string name="product_stock_invalid">Stock inválido</string>
+        <string name="product_category_required">Debe seleccionar una categoría</string>
+
+        <!-- Descuentos -->
+        <string name="discount_none">Sin descuento</string>
+        <string name="discount_percent">Porcentaje (%)</string>
+        <string name="discount_fixed">Monto fijo ($)</string>
+        <string name="discount_value">Valor del descuento</string>
+        <string name="discount_apply">Aplicar descuento</string>
+        <string name="discount_remove">Quitar descuento</string>
+
+        <!-- Categorías -->
+        <string name="category_select_title">Seleccionar Categoría</string>
+        <string name="category_search">Buscar categoría</string>
+        <string name="category_none">Sin categoría</string>
+
+        <!-- Stock -->
+        <string name="stock_low_warning">Stock bajo</string>
+        <string name="stock_out">Agotado</string>
+        <string name="stock_available">Disponible</string>
+
+        <!-- Acciones -->
+        <string name="action_save">Guardar</string>
+        <string name="action_cancel">Cancelar</string>
+        <string name="action_delete">Eliminar</string>
+        <string name="action_edit">Editar</string>
+
+        <!-- Confirmaciones -->
+        <string name="confirm_delete_product">¿Está seguro que desea eliminar este producto?</string>
+        <string name="confirm_delete_product_message">Esta acción no se puede deshacer</string>
+
+        <!-- Loading -->
+        <string name="loading_product">Cargando producto…</string>
+        <string name="saving_product">Guardando producto…</string>
+
     <!-- INVENTARIO -->
     <string name="inventory_low_stock_msg">El producto %1$s está por agotarse</string>
     <string name="inventory_out_stock_msg">El producto %1$s se quedó sin stock</string>
@@ -440,5 +739,12 @@
 
     <string name="no_notifications">No tienes notificaciones</string>
     <string name="low_stock_warning">Stock bajo</string>
+    <string name="cash_register_already_open">ya hay una caja abierta</string>
+    <string name="sales_cancel_confirmation_title">Cancelar compra\n</string>
+    <string name="sales_cancel_confirmation_message">Esta seguro que quiere cancelar la compra?\n</string>
 
+    <string name="sales_payment_method">Método de pago</string>
+    <string name="sales_payment_cash">Efectivo</string>
+    <string name="sales_payment_card">Tarjeta</string>
+    <string name="sales_payment_transfer">Transferencia</string>
 </resources>

@@ -3,16 +3,12 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * DTO para leer datos de ventas desde Supabase
- * Este es un contrato genérico que asume la estructura de la tabla `sale`
- */
 @Serializable
 data class SaleDTO(
     @SerialName("sale_id")
-    val saleId: Int,
+    val saleId: String,
 
-    @SerialName("total_amount")
+    @SerialName("total")
     val totalAmount: Double,
 
     @SerialName("sale_date")
@@ -21,32 +17,32 @@ data class SaleDTO(
     @SerialName("payment_method")
     val paymentMethod: String? = null,
 
-    @SerialName("branch_id")
-    val branchId: Int? = null,
-
     @SerialName("user_id")
     val userId: String? = null,
 
     @SerialName("status")
-    val status: String? = null
+    val status: String? = null,
+
+    @SerialName("subtotal")
+    val subtotal: Double = 0.0,
+
+    @SerialName("itbis")
+    val itbis: Double = 0.0,
+
+    @SerialName("invoice_number")
+    val invoiceNumber: String? = null
 )
 
-/**
- * DTO para los ítems de venta (sale_items)
- */
 @Serializable
 data class SaleItemDTO(
-    @SerialName("sale_item_id")
-    val saleItemId: Int,
+    @SerialName("sale_detail_id")
+    val saleDetailId: Int,
 
     @SerialName("sale_id")
-    val saleId: Int,
+    val saleId: String,
 
     @SerialName("product_id")
     val productId: Int,
-
-    @SerialName("product_name")
-    val productName: String,
 
     @SerialName("quantity")
     val quantity: Int,
@@ -54,13 +50,16 @@ data class SaleItemDTO(
     @SerialName("unit_price")
     val unitPrice: Double,
 
-    @SerialName("subtotal")
-    val subtotal: Double
-)
+    @SerialName("final_price")
+    val finalPrice: Double,
 
-/**
- * DTO para agregados de productos más vendidos
- */
+    @SerialName("products")
+    val product: ProductNameDTO? = null
+) {
+    val productName: String
+        get() = product?.name ?: "Producto $productId"
+}
+
 @Serializable
 data class TopProductDTO(
     @SerialName("product_id")
@@ -76,9 +75,6 @@ data class TopProductDTO(
     val totalRevenue: Double
 )
 
-/**
- * DTO para agregados de ingresos por fecha
- */
 @Serializable
 data class RevenueDateDTO(
     @SerialName("sale_date")
@@ -89,4 +85,9 @@ data class RevenueDateDTO(
 
     @SerialName("sales_count")
     val salesCount: Int
+)
+
+@Serializable
+data class ProductNameDTO(
+    val name: String
 )

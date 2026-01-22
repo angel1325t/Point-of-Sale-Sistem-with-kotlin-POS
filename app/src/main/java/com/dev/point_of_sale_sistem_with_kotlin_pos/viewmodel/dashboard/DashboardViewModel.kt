@@ -4,20 +4,29 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.dashboard.DashboardIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.*
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.DashboardError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.DashboardState
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.DashboardSummary
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.RevenueDataPoint
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.RevenueDateDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.TopProduct
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.TopProductDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardData
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard.DashboardRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class DashboardViewModel(
     private val repository: DashboardRepository,
-    private val branchId: String? = null
+    private val sessionPreferences: SessionPreferences
 ) : ViewModel() {
 
     companion object {
@@ -28,8 +37,9 @@ class DashboardViewModel(
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
+
     init {
-        Log.d(TAG, "🚀 DashboardViewModel inicializado con branchId: $branchId")
+        Log.d(TAG, "🚀 DashboardViewModel inicializado")
 
         val calendar = Calendar.getInstance()
         val endDate = formatDate(calendar.time)
@@ -66,6 +76,7 @@ class DashboardViewModel(
      */
     private fun loadDashboard() {
         viewModelScope.launch {
+            val branchId = sessionPreferences.getBranchId()
             Log.d(TAG, "📊 Cargando dashboard con branchId: $branchId")
             _state.update { it.copy(isLoading = true, error = null) }
 
@@ -81,7 +92,6 @@ class DashboardViewModel(
                             summary = calculateSummary(data),
                             topProducts = mapTopProducts(data.topProducts),
                             revenueData = mapRevenueData(data.revenueData),
-                            profitMargins = data.profitMargins,
                             isLoading = false,
                             lastUpdated = System.currentTimeMillis()
                         )
@@ -107,6 +117,7 @@ class DashboardViewModel(
      */
     private fun refreshData() {
         viewModelScope.launch {
+            val branchId = sessionPreferences.getBranchId()
             Log.d(TAG, "🔄 Refrescando datos...")
             _state.update { it.copy(isRefreshing = true, error = null) }
 
@@ -122,7 +133,6 @@ class DashboardViewModel(
                             summary = calculateSummary(data),
                             topProducts = mapTopProducts(data.topProducts),
                             revenueData = mapRevenueData(data.revenueData),
-                            profitMargins = data.profitMargins,
                             isRefreshing = false,
                             lastUpdated = System.currentTimeMillis()
                         )

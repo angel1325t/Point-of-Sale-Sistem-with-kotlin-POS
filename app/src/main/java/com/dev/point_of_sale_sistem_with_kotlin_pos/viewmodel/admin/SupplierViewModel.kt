@@ -3,7 +3,8 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.suppliers.SupplierIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.SupplierError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.SupplierState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,198 +19,80 @@ class SupplierViewModel(
     private val _state = MutableStateFlow(SupplierState())
     val state: StateFlow<SupplierState> = _state.asStateFlow()
 
-    init {
-        handleIntent(SupplierIntent.LoadSuppliers)
-    }
-
-    // ───────────────────────────────────────────────
-    // MANEJO DE INTENTS
-    // ───────────────────────────────────────────────
     fun handleIntent(intent: SupplierIntent) {
         when (intent) {
             is SupplierIntent.LoadSuppliers -> loadSuppliers()
             is SupplierIntent.LoadSupplierById -> loadSupplierById(intent.supplierId)
-            is SupplierIntent.SearchSupplier -> searchSuppliers(intent.query)
             is SupplierIntent.CreateSupplier -> createSupplier(
-                name = intent.name,
-                contact = intent.contact,
-                phone = intent.phone,
-                email = intent.email,
-                address = intent.address
+                intent.name, intent.contact, intent.phone, intent.email, intent.address
             )
             is SupplierIntent.UpdateSupplier -> updateSupplier(
-                supplierId = intent.supplierId,
-                name = intent.name,
-                contact = intent.contact,
-                phone = intent.phone,
-                email = intent.email,
-                address = intent.address
+                intent.supplierId, intent.name, intent.contact,
+                intent.phone, intent.email, intent.address
             )
             is SupplierIntent.DeleteSupplier -> deleteSupplier(intent.supplierId)
+            is SupplierIntent.SearchSupplier -> searchSuppliers(intent.query)
+            is SupplierIntent.FilterSuppliers -> filterSuppliers(intent.onlyCompleteContact)
+            is SupplierIntent.ValidateName -> validateSupplierName(intent.name)
+            is SupplierIntent.ValidatePhone -> validatePhone(intent.phone)
+            is SupplierIntent.ValidateEmail -> validateEmail(intent.email)
+            is SupplierIntent.ClearError -> clearError()
+            is SupplierIntent.ClearSelectedSupplier -> clearSelectedSupplier()
         }
     }
-
-    // ───────────────────────────────────────────────
-    // MÉTODOS PÚBLICOS ADICIONALES (Helper Methods)
-    // ───────────────────────────────────────────────
-
-    fun selectSupplier(supplierId: Int?) {
-        if (supplierId == null) {
-            clearSelection()
-            return
-        }
-        val supplier = _state.value.suppliers.find { it.supplierId == supplierId }
-        _state.update { it.copy(selectedSupplier = supplier) }
-    }
-
-    fun clearSelection() {
-        _state.update {
-            it.copy(
-                selectedSupplier = null,
-                nameError = null,
-                emailError = null,
-                phoneError = null
-            )
-        }
-    }
-
-    fun clearError() {
-        _state.update {
-            it.copy(
-                error = null,
-                operationSuccess = false,
-                successMessage = null
-            )
-        }
-    }
-
-    fun resetState() {
-        _state.update { SupplierState() }
-        loadSuppliers()
-    }
-
-    fun validateSupplierName(name: String) {
-        val error = when {
-            name.isBlank() -> "El nombre no puede estar vacío"
-            name.length < 2 -> "Debe tener al menos 2 caracteres"
-            name.length > 100 -> "Máximo 100 caracteres"
-            else -> null
-        }
-        _state.update { it.copy(nameError = error) }
-    }
-
-    fun validatePhone(phone: String?) {
-        val error = when {
-            !phone.isNullOrBlank() && phone.length < 8 -> "Teléfono demasiado corto"
-            !phone.isNullOrBlank() && phone.length > 20 -> "Teléfono demasiado largo"
-            else -> null
-        }
-        _state.update { it.copy(phoneError = error) }
-    }
-
-    fun validateEmail(email: String?) {
-        val error = when {
-            !email.isNullOrBlank() && !email.contains("@") -> "Email inválido"
-            !email.isNullOrBlank() && email.length > 255 -> "Email demasiado largo"
-            else -> null
-        }
-        _state.update { it.copy(emailError = error) }
-    }
-
-    // ───────────────────────────────────────────────
-    // CRUD OPERATIONS (Private)
-    // ───────────────────────────────────────────────
 
     private fun loadSuppliers() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            repository.getAllSuppliers()
-                .onSuccess { suppliers ->
+            val result = repository.getAllSuppliers()
+            result.fold(
+                onSuccess = { suppliers ->
                     _state.update {
                         it.copy(
                             suppliers = suppliers,
-                            filteredSuppliers = suppliers,
+                            displaySuppliers = suppliers,
                             isLoading = false,
-                            totalItems = suppliers.size
+                            isFiltered = false,
+                            searchQuery = ""
                         )
                     }
-                }
-                .onFailure { throwable ->
+                },
+                onFailure = { error ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = throwable as? SupplierError
-                                ?: SupplierError.UnknownError(cause = throwable)
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
                         )
                     }
                 }
+            )
         }
     }
 
-    private fun loadSupplierById(id: Int) {
+    private fun loadSupplierById(supplierId: Int) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            repository.getSupplierById(id)
-                .onSuccess { supplier ->
+            val result = repository.getSupplierById(supplierId)
+            result.fold(
+                onSuccess = { supplier ->
                     _state.update {
                         it.copy(
                             selectedSupplier = supplier,
                             isLoading = false
                         )
                     }
-                }
-                .onFailure { throwable ->
+                },
+                onFailure = { error ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = throwable as? SupplierError
-                                ?: SupplierError.UnknownError(cause = throwable)
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
                         )
                     }
                 }
-        }
-    }
-
-    private fun searchSuppliers(query: String) {
-        viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    searchQuery = query,
-                    isLoading = true,
-                    error = null
-                )
-            }
-
-            if (query.isBlank()) {
-                _state.update {
-                    it.copy(
-                        filteredSuppliers = it.suppliers,
-                        isLoading = false
-                    )
-                }
-                return@launch
-            }
-
-            repository.searchSuppliers(query)
-                .onSuccess { results ->
-                    _state.update {
-                        it.copy(
-                            filteredSuppliers = results,
-                            isLoading = false
-                        )
-                    }
-                }
-                .onFailure { throwable ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = throwable as? SupplierError
-                                ?: SupplierError.UnknownError(cause = throwable)
-                        )
-                    }
-                }
+            )
         }
     }
 
@@ -221,51 +104,32 @@ class SupplierViewModel(
         address: String?
     ) {
         viewModelScope.launch {
+            if (!validateBeforeSave(name, phone, email)) return@launch
             _state.update { it.copy(isLoading = true, error = null) }
 
-            repository.createSupplier(name, contact, phone, email, address)
-                .onSuccess { supplier ->
+            val result = repository.createSupplier(name, contact, phone, email, address)
+            result.fold(
+                onSuccess = { newSupplier ->
+                    val updatedList = _state.value.suppliers + newSupplier
                     _state.update {
                         it.copy(
-                            suppliers = it.suppliers + supplier,
-                            filteredSuppliers = it.filteredSuppliers + supplier,
+                            suppliers = updatedList,
+                            displaySuppliers = updatedList,
                             isLoading = false,
                             operationSuccess = true,
-                            successMessage = "Proveedor creado exitosamente",
-                            selectedSupplier = null,
-                            nameError = null,
-                            emailError = null,
-                            phoneError = null,
-                            totalItems = it.suppliers.size + 1
+                            successMessage = "Proveedor creado exitosamente"
                         )
                     }
-                }
-                .onFailure { throwable ->
-                    val error = throwable as? SupplierError
-                        ?: SupplierError.UnknownError(cause = throwable)
-
+                },
+                onFailure = { error ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = error,
-                            operationSuccess = false,
-                            nameError = when (error) {
-                                is SupplierError.ValidationError ->
-                                    if (error.field == "name") error.message else it.nameError
-                                is SupplierError.DuplicateNameError -> error.message
-                                else -> it.nameError
-                            },
-                            phoneError = when (error) {
-                                is SupplierError.InvalidPhoneError -> error.message
-                                else -> it.phoneError
-                            },
-                            emailError = when (error) {
-                                is SupplierError.InvalidEmailError -> error.message
-                                else -> it.emailError
-                            }
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
                         )
                     }
                 }
+            )
         }
     }
 
@@ -278,54 +142,35 @@ class SupplierViewModel(
         address: String?
     ) {
         viewModelScope.launch {
+            if (!validateBeforeSave(name, phone, email)) return@launch
             _state.update { it.copy(isLoading = true, error = null) }
 
-            repository.updateSupplier(supplierId, name, contact, phone, email, address)
-                .onSuccess { supplier ->
+            val result = repository.updateSupplier(supplierId, name, contact, phone, email, address)
+            result.fold(
+                onSuccess = { updatedSupplier ->
+                    val updatedList = _state.value.suppliers.map {
+                        if (it.supplierId == supplierId) updatedSupplier else it
+                    }
                     _state.update {
                         it.copy(
-                            suppliers = it.suppliers.map { s ->
-                                if (s.supplierId == supplierId) supplier else s
-                            },
-                            filteredSuppliers = it.filteredSuppliers.map { s ->
-                                if (s.supplierId == supplierId) supplier else s
-                            },
+                            suppliers = updatedList,
+                            displaySuppliers = updatedList,
+                            selectedSupplier = updatedSupplier,
                             isLoading = false,
                             operationSuccess = true,
-                            successMessage = "Proveedor actualizado exitosamente",
-                            selectedSupplier = null,
-                            nameError = null,
-                            emailError = null,
-                            phoneError = null
+                            successMessage = "Proveedor actualizado exitosamente"
                         )
                     }
-                }
-                .onFailure { throwable ->
-                    val error = throwable as? SupplierError
-                        ?: SupplierError.UnknownError(cause = throwable)
-
+                },
+                onFailure = { error ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = error,
-                            operationSuccess = false,
-                            nameError = when (error) {
-                                is SupplierError.ValidationError ->
-                                    if (error.field == "name") error.message else it.nameError
-                                is SupplierError.DuplicateNameError -> error.message
-                                else -> it.nameError
-                            },
-                            phoneError = when (error) {
-                                is SupplierError.InvalidPhoneError -> error.message
-                                else -> it.phoneError
-                            },
-                            emailError = when (error) {
-                                is SupplierError.InvalidEmailError -> error.message
-                                else -> it.emailError
-                            }
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
                         )
                     }
                 }
+            )
         }
     }
 
@@ -333,30 +178,127 @@ class SupplierViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            repository.deleteSupplier(supplierId)
-                .onSuccess {
+            val result = repository.deleteSupplier(supplierId)
+            result.fold(
+                onSuccess = {
+                    val updatedList = _state.value.suppliers.filter { it.supplierId != supplierId }
                     _state.update {
                         it.copy(
-                            suppliers = it.suppliers.filter { s -> s.supplierId != supplierId },
-                            filteredSuppliers = it.filteredSuppliers.filter { s -> s.supplierId != supplierId },
+                            suppliers = updatedList,
+                            displaySuppliers = updatedList,
                             isLoading = false,
                             operationSuccess = true,
-                            successMessage = "Proveedor eliminado exitosamente",
-                            selectedSupplier = null,
-                            totalItems = it.suppliers.size - 1
+                            successMessage = "Proveedor eliminado exitosamente"
                         )
                     }
-                }
-                .onFailure { throwable ->
+                },
+                onFailure = { error ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = throwable as? SupplierError
-                                ?: SupplierError.UnknownError(cause = throwable),
-                            operationSuccess = false
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause = error)
                         )
                     }
                 }
+            )
+        }
+    }
+
+
+    private fun searchSuppliers(query: String) {
+        _state.update { it.copy(searchQuery = query) }
+
+        val filtered = if (query.isBlank()) {
+            _state.value.suppliers
+        } else {
+            _state.value.suppliers.filter { it.matchesSearch(query) }
+        }
+
+        _state.update { it.copy(displaySuppliers = filtered) }
+    }
+
+    private fun filterSuppliers(onlyCompleteContact: Boolean) {
+        val filtered = if (onlyCompleteContact) {
+            _state.value.suppliers.filter { it.hasCompleteContact() }
+        } else {
+            _state.value.suppliers
+        }
+
+        _state.update {
+            it.copy(
+                displaySuppliers = filtered,
+                isFiltered = onlyCompleteContact
+            )
+        }
+    }
+
+    fun validateSupplierName(name: String) {
+        val error = when {
+            name.isBlank() -> "El nombre es requerido"
+            name.length < 3 -> "El nombre debe tener al menos 3 caracteres"
+            name.length > 100 -> "El nombre no puede exceder 100 caracteres"
+            else -> null
+        }
+        _state.update { it.copy(nameError = error) }
+    }
+
+    fun validatePhone(phone: String) {
+        if (phone.isBlank()) {
+            _state.update { it.copy(phoneError = null) }
+            return
+        }
+
+        val error = when {
+            phone.length < 10 -> "El teléfono debe tener al menos 10 dígitos"
+            phone.length > 15 -> "El teléfono no puede exceder 15 dígitos"
+            !phone.matches(Regex("^[0-9+\\-() ]+$")) -> "Formato de teléfono inválido"
+            else -> null
+        }
+        _state.update { it.copy(phoneError = error) }
+    }
+
+    fun validateEmail(email: String) {
+        if (email.isBlank()) {
+            _state.update { it.copy(emailError = null) }
+            return
+        }
+
+        val error = if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            "Email inválido"
+        } else null
+
+        _state.update { it.copy(emailError = error) }
+    }
+
+    private fun validateBeforeSave(name: String, phone: String?, email: String?): Boolean {
+        validateSupplierName(name)
+        phone?.let { validatePhone(it) }
+        email?.let { validateEmail(it) }
+
+        val currentState = _state.value
+        return currentState.nameError == null &&
+                currentState.phoneError == null &&
+                currentState.emailError == null
+    }
+
+    fun clearError() {
+        _state.update {
+            it.copy(
+                error = null,
+                operationSuccess = false,
+                successMessage = null
+            )
+        }
+    }
+
+    private fun clearSelectedSupplier() {
+        _state.update {
+            it.copy(
+                selectedSupplier = null,
+                nameError = null,
+                phoneError = null,
+                emailError = null
+            )
         }
     }
 }

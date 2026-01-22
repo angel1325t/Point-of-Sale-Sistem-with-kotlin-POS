@@ -14,7 +14,14 @@ data class Category(
     val description: String? = null,
     @SerialName("parent_id")
     val parentId: Int? = null,
-    val parentName: String? = null
+    val parentName: String? = null,
+
+    // 🔥 NUEVO
+    @SerialName("company_id")
+    val companyId: String,
+
+    @SerialName("branch_id")
+    val branchId: String
 )
 
 /**
@@ -27,8 +34,16 @@ data class CategoryDTO(
     val name: String,
     val description: String? = null,
     @SerialName("parent_id")
-    val parentId: Int? = null
+    val parentId: Int? = null,
+
+    // 🔥 NUEVO
+    @SerialName("company_id")
+    val companyId: String,
+
+    @SerialName("branch_id")
+    val branchId: String
 )
+
 
 /**
  * DTO para insertar categorías
@@ -38,7 +53,14 @@ data class CategoryInsertDTO(
     val name: String,
     val description: String? = null,
     @SerialName("parent_id")
-    val parentId: Int? = null
+    val parentId: Int? = null,
+
+    // 🔥 CLAVE
+    @SerialName("company_id")
+    val companyId: String,
+
+    @SerialName("branch_id")
+    val branchId: String
 )
 
 /**

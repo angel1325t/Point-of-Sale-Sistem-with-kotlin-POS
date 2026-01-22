@@ -4,18 +4,18 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.dao.BranchCacheDao
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.dao.OfflineCashRegisterDao
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.dao.OfflineProductCacheDao
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.dao.OfflineSalesDao
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.dao.OfflineStockDao
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.dao.SyncQueueDao
-import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.dao.BranchCacheDao
+import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineBranchEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineCashRegisterHistoryEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineProductCacheEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineProductStockEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineSaleDetailEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineSaleEntity
-import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineBranchEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.SyncQueueEntity
 
 @Database(
@@ -28,7 +28,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.SyncQueu
         OfflineBranchEntity::class,
         SyncQueueEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class OfflineDatabase : RoomDatabase() {

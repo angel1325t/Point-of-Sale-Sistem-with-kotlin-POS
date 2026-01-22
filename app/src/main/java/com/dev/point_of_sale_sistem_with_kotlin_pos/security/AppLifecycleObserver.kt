@@ -1,10 +1,9 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.security
 
-import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -47,6 +46,6 @@ object AppLifecycleObserver : DefaultLifecycleObserver {
     }
 
     fun resetFirstLaunch() {
-        _isFirstLaunch = true
+        isFirstLaunch = true
     }
 }

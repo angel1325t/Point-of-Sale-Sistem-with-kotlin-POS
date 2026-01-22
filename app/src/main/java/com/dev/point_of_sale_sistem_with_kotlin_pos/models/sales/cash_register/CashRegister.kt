@@ -56,7 +56,9 @@ data class CashRegisterHistory(
     val is_open: Boolean = false,
 
     @SerialName("created_at")
-    val created_at: String? = null
+    val created_at: String? = null,
+    @SerialName("branch_id")
+    val branch_id: String,
 ) {
     // ════════════════════════════════════════════════════
     // HELPERS PARA FORMATEAR FECHAS

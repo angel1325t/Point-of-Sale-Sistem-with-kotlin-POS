@@ -18,6 +18,7 @@ data class OfflineCashRegisterHistoryEntity(
     val finalBalance: Double? = null,
 
     val isOpen: Boolean,
+    val branchId: String,
 
     val expectedBalance: Double? = null,
     val difference: Double? = null,

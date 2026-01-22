@@ -7,6 +7,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Sa
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleCreatedDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetailInsertDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleInsertDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -19,10 +20,12 @@ data class ProductStockUpdate(
 
 class SalesRepository(
     private val supabase: SupabaseClient,
+    private val sessionPreferences: SessionPreferences
 ) {
     companion object {
         private const val TAG = "SalesRepository"
     }
+
 
     /**
      * Crea una venta completa en Supabase con todos sus detalles
@@ -33,7 +36,6 @@ class SalesRepository(
 
         Log.d(TAG, "Creating sale with ${sale.saleDetails.size} items")
 
-        // 🔐 VALIDAR QUE TENGA cash_register_history_id
         if (sale.cashRegisterHistoryId.isBlank()) {
             throw IllegalStateException("No se puede crear venta sin caja abierta")
         }
@@ -49,7 +51,11 @@ class SalesRepository(
             }
         }
 
-        // 2️⃣ CREAR LA VENTA CON cash_register_history_id
+        // 2️⃣ OBTENER BRANCH_ID DE SESSION PREFERENCES
+        val branchId = sessionPreferences.getBranchId()
+        Log.d(TAG, "Branch ID from session: $branchId")
+
+        // 3️⃣ CREAR LA VENTA CON cash_register_history_id y branch_id
         val saleDTO = SaleInsertDTO(
             userId = sale.userId.toString(),
             saleDate = sale.saleDate.toString(),
@@ -63,10 +69,11 @@ class SalesRepository(
             originalSaleId = sale.originalSaleId?.toString(),
             creditRemaining = sale.creditRemaining,
             cashRegisterHistoryId = sale.cashRegisterHistoryId,
-            localId = null // Supabase generará su propio UUID
+            branchId = branchId, // ✅ OBTENIDO DE SESSION PREFERENCES
+            localId = null
         )
 
-        Log.d(TAG, "Inserting sale - Cash Register History ID: ${sale.cashRegisterHistoryId}")
+        Log.d(TAG, "Inserting sale - Cash Register: ${sale.cashRegisterHistoryId}, Branch: $branchId")
         Log.d(TAG, "Sale totals - Subtotal: ${sale.subtotal}, ITBIS: ${sale.itbis}, Total: ${sale.total}")
 
         val createdSale = supabase.from("sales")
@@ -82,7 +89,7 @@ class SalesRepository(
 
         Log.d(TAG, "Sale created: ${createdSale.saleId} - Invoice: ${createdSale.invoiceNumber}")
 
-        // 3️⃣ CREAR LOS DETALLES
+        // 4️⃣ CREAR LOS DETALLES
         val detailsDTO = sale.saleDetails.map {
             SaleDetailInsertDTO(
                 saleId = createdSale.saleId,
@@ -97,7 +104,7 @@ class SalesRepository(
         supabase.from("sale_details").insert(detailsDTO)
         Log.d(TAG, "Sale details inserted: ${detailsDTO.size} items")
 
-        // 4️⃣ ACTUALIZAR STOCK DE CADA PRODUCTO
+        // 5️⃣ ACTUALIZAR STOCK DE CADA PRODUCTO
         for (detail in sale.saleDetails) {
             updateProductStock(detail.productId, -detail.quantity)
         }
@@ -107,9 +114,6 @@ class SalesRepository(
         createdSale
     }
 
-    /**
-     * Obtiene el stock actual de un producto
-     */
     private suspend fun getCurrentStock(productId: Int): Int {
         return try {
             @Serializable
@@ -130,11 +134,6 @@ class SalesRepository(
         }
     }
 
-    /**
-     * Actualiza el stock de un producto (suma o resta)
-     * @param productId ID del producto
-     * @param quantityChange Cantidad a sumar (+) o restar (-)
-     */
     private suspend fun updateProductStock(productId: Int, quantityChange: Int) {
         try {
             val currentStock = getCurrentStock(productId)
@@ -145,14 +144,8 @@ class SalesRepository(
             }
 
             supabase.from("products")
-                .update(
-                    {
-                        set("current_stock", newStock)
-                    }
-                ) {
-                    filter {
-                        eq("product_id", productId)
-                    }
+                .update({ set("current_stock", newStock) }) {
+                    filter { eq("product_id", productId) }
                 }
 
             Log.d(TAG, "Product $productId stock updated: $currentStock -> $newStock (${if (quantityChange > 0) "+" else ""}$quantityChange)")
@@ -163,26 +156,16 @@ class SalesRepository(
         }
     }
 
-    /**
-     * Revierte el stock de una venta (útil para devoluciones)
-     */
     suspend fun revertSaleStock(saleId: String): Result<Unit> = runCatching {
         @Serializable
-        data class SaleDetailResponse(
-            val product_id: Int,
-            val quantity: Int
-        )
+        data class SaleDetailResponse(val product_id: Int, val quantity: Int)
 
-        // Obtener detalles de la venta
         val details = supabase.from("sale_details")
             .select(Columns.list("product_id", "quantity")) {
-                filter {
-                    eq("sale_id", saleId)
-                }
+                filter { eq("sale_id", saleId) }
             }
             .decodeList<SaleDetailResponse>()
 
-        // Revertir stock (sumar las cantidades)
         for (detail in details) {
             updateProductStock(detail.product_id, detail.quantity)
         }

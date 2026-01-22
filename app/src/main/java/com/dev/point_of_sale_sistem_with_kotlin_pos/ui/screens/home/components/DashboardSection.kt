@@ -1,13 +1,39 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,21 +120,15 @@ fun DashboardSection(
                 // Tarjetas de resumen
                 SummaryCards(state = state)
 
-                // Productos más vendidos
-                TopProductsCard(
-                    products = state.topProducts,
-                    modifier = Modifier.fillMaxWidth()
-                )
+//                // Productos más vendidos
+//                TopProductsCard(
+//                    products = state.topProducts,
+//                    modifier = Modifier.fillMaxWidth()
+//                )
 
                 // Gráfico de ingresos
                 RevenueChart(
                     data = state.revenueData,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Márgenes de ganancia
-                ProfitMarginsCard(
-                    margins = state.profitMargins,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -162,16 +182,12 @@ private fun SummaryCards(state: DashboardState) {
                 modifier = Modifier.weight(1f)
             )
 
-            // Margen de ganancia
+            // Ventas del día
             MetricCard(
-                title = "Margen",
-                value = "${String.format("%.1f", state.profitMargins.profitMargin)}%",
-                icon = Icons.Default.TrendingUp,
-                color = if (state.profitMargins.hasProfit) {
-                    Color(0xFF4CAF50)
-                } else {
-                    Color(0xFFF44336)
-                },
+                title = "Ventas Hoy",
+                value = state.revenueData.lastOrNull()?.salesCount?.toString() ?: "0",
+                icon = Icons.Default.ShoppingCart,
+                color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -225,63 +241,63 @@ private fun MetricCard(
     }
 }
 
-// ═══════════════════════════════════════════════════════════
-// PRODUCTOS MÁS VENDIDOS
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Tarjeta de productos más vendidos
- */
-@Composable
-private fun TopProductsCard(
-    products: List<TopProduct>,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.TrendingUp,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = "Productos Más Vendidos",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (products.isEmpty()) {
-                EmptyProductsList()
-            } else {
-                products.forEachIndexed { index, product ->
-                    TopProductItem(
-                        product = product,
-                        rank = index + 1
-                    )
-                    if (index < products.lastIndex) {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                    }
-                }
-            }
-        }
-    }
-}
+//// ═══════════════════════════════════════════════════════════
+//// PRODUCTOS MÁS VENDIDOS
+//// ═══════════════════════════════════════════════════════════
+//
+///**
+// * Tarjeta de productos más vendidos
+// */
+//@Composable
+//private fun TopProductsCard(
+//    products: List<TopProduct>,
+//    modifier: Modifier = Modifier
+//) {
+//    Card(
+//        modifier = modifier,
+//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+//    ) {
+//        Column(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(16.dp)
+//        ) {
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                verticalAlignment = Alignment.CenterVertically,
+//                horizontalArrangement = Arrangement.spacedBy(8.dp)
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Default.TrendingUp,
+//                    contentDescription = null,
+//                    tint = MaterialTheme.colorScheme.primary,
+//                    modifier = Modifier.size(24.dp)
+//                )
+//                Text(
+//                    text = "Productos Más Vendidos",
+//                    style = MaterialTheme.typography.titleMedium,
+//                    fontWeight = FontWeight.Bold
+//                )
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            if (products.isEmpty()) {
+//                EmptyProductsList()
+//            } else {
+//                products.forEachIndexed { index, product ->
+//                    TopProductItem(
+//                        product = product,
+//                        rank = index + 1
+//                    )
+//                    if (index < products.lastIndex) {
+//                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 /**
  * Item individual de producto más vendido
@@ -482,143 +498,6 @@ private fun EmptyChartView() {
             text = "No hay datos de ingresos",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-// ═══════════════════════════════════════════════════════════
-// MÁRGENES DE GANANCIA
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Tarjeta de márgenes de ganancia
- */
-@Composable
-private fun ProfitMarginsCard(
-    margins: com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.ProfitMargins,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountBalance,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = "Análisis de Rentabilidad",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ProfitRow(label = "Ingresos Totales", value = margins.totalRevenue)
-            ProfitRow(label = "Costo Total (Est.)", value = margins.totalCost)
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            ProfitRow(
-                label = "Ganancia Bruta",
-                value = margins.grossProfit,
-                isHighlight = true
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = if (margins.hasProfit) {
-                    Color(0xFF4CAF50).copy(alpha = 0.1f)
-                } else {
-                    Color(0xFFF44336).copy(alpha = 0.1f)
-                },
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (margins.hasProfit) {
-                                Icons.Default.TrendingUp
-                            } else {
-                                Icons.Default.TrendingDown
-                            },
-                            contentDescription = null,
-                            tint = if (margins.hasProfit) Color(0xFF4CAF50) else Color(0xFFF44336)
-                        )
-                        Text(
-                            text = "Margen de Ganancia",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Text(
-                        text = "${String.format("%.1f", margins.profitMargin)}%",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (margins.hasProfit) Color(0xFF4CAF50) else Color(0xFFF44336)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfitRow(
-    label: String,
-    value: Double,
-    isHighlight: Boolean = false
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = if (isHighlight) {
-                MaterialTheme.typography.bodyLarge
-            } else {
-                MaterialTheme.typography.bodyMedium
-            },
-            fontWeight = if (isHighlight) FontWeight.Bold else FontWeight.Normal
-        )
-        Text(
-            text = formatCurrency(value),
-            style = if (isHighlight) {
-                MaterialTheme.typography.bodyLarge
-            } else {
-                MaterialTheme.typography.bodyMedium
-            },
-            fontWeight = if (isHighlight) FontWeight.Bold else FontWeight.Medium,
-            color = if (isHighlight) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
         )
     }
 }

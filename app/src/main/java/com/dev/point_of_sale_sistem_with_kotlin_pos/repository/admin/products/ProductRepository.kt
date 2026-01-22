@@ -277,4 +277,3 @@ class ProductRepository(
         }
 }
 
-annotation class ProductRepository

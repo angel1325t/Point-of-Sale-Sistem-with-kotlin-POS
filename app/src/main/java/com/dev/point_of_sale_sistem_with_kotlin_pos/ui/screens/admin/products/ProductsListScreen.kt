@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.products.ProductsIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductsError
@@ -32,83 +33,127 @@ fun ProductsListScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
+    // Verificar permisos
+    val canView = PermissionChecker.canViewProducts()
+    val canCreate = PermissionChecker.canCreateProducts()
+    val canUpdate = PermissionChecker.canUpdateProducts()
+    val canDelete = PermissionChecker.canDeleteProducts()
+
+    // Si no puede ver productos, navegar atrás
+    LaunchedEffect(canView) {
+        if (!canView) {
+            onNavigateBack()
+        }
+    }
+
+    val errorMessages = remember {
+        mutableMapOf<String, String>()
+    }
+
+    val successMessages = remember {
+        mutableMapOf<String, String>()
+    }
+
+    errorMessages["network"] = stringResource(R.string.error_network)
+    errorMessages["timeout"] = stringResource(R.string.error_timeout)
+    errorMessages["no_internet"] = stringResource(R.string.error_no_internet)
+    errorMessages["product_name_invalid"] = stringResource(R.string.error_product_name_invalid)
+    errorMessages["product_name_too_short"] = stringResource(R.string.error_product_name_too_short)
+    errorMessages["product_name_too_long"] = stringResource(R.string.error_product_name_too_long)
+    errorMessages["price_invalid"] = stringResource(R.string.error_price_invalid)
+    errorMessages["price_zero_or_negative"] = stringResource(R.string.error_price_zero_or_negative)
+    errorMessages["stock_invalid"] = stringResource(R.string.error_stock_invalid)
+    errorMessages["stock_negative"] = stringResource(R.string.error_stock_negative)
+    errorMessages["category_invalid"] = stringResource(R.string.error_category_invalid)
+    errorMessages["barcode_invalid"] = stringResource(R.string.error_barcode_invalid)
+    errorMessages["discount_invalid"] = stringResource(R.string.error_discount_invalid)
+    errorMessages["discount_value_invalid"] = stringResource(R.string.error_discount_value_invalid)
+    errorMessages["discount_percentage_exceeded"] = stringResource(R.string.error_discount_percentage_exceeded)
+    errorMessages["product_not_found"] = stringResource(R.string.error_product_not_found)
+    errorMessages["database"] = stringResource(R.string.error_database)
+    errorMessages["unauthorized"] = stringResource(R.string.error_unauthorized)
+    errorMessages["create_failed"] = stringResource(R.string.error_create_product_failed)
+    errorMessages["update_failed"] = stringResource(R.string.error_update_product_failed)
+    errorMessages["delete_failed"] = stringResource(R.string.error_delete_product_failed)
+    errorMessages["load_failed"] = stringResource(R.string.error_load_products_failed)
+    errorMessages["search_failed"] = stringResource(R.string.error_search_products_failed)
+    errorMessages["image_upload"] = stringResource(R.string.error_image_upload_failed)
+    errorMessages["barcode_generation"] = stringResource(R.string.error_barcode_generation_failed)
+    errorMessages["storage"] = stringResource(R.string.error_storage)
+    errorMessages["insufficient_stock"] = stringResource(R.string.error_insufficient_stock)
+    errorMessages["stock_update"] = stringResource(R.string.error_stock_update_failed)
+    errorMessages["unknown_simple"] = stringResource(R.string.error_unknown_simple)
+
+    successMessages["created"] = stringResource(R.string.product_created_success)
+    successMessages["updated"] = stringResource(R.string.product_updated_success)
+    successMessages["deleted"] = stringResource(R.string.product_deleted_success)
+
+    val validationErrorFormat = stringResource(R.string.error_validation_generic)
+    val duplicateBarcodeFormat = stringResource(R.string.error_duplicate_barcode)
+    val unknownErrorFormat = stringResource(R.string.error_unknown)
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var productToDelete by remember { mutableStateOf<ProductDTO?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Función helper para obtener el mensaje de error (NO @Composable)
     fun getErrorMessage(error: ProductsError): String {
         return when (error) {
-            // Errores de red
-            is ProductsError.NetworkError -> context.getString(R.string.error_network)
-            is ProductsError.TimeoutError -> context.getString(R.string.error_timeout)
-            is ProductsError.NoInternetConnection -> context.getString(R.string.error_no_internet)
-
-            // Errores de validación
-            is ProductsError.ValidationError -> context.getString(R.string.error_validation_generic, error.field, error.message)
-            is ProductsError.InvalidProductName -> context.getString(R.string.error_product_name_invalid)
-            is ProductsError.ProductNameTooShort -> context.getString(R.string.error_product_name_too_short)
-            is ProductsError.ProductNameTooLong -> context.getString(R.string.error_product_name_too_long)
-            is ProductsError.InvalidPrice -> context.getString(R.string.error_price_invalid)
-            is ProductsError.PriceZeroOrNegative -> context.getString(R.string.error_price_zero_or_negative)
-            is ProductsError.InvalidStock -> context.getString(R.string.error_stock_invalid)
-            is ProductsError.StockNegative -> context.getString(R.string.error_stock_negative)
-            is ProductsError.InvalidCategory -> context.getString(R.string.error_category_invalid)
-            is ProductsError.InvalidBarcode -> context.getString(R.string.error_barcode_invalid)
-            is ProductsError.InvalidDiscount -> context.getString(R.string.error_discount_invalid)
-            is ProductsError.DiscountValueInvalid -> context.getString(R.string.error_discount_value_invalid)
-            is ProductsError.DiscountPercentageExceeded -> context.getString(R.string.error_discount_percentage_exceeded)
-
-            // Errores de base de datos
-            is ProductsError.ProductNotFound -> context.getString(R.string.error_product_not_found)
-            is ProductsError.DuplicateBarcode -> context.getString(R.string.error_duplicate_barcode, error.barcode)
-            is ProductsError.DatabaseError -> context.getString(R.string.error_database)
-            is ProductsError.UnauthorizedAccess -> context.getString(R.string.error_unauthorized)
-
-            // Errores de operaciones
-            is ProductsError.CreateProductFailed -> context.getString(R.string.error_create_product_failed)
-            is ProductsError.UpdateProductFailed -> context.getString(R.string.error_update_product_failed)
-            is ProductsError.DeleteProductFailed -> context.getString(R.string.error_delete_product_failed)
-            is ProductsError.LoadProductsFailed -> context.getString(R.string.error_load_products_failed)
-            is ProductsError.SearchProductsFailed -> context.getString(R.string.error_search_products_failed)
-
-            // Errores de storage
-            is ProductsError.ImageUploadFailed -> context.getString(R.string.error_image_upload_failed)
-            is ProductsError.BarcodeGenerationFailed -> context.getString(R.string.error_barcode_generation_failed)
-            is ProductsError.StorageError -> context.getString(R.string.error_storage)
-
-            // Errores de stock
-            is ProductsError.InsufficientStock -> context.getString(R.string.error_insufficient_stock)
-            is ProductsError.StockUpdateFailed -> context.getString(R.string.error_stock_update_failed)
-
-            // Error genérico
+            is ProductsError.NetworkError -> errorMessages["network"]!!
+            is ProductsError.TimeoutError -> errorMessages["timeout"]!!
+            is ProductsError.NoInternetConnection -> errorMessages["no_internet"]!!
+            is ProductsError.ValidationError -> String.format(validationErrorFormat, error.field, error.message)
+            is ProductsError.InvalidProductName -> errorMessages["product_name_invalid"]!!
+            is ProductsError.ProductNameTooShort -> errorMessages["product_name_too_short"]!!
+            is ProductsError.ProductNameTooLong -> errorMessages["product_name_too_long"]!!
+            is ProductsError.InvalidPrice -> errorMessages["price_invalid"]!!
+            is ProductsError.PriceZeroOrNegative -> errorMessages["price_zero_or_negative"]!!
+            is ProductsError.InvalidStock -> errorMessages["stock_invalid"]!!
+            is ProductsError.StockNegative -> errorMessages["stock_negative"]!!
+            is ProductsError.InvalidCategory -> errorMessages["category_invalid"]!!
+            is ProductsError.InvalidBarcode -> errorMessages["barcode_invalid"]!!
+            is ProductsError.InvalidDiscount -> errorMessages["discount_invalid"]!!
+            is ProductsError.DiscountValueInvalid -> errorMessages["discount_value_invalid"]!!
+            is ProductsError.DiscountPercentageExceeded -> errorMessages["discount_percentage_exceeded"]!!
+            is ProductsError.ProductNotFound -> errorMessages["product_not_found"]!!
+            is ProductsError.DuplicateBarcode -> String.format(duplicateBarcodeFormat, error.barcode)
+            is ProductsError.DatabaseError -> errorMessages["database"]!!
+            is ProductsError.UnauthorizedAccess -> errorMessages["unauthorized"]!!
+            is ProductsError.CreateProductFailed -> errorMessages["create_failed"]!!
+            is ProductsError.UpdateProductFailed -> errorMessages["update_failed"]!!
+            is ProductsError.DeleteProductFailed -> errorMessages["delete_failed"]!!
+            is ProductsError.LoadProductsFailed -> errorMessages["load_failed"]!!
+            is ProductsError.SearchProductsFailed -> errorMessages["search_failed"]!!
+            is ProductsError.ImageUploadFailed -> errorMessages["image_upload"]!!
+            is ProductsError.BarcodeGenerationFailed -> errorMessages["barcode_generation"]!!
+            is ProductsError.StorageError -> errorMessages["storage"]!!
+            is ProductsError.InsufficientStock -> errorMessages["insufficient_stock"]!!
+            is ProductsError.StockUpdateFailed -> errorMessages["stock_update"]!!
             is ProductsError.UnknownError -> {
                 if (error.message.isNullOrBlank()) {
-                    context.getString(R.string.error_unknown_simple)
+                    errorMessages["unknown_simple"]!!
                 } else {
-                    context.getString(R.string.error_unknown, error.message)
+                    String.format(unknownErrorFormat, error.message)
                 }
             }
         }
     }
 
-    // Función para obtener mensaje de éxito
     fun getSuccessMessage(messageKey: String): String {
         return when (messageKey) {
-            "product_created_success" -> context.getString(R.string.product_created_success)
-            "product_updated_success" -> context.getString(R.string.product_updated_success)
-            "product_deleted_success" -> context.getString(R.string.product_deleted_success)
+            "product_created_success" -> successMessages["created"]!!
+            "product_updated_success" -> successMessages["updated"]!!
+            "product_deleted_success" -> successMessages["deleted"]!!
             else -> messageKey
         }
     }
 
-    // Cargar productos al iniciar
     LaunchedEffect(Unit) {
-        viewModel.handleIntent(ProductsIntent.LoadProducts)
+        if (canView) {
+            viewModel.handleIntent(ProductsIntent.LoadProducts)
+        }
     }
 
-    // Mostrar mensajes de éxito/error
     LaunchedEffect(state.successMessage, state.error) {
         state.successMessage?.let { messageKey ->
             snackbarHostState.showSnackbar(getSuccessMessage(messageKey))
@@ -118,8 +163,7 @@ fun ProductsListScreen(
         }
     }
 
-    // Diálogo de eliminar
-    if (showDeleteDialog && productToDelete != null) {
+    if (showDeleteDialog && productToDelete != null && canDelete) {
         DeleteProductDialog(
             product = productToDelete!!,
             onConfirm = {
@@ -134,26 +178,39 @@ fun ProductsListScreen(
         )
     }
 
+    val titleText = stringResource(R.string.products_title)
+    val backText = stringResource(R.string.action_back)
+    val refreshText = stringResource(R.string.action_refresh)
+    val createText = stringResource(R.string.product_create)
+    val searchPlaceholder = stringResource(R.string.product_search_placeholder)
+    val loadingText = stringResource(R.string.product_loading)
+    val processingText = stringResource(R.string.processing)
+
+    // Si no tiene permiso de ver, no renderizar nada
+    if (!canView) {
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        stringResource(R.string.products_title),
+                        titleText,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back))
+                        Icon(Icons.Default.ArrowBack, backText)
                     }
                 },
                 actions = {
                     IconButton(onClick = {
                         viewModel.handleIntent(ProductsIntent.LoadProducts)
                     }) {
-                        Icon(Icons.Default.Refresh, stringResource(R.string.action_refresh))
+                        Icon(Icons.Default.Refresh, refreshText)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -165,11 +222,13 @@ fun ProductsListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreate,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, stringResource(R.string.product_create))
+            if (canCreate) {
+                FloatingActionButton(
+                    onClick = onNavigateToCreate,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, createText)
+                }
             }
         },
         snackbarHost = {
@@ -184,14 +243,12 @@ fun ProductsListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Buscador (filtrado local)
             SearchBar(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
-                placeholder = stringResource(R.string.product_search_placeholder)
+                placeholder = searchPlaceholder
             )
 
-            // Contenido principal
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -199,7 +256,7 @@ fun ProductsListScreen(
             ) {
                 when {
                     state.isLoading && state.products.isEmpty() -> {
-                        LoadingIndicator(message = stringResource(R.string.product_loading))
+                        LoadingIndicator(message = loadingText)
                     }
 
                     state.error != null && state.products.isEmpty() -> {
@@ -216,7 +273,6 @@ fun ProductsListScreen(
                     }
 
                     else -> {
-                        // Filtrar productos localmente por búsqueda
                         val filteredProducts = if (searchQuery.isBlank()) {
                             state.products
                         } else {
@@ -243,10 +299,16 @@ fun ProductsListScreen(
                                         product = product,
                                         isLowStock = product.currentStock <= product.minimumStock && product.currentStock > 0,
                                         isOutOfStock = product.currentStock == 0,
-                                        onClick = { onNavigateToEdit(product.productId) },
+                                        onClick = {
+                                            if (canUpdate) {
+                                                onNavigateToEdit(product.productId)
+                                            }
+                                        },
                                         onDelete = {
-                                            productToDelete = product
-                                            showDeleteDialog = true
+                                            if (canDelete) {
+                                                productToDelete = product
+                                                showDeleteDialog = true
+                                            }
                                         }
                                     )
                                 }
@@ -255,7 +317,6 @@ fun ProductsListScreen(
                     }
                 }
 
-                // Indicador de carga superpuesto (para acciones sin bloquear UI)
                 if (state.isLoading && state.products.isNotEmpty()) {
                     Box(
                         modifier = Modifier
@@ -273,7 +334,7 @@ fun ProductsListScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                Text(stringResource(R.string.processing))
+                                Text(processingText)
                             }
                         }
                     }

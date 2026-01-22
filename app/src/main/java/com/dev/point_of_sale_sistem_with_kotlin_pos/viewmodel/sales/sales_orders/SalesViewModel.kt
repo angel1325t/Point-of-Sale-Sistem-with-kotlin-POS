@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.lang.ref.WeakReference
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -110,7 +112,6 @@ class SalesViewModel(
             is SalesIntent.SearchProductByBarcode -> searchByBarcode(intent.barcode)
             SalesIntent.ClearSearchResults -> clearSearchResults()
 
-            // 🆕 LECTOR DE CÓDIGOS
             SalesIntent.ToggleBarcodeReader -> toggleBarcodeReader()
             is SalesIntent.ProcessBarcodeFromReader -> processBarcodeFromReader(intent.barcode)
 
@@ -137,16 +138,15 @@ class SalesViewModel(
     // 🔓 VALIDACIÓN DE CAJA ABIERTA (HÍBRIDO)
     // ═══════════════════════════════════════════════════
 
-    private suspend fun validateCashRegisterOpen(): String? {
+    private suspend fun validateCashRegisterOpen(): Pair<String, String?>? {
         return try {
-            // ✅ USAR HYBRID REPOSITORY
             val openRegister = hybridCashRegisterRepository.getOpenCashRegister()
             if (openRegister == null) {
                 Log.w(TAG, "⚠️ No hay caja abierta")
                 null
             } else {
-                Log.d(TAG, "✅ Caja abierta: ${openRegister.history_id}")
-                openRegister.history_id
+                Log.d(TAG, "✅ Caja abierta: ${openRegister.history_id}, Branch: ${openRegister.branch_id}")
+                Pair(openRegister.history_id, openRegister.branch_id)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error validando caja abierta", e)
@@ -302,6 +302,19 @@ class SalesViewModel(
                             isLoading = false,
                             searchResults = listOf(product)
                         )
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            addProductToSale(
+                                SalesIntent.AddSaleDetail(
+                                    productId = product.productId,
+                                    quantity = 1,
+                                    unitPrice = product.price,
+                                    discount = 0.0
+                                )
+                            )
+                        }
+
+                        _state.value = _state.value.copy(searchResults = emptyList())
                     } else {
                         Log.d(TAG, "searchByBarcode: No product found with code '$barcode'")
                         setError(SaleError.Server("Producto no encontrado: $barcode"))
@@ -406,15 +419,20 @@ class SalesViewModel(
 
         val itemsSubtotal = saleItems.sumOf { it.unitPrice * it.quantity }
         val subtotalAfterDiscount = itemsSubtotal - currentSale.globalDiscount
-        val itbis = subtotalAfterDiscount * ITBIS_RATE
-        val total = subtotalAfterDiscount + itbis
+
+        // Use BigDecimal for precise calculations
+        val subtotalBD = BigDecimal(subtotalAfterDiscount)
+        val itbisBD = subtotalBD.multiply(BigDecimal(ITBIS_RATE))
+            .setScale(2, RoundingMode.HALF_UP)
+        val totalBD = subtotalBD.add(itbisBD)
+            .setScale(2, RoundingMode.HALF_UP)
 
         _state.value = _state.value.copy(
             sale = currentSale.copy(
                 saleDetails = saleItems.toList(),
-                subtotal = subtotalAfterDiscount,
-                itbis = itbis,
-                total = total
+                subtotal = subtotalBD.toDouble(),
+                itbis = itbisBD.toDouble(),
+                total = totalBD.toDouble()
             )
         )
     }
@@ -444,43 +462,34 @@ class SalesViewModel(
             return
         }
 
-        // 🔐 VALIDAR QUE HAYA CAJA ABIERTA (HÍBRIDO)
-        viewModelScope.launch {
-            val cashRegisterHistoryId = validateCashRegisterOpen()
+        if (sale.cashRegisterHistoryId.isBlank()) {
+            setError(SaleError.Server("Estado inválido: falta ID de caja registradora"))
+            return
+        }
 
-            if (cashRegisterHistoryId == null) {
-                setError(SaleError.Server("⚠️ No hay caja abierta. Por favor, abre una caja antes de realizar ventas."))
-                return@launch
+        val remainingToPay = _state.value.remainingToPay
+        val isCoveredByCredit = _state.value.isCoveredByCredit
+
+        Log.d(TAG, "Initiating sale completion - Remaining: $remainingToPay, Covered by credit: $isCoveredByCredit")
+
+        if (isCoveredByCredit) {
+            finalizeSaleWithInvoice()
+            return
+        }
+
+        when (sale.paymentMethod) {
+            "cash" -> {
+                _state.value = _state.value.copy(
+                    paymentFlowState = PaymentFlowState.CashPayment(remainingToPay)
+                )
             }
-
-            _state.value = _state.value.copy(
-                sale = sale.copy(cashRegisterHistoryId = cashRegisterHistoryId)
-            )
-
-            val remainingToPay = _state.value.remainingToPay
-            val isCoveredByCredit = _state.value.isCoveredByCredit
-
-            Log.d(TAG, "Initiating sale completion - Remaining: $remainingToPay, Covered by credit: $isCoveredByCredit")
-
-            if (isCoveredByCredit) {
-                finalizeSaleWithInvoice()
-                return@launch
+            "card" -> {
+                initiateCardPayment()
             }
-
-            when (sale.paymentMethod) {
-                "cash" -> {
-                    _state.value = _state.value.copy(
-                        paymentFlowState = PaymentFlowState.CashPayment(remainingToPay)
-                    )
-                }
-                "card" -> {
-                    initiateCardPayment()
-                }
-                "transfer" -> {
-                    _state.value = _state.value.copy(
-                        paymentFlowState = PaymentFlowState.TransferPayment(remainingToPay)
-                    )
-                }
+            "transfer" -> {
+                _state.value = _state.value.copy(
+                    paymentFlowState = PaymentFlowState.TransferPayment(remainingToPay)
+                )
             }
         }
     }
@@ -725,10 +734,6 @@ class SalesViewModel(
         _state.value = _state.value.copy(isLoading = true)
 
         viewModelScope.launch {
-            // 🔄 Sync pending cash register box first if needed
-            if (!isOffline) {
-                hybridCashRegisterRepository.syncPendingBoxIfNeeded()
-            }
 
             val saleToCreate = sale.copy(status = "completed")
 
@@ -797,29 +802,55 @@ class SalesViewModel(
     // ═══════════════════════════════════════════════════
 
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun createSale(paymentMethod: String, globalDiscount: Double, userId: UUID) {
-        val nowUtc = currentUtcDateTime()
-        saleItems.clear()
+    private fun createSale(
+        paymentMethod: String,
+        globalDiscount: Double,
+        userId: UUID,
+        branchId: String? = null
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
 
-        _state.value = _state.value.copy(
-            sale = Sale(
-                saleId = UUID.randomUUID(),
-                userId = userId,
-                saleDate = nowUtc,
-                createdAt = nowUtc,
-                paymentMethod = paymentMethod,
-                status = "pending",
-                subtotal = 0.0,
-                itbis = 0.0,
-                total = 0.0,
-                globalDiscount = globalDiscount,
-                saleDetails = emptyList()
-            ),
-            searchResults = emptyList(),
-            productsCache = emptyMap(),
-            paymentFlowState = PaymentFlowState.Idle,
-            appliedCreditNotes = emptyList()
-        )
+            val cashRegisterInfo = validateCashRegisterOpen()
+
+            if (cashRegisterInfo == null) {
+                setError(SaleError.Server(
+                    "⚠️ No hay caja abierta. Por favor, abre una caja antes de realizar ventas."
+                ))
+                return@launch
+            }
+
+            val (cashRegisterHistoryId, cashRegisterBranchId) = cashRegisterInfo
+            val finalBranchId = branchId ?: cashRegisterBranchId
+
+            val nowUtc = currentUtcDateTime()
+            saleItems.clear()
+
+            _state.value = _state.value.copy(
+                sale = Sale(
+                    saleId = UUID.randomUUID(),
+                    userId = userId,
+                    saleDate = nowUtc,
+                    createdAt = nowUtc,
+                    paymentMethod = paymentMethod,
+                    status = "pending",
+                    subtotal = 0.0,
+                    itbis = 0.0,
+                    total = 0.0,
+                    globalDiscount = globalDiscount,
+                    cashRegisterHistoryId = cashRegisterHistoryId,
+                    branchId = finalBranchId,
+                    saleDetails = emptyList()
+                ),
+                searchResults = emptyList(),
+                productsCache = emptyMap(),
+                paymentFlowState = PaymentFlowState.Idle,
+                appliedCreditNotes = emptyList(),
+                isLoading = false
+            )
+
+            Log.d(TAG, "Sale created with Cash Register: $cashRegisterHistoryId, Branch: $finalBranchId")
+        }
     }
 
     private fun clearSale() {

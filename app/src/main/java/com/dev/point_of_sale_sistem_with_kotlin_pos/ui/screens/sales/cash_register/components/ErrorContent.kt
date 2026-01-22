@@ -33,8 +33,8 @@ fun ErrorContent(
         is CashRegisterError.NetworkError -> error.message
         is CashRegisterError.ValidationError -> error.message
         is CashRegisterError.DatabaseError -> error.message
-        is CashRegisterError.UnauthorizedError -> context.getString(R.string.unauthorize_error)
-        is CashRegisterError.CashRegisterNotFound -> context.getString(R.string.cash_register_not_found_error)
+        is CashRegisterError.UnauthorizedError -> stringResource(R.string.unauthorize_error)
+        is CashRegisterError.CashRegisterNotFound -> stringResource(R.string.cash_register_not_found_error)
         is CashRegisterError.UnknownError -> error.message
         CashRegisterError.CashRegisterAlreadyOpen -> stringResource(R.string.cash_register_already_open)
     }

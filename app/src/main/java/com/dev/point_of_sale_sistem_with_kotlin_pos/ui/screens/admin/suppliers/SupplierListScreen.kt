@@ -1,23 +1,52 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.suppliers.SupplierIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.Supplier
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.SupplierError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.DeleteSupplierDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.EmptySuppliersState
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.ErrorMessage
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.LoadingIndicator
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.SupplierFilterDialog
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.SupplierListItem
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.SupplierSearchBar
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.SupplierViewModel
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.suppliers.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +57,20 @@ fun SupplierListScreen(
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Verificar permisos
+    val canView = PermissionChecker.canViewSuppliers()
+    val canCreate = PermissionChecker.canCreateSuppliers()
+    val canUpdate = PermissionChecker.canUpdateSuppliers()
+    val canDelete = PermissionChecker.canDeleteSuppliers()
+
+    // Si no puede ver proveedores, navegar atrás
+    LaunchedEffect(canView) {
+        if (!canView) {
+            onNavigateBack()
+        }
+    }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var supplierToDelete by remember { mutableStateOf<Supplier?>(null) }
@@ -35,11 +78,22 @@ fun SupplierListScreen(
     var showFilterDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        viewModel.handleIntent(SupplierIntent.LoadSuppliers)
+        if (canView) {
+            viewModel.handleIntent(SupplierIntent.LoadSuppliers)
+        }
     }
 
-    // Diálogo de eliminar
-    if (showDeleteDialog && supplierToDelete != null) {
+    LaunchedEffect(state.operationSuccess, state.successMessage) {
+        if (state.operationSuccess && state.successMessage != null) {
+            snackbarHostState.showSnackbar(
+                message = state.successMessage!!,
+                duration = SnackbarDuration.Short
+            )
+            viewModel.clearError()
+        }
+    }
+
+    if (showDeleteDialog && supplierToDelete != null && canDelete) {
         DeleteSupplierDialog(
             supplier = supplierToDelete!!,
             onConfirm = {
@@ -54,17 +108,20 @@ fun SupplierListScreen(
         )
     }
 
-    // Diálogo de filtros
     if (showFilterDialog) {
         SupplierFilterDialog(
             onlyCompleteContact = state.isFiltered,
             onApplyFilter = { onlyComplete ->
-                if (onlyComplete)
-                    viewModel.handleIntent(SupplierIntent.SearchSupplier(""))
+                viewModel.handleIntent(SupplierIntent.FilterSuppliers(onlyComplete))
                 showFilterDialog = false
             },
             onDismiss = { showFilterDialog = false }
         )
+    }
+
+    // Si no tiene permiso de ver, no renderizar nada
+    if (!canView) {
+        return
     }
 
     Scaffold(
@@ -84,47 +141,52 @@ fun SupplierListScreen(
                 },
                 actions = {
                     IconButton(onClick = { showFilterDialog = true }) {
-                        Icon(Icons.Default.FilterList, "Filtrar")
+                        Icon(
+                            Icons.Default.FilterList,
+                            "Filtrar",
+                            tint = if (state.isFiltered)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurface
+                        )
                     }
-                    IconButton(onClick = { viewModel.handleIntent(SupplierIntent.LoadSuppliers) }) {
+                    IconButton(onClick = {
+                        viewModel.handleIntent(SupplierIntent.LoadSuppliers)
+                        searchQuery = ""
+                    }) {
                         Icon(Icons.Default.Refresh, "Actualizar")
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreate
-            ) {
-                Icon(Icons.Default.Add, "Agregar proveedor")
+            if (canCreate) {
+                FloatingActionButton(
+                    onClick = onNavigateToCreate
+                ) {
+                    Icon(Icons.Default.Add, "Agregar proveedor")
+                }
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-
-            // Barra búsqueda
             SupplierSearchBar(
                 query = searchQuery,
                 onQueryChange = { query ->
                     searchQuery = query
-                    if (query.isNotEmpty()) {
-                        viewModel.handleIntent(SupplierIntent.SearchSupplier(query))
-                    } else {
-                        viewModel.handleIntent(SupplierIntent.LoadSuppliers)
-                    }
+                    viewModel.handleIntent(SupplierIntent.SearchSupplier(query))
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             )
 
-            // Lista
             Box(modifier = Modifier.fillMaxSize()) {
-
                 when {
                     state.isLoading -> LoadingIndicator()
 
@@ -134,38 +196,36 @@ fun SupplierListScreen(
                         onDismiss = { viewModel.clearError() }
                     )
 
-                    state.displaySuppliers.isEmpty() -> EmptySuppliersState()
+                    state.displaySuppliers.isEmpty() -> EmptySuppliersState(
+                        isSearching = searchQuery.isNotEmpty(),
+                        isFiltering = state.isFiltered
+                    )
 
                     else -> LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(state.displaySuppliers, key = { it.supplierId }) { supplier ->
+                        items(
+                            items = state.displaySuppliers,
+                            key = { it.supplierId }
+                        ) { supplier ->
                             SupplierListItem(
                                 supplier = supplier,
-                                onClick = { onNavigateToEdit(supplier.supplierId) },
+                                onClick = {
+                                    if (canUpdate) {
+                                        onNavigateToEdit(supplier.supplierId)
+                                    }
+                                },
                                 onDelete = {
-                                    supplierToDelete = supplier
-                                    showDeleteDialog = true
+                                    if (canDelete) {
+                                        supplierToDelete = supplier
+                                        showDeleteDialog = true
+                                    }
                                 }
                             )
                         }
                     }
-                }
-            }
-
-            // Snackbar éxito
-            if (state.operationSuccess && state.successMessage != null) {
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { viewModel.clearError() }) {
-                            Text("OK")
-                        }
-                    }
-                ) {
-                    Text(state.successMessage!!)
                 }
             }
         }

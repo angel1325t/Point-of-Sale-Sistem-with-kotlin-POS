@@ -1,10 +1,8 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users
 
-import android.util.Log
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.result.PostgrestResult
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -18,49 +16,38 @@ class UserRepository(private val supabase: SupabaseClient) {
         private const val TAG = "UserRepository"
     }
 
-    // Obtener el usuario logueado para sacar company_id y branch_id
+    // 🔹 Usuario actual
     suspend fun getCurrentUser(): UserModel? {
         val authUser = supabase.auth.currentUserOrNull() ?: return null
         return supabase.postgrest.from("users")
-            .select {
-                filter {
-                    eq("auth_id", authUser.id)
-                }
-            }
+            .select { filter { eq("auth_id", authUser.id) } }
             .decodeList<UserModel>()
             .firstOrNull()
     }
 
-    // Obtener solo usuarios activos
-    suspend fun getAllActiveUsers(): List<UserModel> {
-        Log.d(TAG, "Fetching all active users...")
+    // 🔹 SOLO usuarios activos del branch
+    suspend fun getActiveUsersByBranch(
+        branchId: UUID,
+        authId: UUID
+    ): List<UserModel> {
 
-        val users = supabase.postgrest.from("users")
+        return supabase.postgrest.from("users")
             .select {
                 filter {
                     eq("active", true)
+                    eq("branch_id", branchId.toString())
+                    neq("auth_id", authId)
                 }
             }
-            .decodeList<UserModel>()
-
-        Log.d(TAG, "Found ${users.size} users")
-        users.forEach { user ->
-            Log.d(TAG, "User: ${user.username}, Active: ${user.active}")
-        }
-
-        return users
+            .decodeList()
     }
+
 
     suspend fun getUserById(authId: String): UserModel? =
         supabase.postgrest.from("users")
-            .select {
-                filter {
-                    eq("auth_id", authId)
-                }
-            }
+            .select { filter { eq("auth_id", authId) } }
             .decodeList<UserModel>()
             .firstOrNull()
-
 
     suspend fun createUser(
         email: String,
@@ -68,142 +55,83 @@ class UserRepository(private val supabase: SupabaseClient) {
         companyId: UUID,
         branchId: UUID
     ): UserModel {
-        Log.d(TAG, "Starting user creation for $email")
 
-        if (email.isBlank()) throw IllegalArgumentException("Email cannot be empty")
-
-        // === username basado en email ===
         val username = email.substringBefore("@")
 
-        // === Verificar si username ya existe ===
-        val existingUser = supabase.postgrest.from("users")
+        val exists = supabase.postgrest.from("users")
             .select { filter { eq("username", username) } }
             .decodeList<UserCheck>()
             .firstOrNull()
 
-        if (existingUser != null) {
-            throw IllegalArgumentException("username '$username' is already in use")
+        if (exists != null) {
+            throw IllegalArgumentException("username already exists")
         }
 
-        // === Generar contraseña ===
-        val randomPassword = generateRandomPassword()
-        val passwordTest = "12345678"
-        Log.d(TAG, "Generated random password for auth")
+//        val password = generateRandomPassword()
+        val password = "12345678"
 
-        // === Crear usuario en auth.users ===
         val authResponse = supabase.postgrest.rpc(
             "create_auth_user",
             buildJsonObject {
                 put("email", email)
-                put("password", passwordTest)
+                put("password", password)
             }
         )
 
-        val authId = try {
-            val idString = authResponse.decodeAs<String>()
-            UUID.fromString(idString)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse auth user ID", e)
-            throw Exception("Failed to create auth user: ${e.message}")
-        }
+        val authId = UUID.fromString(authResponse.decodeAs<String>())
 
-        Log.d(TAG, "Auth user created: authId=$authId")
-
-
-        // === Insert en public.users ===
-        val userData = UserInsert(
-            auth_id = authId,
-            role_id = roleId,
-            active = true,
-            company_id = companyId,
-            branch_id = branchId,
-            username = username  // ← AQUI LO AGREGAS
+        supabase.postgrest.from("users").insert(
+            UserInsert(
+                auth_id = authId,
+                role_id = roleId,
+                active = true,
+                company_id = companyId,
+                branch_id = branchId,
+                username = username
+            )
         )
 
-        Log.d(TAG, "Inserting user in public.users: $userData")
-        val userResponse = supabase.postgrest.from("users").insert(userData)
-        Log.d(TAG, "User insert response: $userResponse")
-
         return getUserById(authId.toString())
-            ?: throw Exception("User created but could not retrieve")
+            ?: throw IllegalStateException("User created but not found")
     }
-
 
     suspend fun updateUser(
         authId: String,
         branchId: UUID?,
         roleId: Int?
     ): UserModel {
-        Log.d(TAG, "Updating user: userId=$authId")
 
-        val currentUser = getUserById(authId)
-            ?: throw IllegalStateException("User not found")
-
-        // 🔹 Crear el objeto con los datos a actualizar
         val updateData = buildJsonObject {
-            if (branchId != null) put("branch_id", branchId.toString())
-            if (roleId != null) put("role_id", roleId)
-            put("updated_at", "now()")
+            branchId?.let { put("branch_id", it.toString()) }
+            roleId?.let { put("role_id", it) }
         }
 
-        // 🔹 Actualizar en public.users
         supabase.postgrest.from("users")
             .update(updateData) {
-                filter {
-                    eq("auth_id", authId)
-                }
+                filter { eq("auth_id", authId) }
             }
 
-        Log.d(TAG, "User updated successfully")
-
-        // 🔹 Retornar el usuario actualizado
         return getUserById(authId)
-            ?: throw IllegalStateException("Error reloading updated user")
+            ?: throw IllegalStateException("Updated user not found")
     }
 
-
-    // Soft delete: solo cambiar active a false
     suspend fun deleteUser(authId: String) {
-        Log.d(TAG, "Soft deleting user: userId=$authId")
-
-        val updateData = buildJsonObject {
-            put("active", false)
-            put("updated_at", "now()")
-        }
-
         supabase.postgrest.from("users")
-            .update(updateData) {
-                filter {
-                    eq("auth_id", authId)
-                }
+            .update(buildJsonObject { put("active", false) }) {
+                filter { eq("auth_id", authId) }
             }
-
-        Log.d(TAG, "User soft deleted successfully")
     }
 
     suspend fun getAllRoles(): List<RoleModel> =
         supabase.postgrest.from("roles")
-            .select {
-                filter { /* no filter needed */ }
-            }
-            .decodeList<RoleModel>()
-
-    suspend fun getAllBranches(): List<BranchModel> =
-        supabase.postgrest.from("branches")
-            .select { }
-            .decodeList<BranchModel>()
+            .select()
+            .decodeList()
 
     suspend fun getBranchesByCompany(companyId: UUID): List<BranchModel> =
         supabase.postgrest.from("branches")
-            .select {
-                filter {
-                    eq("company_id", companyId)
-                }
-            }
-            .decodeList<BranchModel>()
+            .select { filter { eq("company_id", companyId.toString()) } }
+            .decodeList()
 
-
-    // Generar contraseña aleatoria
     private fun generateRandomPassword(length: Int = 12): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
         val random = SecureRandom()
@@ -212,19 +140,18 @@ class UserRepository(private val supabase: SupabaseClient) {
             .joinToString("")
     }
 
-    // === MODELOS SERIALIZABLES ===
+    // 🔹 MODELOS
 
     @Serializable
     data class UserModel(
+        @Contextual val user_id: UUID,
         @Contextual val auth_id: UUID,
-        val phone: String? = null,
         val username: String,
         val role_id: Int? = null,
-        val active: Boolean? = false,
+        val active: Boolean = true,
         val created_at: String? = null,
         val updated_at: String? = null,
         val email: String? = null,
-        val profile_image_url: String? = null,
         @Contextual val company_id: UUID? = null,
         @Contextual val branch_id: UUID? = null
     )
@@ -238,7 +165,6 @@ class UserRepository(private val supabase: SupabaseClient) {
         @Contextual val branch_id: UUID,
         val username: String
     )
-
 
     @Serializable
     data class RoleModel(
@@ -255,10 +181,5 @@ class UserRepository(private val supabase: SupabaseClient) {
     @Serializable
     data class UserCheck(
         val username: String
-    )
-
-    @Serializable
-    data class AuthUserResult(
-        val id: String
     )
 }

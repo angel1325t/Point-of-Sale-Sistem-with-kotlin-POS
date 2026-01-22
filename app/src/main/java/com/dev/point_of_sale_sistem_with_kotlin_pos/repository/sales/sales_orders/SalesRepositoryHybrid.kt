@@ -14,11 +14,10 @@ class HybridSalesRepository(
 ) {
 
     private val offlineDb = OfflineDatabase.getInstance(context)
-
     private val offlineDataSource = OfflineSalesDataSource(offlineDb)
     private val onlineDataSource = OnlineSalesDataSource(onlineRepository)
 
-    suspend fun createSale(sale: Sale): Result<SaleCreatedDTO> {
+    suspend fun createSale(sale: Sale, branchId: String? = null): Result<SaleCreatedDTO> {
         return if (NetworkUtils.isOnline(context)) {
             onlineRepository.createSale(sale).map {
                 SaleCreatedDTO(
