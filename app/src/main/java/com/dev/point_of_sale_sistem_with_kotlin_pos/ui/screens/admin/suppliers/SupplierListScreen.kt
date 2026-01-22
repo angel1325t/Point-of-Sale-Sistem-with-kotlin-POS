@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.suppliers.SupplierIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.Supplier
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.SupplierError
@@ -58,17 +59,30 @@ fun SupplierListScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Verificar permisos
+    val canView = PermissionChecker.canViewSuppliers()
+    val canCreate = PermissionChecker.canCreateSuppliers()
+    val canUpdate = PermissionChecker.canUpdateSuppliers()
+    val canDelete = PermissionChecker.canDeleteSuppliers()
+
+    // Si no puede ver proveedores, navegar atrás
+    LaunchedEffect(canView) {
+        if (!canView) {
+            onNavigateBack()
+        }
+    }
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var supplierToDelete by remember { mutableStateOf<Supplier?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var showFilterDialog by remember { mutableStateOf(false) }
 
-    // Cargar proveedores al inicio
     LaunchedEffect(Unit) {
-        viewModel.handleIntent(SupplierIntent.LoadSuppliers)
+        if (canView) {
+            viewModel.handleIntent(SupplierIntent.LoadSuppliers)
+        }
     }
 
-    // Mostrar mensaje de éxito
     LaunchedEffect(state.operationSuccess, state.successMessage) {
         if (state.operationSuccess && state.successMessage != null) {
             snackbarHostState.showSnackbar(
@@ -79,8 +93,7 @@ fun SupplierListScreen(
         }
     }
 
-    // Diálogo de eliminar
-    if (showDeleteDialog && supplierToDelete != null) {
+    if (showDeleteDialog && supplierToDelete != null && canDelete) {
         DeleteSupplierDialog(
             supplier = supplierToDelete!!,
             onConfirm = {
@@ -95,7 +108,6 @@ fun SupplierListScreen(
         )
     }
 
-    // Diálogo de filtros
     if (showFilterDialog) {
         SupplierFilterDialog(
             onlyCompleteContact = state.isFiltered,
@@ -105,6 +117,11 @@ fun SupplierListScreen(
             },
             onDismiss = { showFilterDialog = false }
         )
+    }
+
+    // Si no tiene permiso de ver, no renderizar nada
+    if (!canView) {
+        return
     }
 
     Scaffold(
@@ -143,10 +160,12 @@ fun SupplierListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreate
-            ) {
-                Icon(Icons.Default.Add, "Agregar proveedor")
+            if (canCreate) {
+                FloatingActionButton(
+                    onClick = onNavigateToCreate
+                ) {
+                    Icon(Icons.Default.Add, "Agregar proveedor")
+                }
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -156,7 +175,6 @@ fun SupplierListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Barra de búsqueda
             SupplierSearchBar(
                 query = searchQuery,
                 onQueryChange = { query ->
@@ -168,7 +186,6 @@ fun SupplierListScreen(
                     .padding(16.dp)
             )
 
-            // Lista de proveedores
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     state.isLoading -> LoadingIndicator()
@@ -195,10 +212,16 @@ fun SupplierListScreen(
                         ) { supplier ->
                             SupplierListItem(
                                 supplier = supplier,
-                                onClick = { onNavigateToEdit(supplier.supplierId) },
+                                onClick = {
+                                    if (canUpdate) {
+                                        onNavigateToEdit(supplier.supplierId)
+                                    }
+                                },
                                 onDelete = {
-                                    supplierToDelete = supplier
-                                    showDeleteDialog = true
+                                    if (canDelete) {
+                                        supplierToDelete = supplier
+                                        showDeleteDialog = true
+                                    }
                                 }
                             )
                         }

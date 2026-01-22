@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.suppliers.SupplierIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.SupplierError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.SupplierViewModel
@@ -61,22 +62,32 @@ fun SupplierFormScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val isEditMode = supplierId != null
 
+    // Verificar permisos
+    val canCreate = PermissionChecker.canCreateSuppliers()
+    val canUpdate = PermissionChecker.canUpdateSuppliers()
+    val hasPermission = if (isEditMode) canUpdate else canCreate
+
+    // Si no tiene permiso, navegar atrás
+    LaunchedEffect(hasPermission) {
+        if (!hasPermission) {
+            onNavigateBack()
+        }
+    }
+
     var name by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
 
-    // Cargar datos del proveedor en modo edición
     LaunchedEffect(supplierId) {
-        if (supplierId != null) {
+        if (supplierId != null && hasPermission) {
             viewModel.handleIntent(SupplierIntent.LoadSupplierById(supplierId))
         } else {
             viewModel.handleIntent(SupplierIntent.ClearSelectedSupplier)
         }
     }
 
-    // Actualizar campos cuando se carga el proveedor
     LaunchedEffect(state.selectedSupplier) {
         state.selectedSupplier?.let { supplier ->
             name = supplier.name
@@ -87,14 +98,12 @@ fun SupplierFormScreen(
         }
     }
 
-    // Navegar atrás después de una operación exitosa
     LaunchedEffect(state.operationSuccess) {
         if (state.operationSuccess) {
             onNavigateBack()
         }
     }
 
-    // Mostrar errores en Snackbar
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
@@ -115,6 +124,11 @@ fun SupplierFormScreen(
             )
             viewModel.clearError()
         }
+    }
+
+    // Si no tiene permiso, no renderizar nada
+    if (!hasPermission) {
+        return
     }
 
     Scaffold(
@@ -144,7 +158,6 @@ fun SupplierFormScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // NOMBRE (obligatorio)
             OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -172,7 +185,6 @@ fun SupplierFormScreen(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // PERSONA DE CONTACTO
             OutlinedTextField(
                 value = contact,
                 onValueChange = { contact = it },
@@ -183,7 +195,6 @@ fun SupplierFormScreen(
                 enabled = !state.isLoading
             )
 
-            // TELÉFONO
             OutlinedTextField(
                 value = phone,
                 onValueChange = {
@@ -204,7 +215,6 @@ fun SupplierFormScreen(
                 placeholder = { Text("Ej: 809-555-1234") }
             )
 
-            // EMAIL
             OutlinedTextField(
                 value = email,
                 onValueChange = {
@@ -225,7 +235,6 @@ fun SupplierFormScreen(
                 placeholder = { Text("correo@ejemplo.com") }
             )
 
-            // DIRECCIÓN
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
@@ -240,7 +249,6 @@ fun SupplierFormScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // BOTONES DE ACCIÓN
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -297,7 +305,6 @@ fun SupplierFormScreen(
                 }
             }
 
-            // Nota informativa
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(

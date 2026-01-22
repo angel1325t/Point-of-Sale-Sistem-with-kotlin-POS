@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.categories.CategoryIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.Category
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.CategoryError
@@ -33,17 +34,32 @@ fun CategoriesListScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    // Verificar permisos
+    val canView = PermissionChecker.canViewCategories()
+    val canCreate = PermissionChecker.canCreateCategories()
+    val canUpdate = PermissionChecker.canUpdateCategories()
+    val canDelete = PermissionChecker.canDeleteCategories()
+
+    // Si no puede ver categorías, navegar atrás
+    LaunchedEffect(canView) {
+        if (!canView) {
+            onNavigateBack()
+        }
+    }
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
     var showFilterDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        viewModel.handleIntent(CategoryIntent.LoadCategories)
+        if (canView) {
+            viewModel.handleIntent(CategoryIntent.LoadCategories)
+        }
     }
 
     // Diálogo de confirmación de eliminación
-    if (showDeleteDialog && categoryToDelete != null) {
+    if (showDeleteDialog && categoryToDelete != null && canDelete) {
         DeleteCategoryDialog(
             category = categoryToDelete!!,
             onConfirm = {
@@ -69,6 +85,11 @@ fun CategoriesListScreen(
             },
             onDismiss = { showFilterDialog = false }
         )
+    }
+
+    // Si no tiene permiso de ver, no renderizar nada
+    if (!canView) {
+        return
     }
 
     Scaffold(
@@ -103,11 +124,13 @@ fun CategoriesListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreate,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, "Agregar categoría")
+            if (canCreate) {
+                FloatingActionButton(
+                    onClick = onNavigateToCreate,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, "Agregar categoría")
+                }
             }
         }
     ) { paddingValues ->
@@ -187,10 +210,18 @@ fun CategoriesListScreen(
                             ) { category ->
                                 CategoryListItem(
                                     category = category,
-                                    onClick = { onNavigateToEdit(category.categoryId) },
+                                    canUpdate = canUpdate,
+                                    canDelete = canDelete,
+                                    onClick = {
+                                        if (canUpdate) {
+                                            onNavigateToEdit(category.categoryId)
+                                        }
+                                    },
                                     onDelete = {
-                                        categoryToDelete = category
-                                        showDeleteDialog = true
+                                        if (canDelete) {
+                                            categoryToDelete = category
+                                            showDeleteDialog = true
+                                        }
                                     }
                                 )
                             }
@@ -297,13 +328,15 @@ private fun FilterChip(
 @Composable
 private fun CategoryListItem(
     category: Category,
+    canUpdate: Boolean,
+    canDelete: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(enabled = canUpdate, onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -359,19 +392,23 @@ private fun CategoryListItem(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                IconButton(onClick = onClick) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Editar",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                if (canUpdate) {
+                    IconButton(onClick = onClick) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Editar",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Eliminar",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                if (canDelete) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Eliminar",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }

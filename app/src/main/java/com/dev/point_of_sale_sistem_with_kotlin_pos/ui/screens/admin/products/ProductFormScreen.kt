@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.products.ProductsIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.Category
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.DiscountType
@@ -64,7 +65,18 @@ fun ProductFormScreen(
     val context = LocalContext.current
     val isEditMode = productId != null
 
-    // ✅ CORRECCIÓN: Declarar todos los strings ANTES de LaunchedEffect
+    // Verificar permisos
+    val canCreate = PermissionChecker.canCreateProducts()
+    val canUpdate = PermissionChecker.canUpdateProducts()
+    val hasPermission = if (isEditMode) canUpdate else canCreate
+
+    // Si no tiene permiso, navegar atrás inmediatamente
+    LaunchedEffect(hasPermission) {
+        if (!hasPermission) {
+            onNavigateBack()
+        }
+    }
+
     val productCreatedMessage = stringResource(R.string.product_created_success)
     val productUpdatedMessage = stringResource(R.string.product_updated_success)
     val errorMessage = stringResource(R.string.error_unknown_simple)
@@ -94,7 +106,6 @@ fun ProductFormScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Precio final
     val finalPrice = remember(price, discountType, discountValue) {
         val p = price.toDoubleOrNull() ?: 0.0
         val d = discountValue.toDoubleOrNull() ?: 0.0
@@ -105,14 +116,12 @@ fun ProductFormScreen(
         }
     }
 
-    // Cargar producto
     LaunchedEffect(productId) {
         productId?.let {
             viewModel.handleIntent(ProductsIntent.LoadProductById(it))
         }
     }
 
-    // Setear datos al editar
     LaunchedEffect(state.selectedProduct) {
         state.selectedProduct?.let { product ->
             name = product.name
@@ -126,7 +135,6 @@ fun ProductFormScreen(
         }
     }
 
-    // ✅ CORRECCIÓN: Usar las variables declaradas arriba
     LaunchedEffect(state.successMessage, state.error) {
         state.successMessage?.let {
             snackbarHostState.showSnackbar(
@@ -141,6 +149,11 @@ fun ProductFormScreen(
         state.error?.let {
             snackbarHostState.showSnackbar(errorMessage)
         }
+    }
+
+    // Si no tiene permiso, no renderizar nada
+    if (!hasPermission) {
+        return
     }
 
     Scaffold(

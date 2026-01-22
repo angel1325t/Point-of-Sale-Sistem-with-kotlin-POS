@@ -95,6 +95,7 @@
     <string name="confirm_user_deletion">¿Está seguro que desea eliminar al usuario %1$s?</string>
     <string name="active">Activo</string>
     <string name="inactive">Inactivo</string>
+    <string name="permission_denied">Permiso denegado</string>
 
     <!-- Success -->
     <string name="success_create_user">Usuario creado</string>
