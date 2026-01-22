@@ -3,7 +3,6 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.suppliers.SupplierIntent
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.Supplier
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.SupplierError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers.SupplierState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.suppliers.SupplierRepository
@@ -46,36 +45,28 @@ class SupplierViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            try {
-                // TODO: Reemplazar con llamada real al repositorio
-                // val suppliers = repository.getAllSuppliers()
-
-                // Datos de ejemplo (eliminar cuando conectes con la base de datos)
-                val suppliers = listOf(
-                    Supplier(1, "Proveedor ABC", "Juan Pérez", "809-555-1234", "juan@abc.com", "Calle Principal #123"),
-                    Supplier(2, "Distribuidora XYZ", "María González", "809-555-5678", "maria@xyz.com", "Av. Independencia #456"),
-                    Supplier(3, "Importadora Global", null, "809-555-9012", null, null)
-                )
-
-                _state.update {
-                    it.copy(
-                        suppliers = suppliers,
-                        displaySuppliers = suppliers,
-                        isLoading = false,
-                        isFiltered = false,
-                        searchQuery = ""
-                    )
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = SupplierError.DatabaseError(
-                            e.message ?: "Error al cargar proveedores"
+            val result = repository.getAllSuppliers()
+            result.fold(
+                onSuccess = { suppliers ->
+                    _state.update {
+                        it.copy(
+                            suppliers = suppliers,
+                            displaySuppliers = suppliers,
+                            isLoading = false,
+                            isFiltered = false,
+                            searchQuery = ""
                         )
-                    )
+                    }
+                },
+                onFailure = { error ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
+                        )
+                    }
                 }
-            }
+            )
         }
     }
 
@@ -83,37 +74,25 @@ class SupplierViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            try {
-                // TODO: Reemplazar con llamada real al repositorio
-                // val supplier = repository.getSupplierById(supplierId)
-
-                val supplier = _state.value.suppliers.find { it.supplierId == supplierId }
-
-                if (supplier != null) {
+            val result = repository.getSupplierById(supplierId)
+            result.fold(
+                onSuccess = { supplier ->
                     _state.update {
                         it.copy(
                             selectedSupplier = supplier,
                             isLoading = false
                         )
                     }
-                } else {
+                },
+                onFailure = { error ->
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = SupplierError.RecordNotFound("Proveedor no encontrado")
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
                         )
                     }
                 }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = SupplierError.DatabaseError(
-                            e.message ?: "Error al cargar el proveedor"
-                        )
-                    )
-                }
-            }
+            )
         }
     }
 
@@ -125,45 +104,32 @@ class SupplierViewModel(
         address: String?
     ) {
         viewModelScope.launch {
-            // Validar antes de crear
             if (!validateBeforeSave(name, phone, email)) return@launch
-
             _state.update { it.copy(isLoading = true, error = null) }
 
-            try {
-                // TODO: Reemplazar con llamada real al repositorio
-                // val newSupplier = repository.createSupplier(name, contact, phone, email, address)
-
-                val newSupplier = Supplier(
-                    supplierId = (_state.value.suppliers.maxOfOrNull { it.supplierId } ?: 0) + 1,
-                    name = name,
-                    contact = contact,
-                    phone = phone,
-                    email = email,
-                    address = address
-                )
-
-                val updatedList = _state.value.suppliers + newSupplier
-
-                _state.update {
-                    it.copy(
-                        suppliers = updatedList,
-                        displaySuppliers = updatedList,
-                        isLoading = false,
-                        operationSuccess = true,
-                        successMessage = "Proveedor creado exitosamente"
-                    )
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = SupplierError.DatabaseError(
-                            e.message ?: "Error al crear el proveedor"
+            val result = repository.createSupplier(name, contact, phone, email, address)
+            result.fold(
+                onSuccess = { newSupplier ->
+                    val updatedList = _state.value.suppliers + newSupplier
+                    _state.update {
+                        it.copy(
+                            suppliers = updatedList,
+                            displaySuppliers = updatedList,
+                            isLoading = false,
+                            operationSuccess = true,
+                            successMessage = "Proveedor creado exitosamente"
                         )
-                    )
+                    }
+                },
+                onFailure = { error ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
+                        )
+                    }
                 }
-            }
+            )
         }
     }
 
@@ -176,48 +142,35 @@ class SupplierViewModel(
         address: String?
     ) {
         viewModelScope.launch {
-            // Validar antes de actualizar
             if (!validateBeforeSave(name, phone, email)) return@launch
-
             _state.update { it.copy(isLoading = true, error = null) }
 
-            try {
-                // TODO: Reemplazar con llamada real al repositorio
-                // repository.updateSupplier(supplierId, name, contact, phone, email, address)
-
-                val updatedSupplier = Supplier(
-                    supplierId = supplierId,
-                    name = name,
-                    contact = contact,
-                    phone = phone,
-                    email = email,
-                    address = address
-                )
-
-                val updatedList = _state.value.suppliers.map {
-                    if (it.supplierId == supplierId) updatedSupplier else it
-                }
-
-                _state.update {
-                    it.copy(
-                        suppliers = updatedList,
-                        displaySuppliers = updatedList,
-                        selectedSupplier = updatedSupplier,
-                        isLoading = false,
-                        operationSuccess = true,
-                        successMessage = "Proveedor actualizado exitosamente"
-                    )
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = SupplierError.DatabaseError(
-                            e.message ?: "Error al actualizar el proveedor"
+            val result = repository.updateSupplier(supplierId, name, contact, phone, email, address)
+            result.fold(
+                onSuccess = { updatedSupplier ->
+                    val updatedList = _state.value.suppliers.map {
+                        if (it.supplierId == supplierId) updatedSupplier else it
+                    }
+                    _state.update {
+                        it.copy(
+                            suppliers = updatedList,
+                            displaySuppliers = updatedList,
+                            selectedSupplier = updatedSupplier,
+                            isLoading = false,
+                            operationSuccess = true,
+                            successMessage = "Proveedor actualizado exitosamente"
                         )
-                    )
+                    }
+                },
+                onFailure = { error ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause=error)
+                        )
+                    }
                 }
-            }
+            )
         }
     }
 
@@ -225,33 +178,32 @@ class SupplierViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            try {
-                // TODO: Reemplazar con llamada real al repositorio
-                // repository.deleteSupplier(supplierId)
-
-                val updatedList = _state.value.suppliers.filter { it.supplierId != supplierId }
-
-                _state.update {
-                    it.copy(
-                        suppliers = updatedList,
-                        displaySuppliers = updatedList,
-                        isLoading = false,
-                        operationSuccess = true,
-                        successMessage = "Proveedor eliminado exitosamente"
-                    )
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = SupplierError.DatabaseError(
-                            e.message ?: "Error al eliminar el proveedor"
+            val result = repository.deleteSupplier(supplierId)
+            result.fold(
+                onSuccess = {
+                    val updatedList = _state.value.suppliers.filter { it.supplierId != supplierId }
+                    _state.update {
+                        it.copy(
+                            suppliers = updatedList,
+                            displaySuppliers = updatedList,
+                            isLoading = false,
+                            operationSuccess = true,
+                            successMessage = "Proveedor eliminado exitosamente"
                         )
-                    )
+                    }
+                },
+                onFailure = { error ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error as? SupplierError ?: SupplierError.UnknownError(cause = error)
+                        )
+                    }
                 }
-            }
+            )
         }
     }
+
 
     private fun searchSuppliers(query: String) {
         _state.update { it.copy(searchQuery = query) }
@@ -313,9 +265,8 @@ class SupplierViewModel(
 
         val error = if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             "Email inválido"
-        } else {
-            null
-        }
+        } else null
+
         _state.update { it.copy(emailError = error) }
     }
 

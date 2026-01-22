@@ -5,14 +5,12 @@ import android.util.Log
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.utils.NetworkUtils
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.database.OfflineDatabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.OfflineCashRegisterHistoryEntity
-import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.SyncQueueEntity
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.entities.SyncStatus
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegisterHistory
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 
 class HybridCashRegisterRepository(
     private val context: Context,
@@ -29,145 +27,132 @@ class HybridCashRegisterRepository(
     private suspend fun getCurrentUserId(): String? =
         supabase.auth.currentUserOrNull()?.id
 
-
     // ----------------------------------------------------
-    // APERTURA
+    // APERTURA - ALWAYS CREATES IN SUPABASE FIRST
     // ----------------------------------------------------
 
     suspend fun openCashRegister(
         cashRegisterId: String,
         initialBalance: Double
-    ): Result<CashRegisterHistory> {
+    ): Result<CashRegisterHistory> = runCatching {
 
-        val branchId = onlineRepository
-            .let { it }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-            .let { onlineRepository }
-            .run { onlineRepository }
-
-        val historyId = UUID.randomUUID().toString()
         val now = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
         val authId = getCurrentUserId() ?: "unknown"
 
+        // Check if there's already an open register (locally)
+        val existingOpen = offlineDb.cashRegisterDao().getOpenCashRegister()
+        if (existingOpen != null) {
+            throw Exception("Ya existe una caja abierta: ${existingOpen.localHistoryId}")
+        }
+
+        if (!NetworkUtils.isOnline(context)) {
+            throw Exception("No se puede abrir caja sin conexión a internet. Las cajas deben abrirse en línea para evitar conflictos de sincronización.")
+        }
+
+        // ALWAYS CREATE IN SUPABASE FIRST
+        Log.d(TAG, "Opening cash register in Supabase...")
+        val onlineHistory = onlineRepository.openCashRegister(cashRegisterId, initialBalance)
+
+        // Save to local DB with the SERVER-GENERATED ID
         val entity = OfflineCashRegisterHistoryEntity(
-            localHistoryId = historyId,
+            localHistoryId = onlineHistory.history_id, // ✅ USE SERVER ID
             cashRegisterId = cashRegisterId,
-            branchId = branchId.toString(),
+            branchId = onlineHistory.branch_id,
             authId = authId,
-            openingDate = now,
+            openingDate = onlineHistory.opening_date,
             initialBalance = initialBalance,
             isOpen = true,
-            syncStatus = SyncStatus.PENDING
+            syncStatus = SyncStatus.SYNCED
         )
 
         offlineDb.cashRegisterDao().insert(entity)
+        Log.d(TAG, "✅ Cash register opened: ${onlineHistory.history_id}")
 
-        return if (NetworkUtils.isOnline(context)) {
-            try {
-                val online = onlineRepository.openCashRegister(cashRegisterId, initialBalance)
-                val synced = entity.copy(
-                    localHistoryId = online.history_id,
-                    syncStatus = SyncStatus.SYNCED
-                )
-                offlineDb.cashRegisterDao().update(synced)
-                Result.success(synced.toDomain())
-            } catch (e: Exception) {
-                Log.e(TAG, "Error apertura online", e)
-                Result.success(entity.toDomain())
-            }
-        } else {
-            offlineDb.syncQueueDao().insert(
-                SyncQueueEntity(
-                    entityType = "CASH_REGISTER",
-                    entityId = historyId
-                )
-
-            )
-            Result.success(entity.toDomain())
-        }
+        onlineHistory
     }
 
     // ----------------------------------------------------
-    // CIERRE
+    // CIERRE - UPDATES SUPABASE THEN LOCAL
     // ----------------------------------------------------
 
     suspend fun closeCashRegister(
         realFinalBalance: Double
-    ): Result<CashRegisterHistory> {
+    ): Result<CashRegisterHistory> = runCatching {
 
-        val openRegister = offlineDb.cashRegisterDao()
-            .getOpenCashRegister()
-            ?: return Result.failure(Exception("No hay caja abierta"))
+        val openRegister = offlineDb.cashRegisterDao().getOpenCashRegister()
+            ?: throw Exception("No hay caja abierta")
 
-        val now = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
-        val salesTotal = getLocalSalesTotal(openRegister.localHistoryId)
-        val expected = openRegister.initialBalance + salesTotal
-        val difference = realFinalBalance - expected
+        if (!NetworkUtils.isOnline(context)) {
+            throw Exception("No se puede cerrar caja sin conexión a internet")
+        }
 
+        Log.d(TAG, "Closing cash register in Supabase...")
+        val onlineHistory = onlineRepository.closeCashRegister(realFinalBalance)
+
+        // Update local record
         val updated = openRegister.copy(
-            closingDate = now,
-            finalBalance = realFinalBalance,
-            expectedBalance = expected,
-            difference = difference,
+            closingDate = onlineHistory.closing_date,
+            finalBalance = onlineHistory.final_balance,
+            expectedBalance = onlineHistory.expected_balance,
+            difference = onlineHistory.difference,
             isOpen = false,
-            syncStatus = SyncStatus.PENDING
+            syncStatus = SyncStatus.SYNCED
         )
 
         offlineDb.cashRegisterDao().update(updated)
+        Log.d(TAG, "✅ Cash register closed: ${onlineHistory.history_id}")
 
-        return if (NetworkUtils.isOnline(context)) {
-            try {
-                val online = onlineRepository.closeCashRegister(realFinalBalance)
-                val synced = updated.copy(
-                    localHistoryId = online.history_id,
-                    syncStatus = SyncStatus.SYNCED
-                )
-                offlineDb.cashRegisterDao().update(synced)
-                Result.success(synced.toDomain())
-            } catch (e: Exception) {
-                Log.e(TAG, "Error cierre online", e)
-                Result.success(updated.toDomain())
-            }
-        } else {
-            offlineDb.syncQueueDao().insert(
-                        SyncQueueEntity(
-                        entityType = "CASH_REGISTER",
-                entityId = updated.localHistoryId
-            )
-
-            )
-            Result.success(updated.toDomain())
-        }
+        onlineHistory
     }
 
     // ----------------------------------------------------
-    // CONSULTA
+    // CONSULTA - CHECKS BOTH LOCAL AND ONLINE
     // ----------------------------------------------------
 
     suspend fun getOpenCashRegister(): CashRegisterHistory? {
-        return offlineDb.cashRegisterDao()
-            .getOpenCashRegister()
-            ?.toDomain()
+        val isOnline = NetworkUtils.isOnline(context)
+
+        if (isOnline) {
+            // When online, check Supabase for the source of truth
+            return try {
+                val onlineRegister = onlineRepository.getOpenCashRegister()
+
+                if (onlineRegister != null) {
+                    // Sync to local DB if not already there
+                    val localRegister = offlineDb.cashRegisterDao().getOpenCashRegister()
+
+                    if (localRegister == null || localRegister.localHistoryId != onlineRegister.history_id) {
+                        Log.d(TAG, "Syncing online register to local DB: ${onlineRegister.history_id}")
+
+                        // Close any stale local registers
+                        localRegister?.let {
+                            offlineDb.cashRegisterDao().update(it.copy(isOpen = false))
+                        }
+
+                        // Insert the online register
+                        val entity = OfflineCashRegisterHistoryEntity(
+                            localHistoryId = onlineRegister.history_id,
+                            cashRegisterId = onlineRegister.cash_register_id,
+                            branchId = onlineRegister.branch_id,
+                            authId = onlineRegister.auth_id,
+                            openingDate = onlineRegister.opening_date,
+                            initialBalance = onlineRegister.initial_balance,
+                            isOpen = true,
+                            syncStatus = SyncStatus.SYNCED
+                        )
+                        offlineDb.cashRegisterDao().insert(entity)
+                    }
+                }
+
+                onlineRegister
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking online register, falling back to local", e)
+                offlineDb.cashRegisterDao().getOpenCashRegister()?.toDomain()
+            }
+        } else {
+            // Offline: use local DB
+            return offlineDb.cashRegisterDao().getOpenCashRegister()?.toDomain()
+        }
     }
 
     private suspend fun getLocalSalesTotal(historyId: String): Double {
@@ -192,5 +177,6 @@ private fun OfflineCashRegisterHistoryEntity.toDomain() =
         final_balance = finalBalance,
         expected_balance = expectedBalance,
         difference = difference,
-        is_open = isOpen
+        is_open = isOpen,
+        branch_id = branchId,
     )
