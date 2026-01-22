@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.inventory.InventoryIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.inventory.SortMode
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.inventory.InventoryViewModel
@@ -27,6 +28,17 @@ fun InventoryScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Verificar permisos
+    val canView = PermissionChecker.canViewInventory()
+    val canUpdateStock = PermissionChecker.canUpdateStock()
+
+    // Si no puede ver inventario, navegar atrás
+    LaunchedEffect(canView) {
+        if (!canView) {
+            onBack()
+        }
+    }
+
     var showSortDialog by remember { mutableStateOf(false) }
     var showTestDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -39,6 +51,11 @@ fun InventoryScreen(
                 duration = SnackbarDuration.Short
             )
         }
+    }
+
+    // Si no tiene permiso de ver, no renderizar nada
+    if (!canView) {
+        return
     }
 
     Scaffold(
@@ -142,19 +159,25 @@ fun InventoryScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(state.filteredItems, key = { it.id }) { item ->
-                                InventoryCard(
-                                    item = item,
-                                    onIncrease = {
-                                        viewModel.handleIntent(
-                                            InventoryIntent.IncreaseStock(item.id, 1)
-                                        )
-                                    },
-                                    onDecrease = {
-                                        viewModel.handleIntent(
-                                            InventoryIntent.DecreaseStock(item.id, 1)
-                                        )
-                                    }
-                                )
+                                if (canUpdateStock) {
+                                    // Con permisos: muestra los botones
+                                    InventoryCard(
+                                        item = item,
+                                        onIncrease = {
+                                            viewModel.handleIntent(
+                                                InventoryIntent.IncreaseStock(item.id, 1)
+                                            )
+                                        },
+                                        onDecrease = {
+                                            viewModel.handleIntent(
+                                                InventoryIntent.DecreaseStock(item.id, 1)
+                                            )
+                                        }
+                                    )
+                                } else {
+                                    // Sin permisos: solo lectura (sin botones)
+                                    InventoryCardReadOnly(item = item)
+                                }
                             }
                         }
                     }
