@@ -6,12 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.capabilities.CapabilitiesResolver
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkMonitor
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionManager
 import com.dev.point_of_sale_sistem_with_kotlin_pos.data.local.database.OfflineDatabase
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.SessionState
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.auth.AuthRepository
 import io.github.jan.supabase.SupabaseClient
@@ -34,6 +36,7 @@ class AuthSessionViewModel(
 
     private val repository = AuthRepository(supabase)
     private val userRepository = UserRepository(supabase)
+    private val roleRepository = RoleRepository(supabase)
     private val branchRepository: HybridBranchRepository by lazy {
         HybridBranchRepository(context, supabase, sessionPreferences)
     }
@@ -44,7 +47,6 @@ class AuthSessionViewModel(
 
     private val _intents = Channel<AuthIntent>(Channel.UNLIMITED)
 
-    // 🌐 Estado de conectividad (temporal)
     private var isOfflineMode: Boolean = false
 
     companion object {
@@ -53,6 +55,7 @@ class AuthSessionViewModel(
 
     init {
         Log.d(TAG, "Initializing AuthSessionViewModel")
+        PermissionManager.initialize()
         observeIntents()
         sendIntent(AuthIntent.CheckSession)
         updateCapabilities()
@@ -82,7 +85,6 @@ class AuthSessionViewModel(
         viewModelScope.launch { _intents.send(intent) }
     }
 
-    // 🧠 CAPABILITIES (cálculo central)
     private fun updateCapabilities() {
         val capabilities = CapabilitiesResolver.resolve(
             isOffline = isOfflineMode
@@ -93,13 +95,7 @@ class AuthSessionViewModel(
             capabilities = capabilities
         )
     }
-    // ============================================
-    //        MÉTODOS DE BIOMÉTRICO
-    // ============================================
 
-    /**
-     * Guarda si el dispositivo tiene datos biométricos configurados
-     */
     fun setHasBiometric(hasBiometric: Boolean) {
         viewModelScope.launch {
             sessionPreferences.setHasBiometric(hasBiometric)
@@ -107,16 +103,9 @@ class AuthSessionViewModel(
         }
     }
 
-    /**
-     * Obtiene si el dispositivo tiene datos biométricos configurados
-     */
     suspend fun getHasBiometric(): Boolean {
         return sessionPreferences.getHasBiometric()
     }
-
-    // ============================================
-    //        MÉTODOS EXISTENTES
-    // ============================================
 
     private fun handleCheckSession() {
         viewModelScope.launch {
@@ -126,6 +115,7 @@ class AuthSessionViewModel(
 
             if (authUser == null) {
                 _state.value = SessionState()
+                PermissionManager.clearPermissions()
                 updateCapabilities()
                 return@launch
             }
@@ -161,6 +151,9 @@ class AuthSessionViewModel(
                     branchRepository.cacheBranches()
                 }
 
+                val userId = userInfo?.user_id ?: ""
+                val roleName = roleRepository.getUserRoleName(userId)
+
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isAuthenticated = true,
@@ -168,9 +161,12 @@ class AuthSessionViewModel(
                     email = authUser.email,
                     userId = userInfo.user_id,
                     branchId = branchId,
+                    roleName = roleName,
                     isUserDisabled = false,
                     error = null
                 )
+
+                PermissionManager.loadUserPermissions(userId)
 
                 updateCapabilities()
 
@@ -237,12 +233,12 @@ class AuthSessionViewModel(
             sessionPreferences.clearBranchId()
             sessionPreferences.clearCompanyId()
 
+            PermissionManager.clearPermissions()
             _state.value = SessionState()
             updateCapabilities()
         }
     }
 
-    // 🔧 Se usará en el Paso 4
     fun setOfflineMode(isOffline: Boolean) {
         if (isOfflineMode != isOffline) {
             isOfflineMode = isOffline

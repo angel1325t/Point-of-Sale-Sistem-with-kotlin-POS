@@ -12,6 +12,7 @@ data class SessionState(
     // 🧠 Usuario interno (public.users)
     val userId: String? = null,
     val branchId: String? = null,
+    val roleName: String? = null,
 
     // 🌐 Conectividad
     val isOffline: Boolean = false,

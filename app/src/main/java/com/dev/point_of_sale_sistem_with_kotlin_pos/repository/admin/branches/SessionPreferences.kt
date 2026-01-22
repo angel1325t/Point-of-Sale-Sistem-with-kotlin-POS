@@ -70,6 +70,8 @@ class SessionPreferences(private val context: Context) {
         return hasBiometric
     }
 
+
+
     suspend fun getCompanyId(): String? =
         context.dataStore.data.map { it[COMPANY_ID_KEY] }.first()
 

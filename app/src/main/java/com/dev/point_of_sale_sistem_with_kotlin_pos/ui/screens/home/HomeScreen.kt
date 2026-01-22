@@ -63,7 +63,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.MyApplication
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.auth.AuthIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.auth.AuthError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.HybridBranchRepository
@@ -98,7 +98,6 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val localContext = LocalContext.current
 
-    // ✅ CORRECCIÓN: Obtener los strings ANTES de usarlos en LaunchedEffect
     val branchChangedMessage = stringResource(R.string.branch_changed_success)
     val logoutSuccessMessage = stringResource(R.string.logout_success)
     val userLabel = stringResource(R.string.user)
@@ -132,7 +131,6 @@ fun HomeScreen(
     }
     val branchState by branchViewModel.state.collectAsState()
 
-    // ✅ ViewModel del Dashboard
     val dashboardViewModel = remember(state.branchId) {
         if (state.branchId != null) {
             DashboardViewModel(
@@ -146,17 +144,14 @@ fun HomeScreen(
 
     val dashboardState = dashboardViewModel?.state?.collectAsState()
 
-    // ✅ Determinar si mostrar selector de sucursal
     val showBranchSelector = state.isAuthenticated && state.branchId == null && !state.isLoading
 
-    // ✅ Obtener la sucursal actual
     val currentBranch = remember(state.branchId, branchState.branches) {
         state.branchId?.let { branchId ->
             branchState.branches.find { it.branchId == branchId }
         }
     }
 
-    // Redirigir al login si no está autenticado
     LaunchedEffect(state.isAuthenticated, state.isLoading) {
         if (!state.isAuthenticated && !state.isLoading) {
             navController.navigate("login") {
@@ -165,7 +160,6 @@ fun HomeScreen(
         }
     }
 
-    // Mostrar error en Snackbar
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             val message = when (error) {
@@ -181,7 +175,6 @@ fun HomeScreen(
         }
     }
 
-    // ✅ CORRECCIÓN: Usar las variables declaradas arriba
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { msg ->
             val displayMessage = when (msg) {
@@ -205,9 +198,6 @@ fun HomeScreen(
                         .fillMaxSize()
                         .verticalScroll(scrollState)
                 ) {
-                    // ═══════════════════════════════════════════════════
-                    // HEADER DEL DRAWER
-                    // ═══════════════════════════════════════════════════
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primaryContainer
@@ -236,9 +226,16 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
 
+                            state.roleName?.let { role ->
+                                Text(
+                                    text = "Rol: $role",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+
                             Spacer(Modifier.height(8.dp))
 
-                            // Sucursal actual
                             currentBranch?.let { branch ->
                                 Surface(
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f),
@@ -278,136 +275,156 @@ fun HomeScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // ═══════════════════════════════════════════════════
-                    // SECCIÓN: OPERACIONES
-                    // ═══════════════════════════════════════════════════
                     DrawerSection(operationsLabel)
 
-                    DrawerItem(
-                        icon = Icons.Default.ShoppingCart,
-                        title = salesLabel,
-                        onClick = {
-                            navController.navigate("sales")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canCreateSales() || PermissionChecker.canViewSales()) {
+                        DrawerItem(
+                            icon = Icons.Default.ShoppingCart,
+                            title = salesLabel,
+                            onClick = {
+                                navController.navigate("sales")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.ManageAccounts,
-                        title = cashRegisterManagementLabel,
-                        onClick = {
-                            navController.navigate("cash_register/manage")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewCashRegister()) {
+                        DrawerItem(
+                            icon = Icons.Default.ManageAccounts,
+                            title = cashRegisterManagementLabel,
+                            onClick = {
+                                navController.navigate("cash_register/manage")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.AccountBalanceWallet,
-                        title = cashRegisterLabel,
-                        onClick = {
-                            navController.navigate("cash_register/history")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewCashTransactions()) {
+                        DrawerItem(
+                            icon = Icons.Default.AccountBalanceWallet,
+                            title = cashRegisterLabel,
+                            onClick = {
+                                navController.navigate("cash_register/history")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.KeyboardReturn,
-                        title = returnsLabel,
-                        onClick = {
-                            navController.navigate("refunds")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewReturns()) {
+                        DrawerItem(
+                            icon = Icons.Default.KeyboardReturn,
+                            title = returnsLabel,
+                            onClick = {
+                                navController.navigate("refunds")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.Inventory,
-                        title = inventoryLabel,
-                        onClick = {
-                            navController.navigate(route = "inventory")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewInventory()) {
+                        DrawerItem(
+                            icon = Icons.Default.Inventory,
+                            title = inventoryLabel,
+                            onClick = {
+                                navController.navigate("inventory")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.Assessment,
-                        title = reportsLabel,
-                        onClick = {
-                            navController.navigate("reports")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewReports()) {
+                        DrawerItem(
+                            icon = Icons.Default.Assessment,
+                            title = reportsLabel,
+                            onClick = {
+                                navController.navigate("reports")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
                     Spacer(Modifier.height(8.dp))
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(Modifier.height(8.dp))
 
-                    // ═══════════════════════════════════════════════════
-                    // SECCIÓN: ADMINISTRACIÓN
-                    // ═══════════════════════════════════════════════════
                     DrawerSection(administrationLabel)
 
-                    DrawerItem(
-                        icon = Icons.Default.Security,
-                        title = roleManagementLabel,
-                        onClick = {
-                            navController.navigate("roles")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewRoles()) {
+                        DrawerItem(
+                            icon = Icons.Default.Security,
+                            title = roleManagementLabel,
+                            onClick = {
+                                navController.navigate("roles")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.People,
-                        title = usersLabel,
-                        onClick = {
-                            navController.navigate("users")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewUsers()) {
+                        DrawerItem(
+                            icon = Icons.Default.People,
+                            title = usersLabel,
+                            onClick = {
+                                navController.navigate("users")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.Store,
-                        title = branchesLabel,
-                        onClick = {
-                            navController.navigate("branches")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewBranches()) {
+                        DrawerItem(
+                            icon = Icons.Default.Store,
+                            title = branchesLabel,
+                            onClick = {
+                                navController.navigate("branches")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.Category,
-                        title = "Categorias",
-                        onClick = {
-                            navController.navigate("categories")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewCategories()) {
+                        DrawerItem(
+                            icon = Icons.Default.Category,
+                            title = "Categorias",
+                            onClick = {
+                                navController.navigate("categories")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.Inventory2,
-                        title = "Productos",
-                        onClick = {
-                            navController.navigate("products")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewProducts()) {
+                        DrawerItem(
+                            icon = Icons.Default.Inventory2,
+                            title = "Productos",
+                            onClick = {
+                                navController.navigate("products")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.LocalShipping,
-                        title = "Proveedores",
-                        onClick = {
-                            navController.navigate("suppliers")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewSuppliers()) {
+                        DrawerItem(
+                            icon = Icons.Default.LocalShipping,
+                            title = "Proveedores",
+                            onClick = {
+                                navController.navigate("suppliers")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
-                    DrawerItem(
-                        icon = Icons.Default.ShoppingCart,
-                        title = "Pedidos de Reposición",
-                        onClick = {
-                            navController.navigate("purchase_orders")
-                            scope.launch { drawerState.close() }
-                        }
-                    )
+                    if (PermissionChecker.canViewPurchases()) {
+                        DrawerItem(
+                            icon = Icons.Default.ShoppingCart,
+                            title = "Pedidos de Reposición",
+                            onClick = {
+                                navController.navigate("purchase_orders")
+                                scope.launch { drawerState.close() }
+                            }
+                        )
+                    }
 
                     Spacer(Modifier.height(16.dp))
                 }
@@ -422,23 +439,14 @@ fun HomeScreen(
                     tonalElevation = 4.dp
                 ) {
                     NavigationBarItem(
-                        icon = {
-                            Icon(
-                                Icons.Default.Home,
-                                contentDescription = homeLabel
-                            )
-                        },
+                        icon = { Icon(Icons.Default.Home, contentDescription = homeLabel) },
                         label = { Text(homeLabel) },
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 }
                     )
+                    if (PermissionChecker.canViewBranches()) {
                     NavigationBarItem(
-                        icon = {
-                            Icon(
-                                Icons.Default.Store,
-                                contentDescription = branchesLabel
-                            )
-                        },
+                        icon = { Icon(Icons.Default.Store, contentDescription = branchesLabel) },
                         label = { Text(branchesLabel) },
                         selected = selectedTab == 1,
                         onClick = {
@@ -446,13 +454,9 @@ fun HomeScreen(
                             navController.navigate("branches")
                         }
                     )
+                    }
                     NavigationBarItem(
-                        icon = {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "Perfil"
-                            )
-                        },
+                        icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
                         label = { Text("Perfil") },
                         selected = selectedTab == 2,
                         onClick = {
@@ -470,9 +474,6 @@ fun HomeScreen(
                         .background(MaterialTheme.colorScheme.background)
                         .padding(paddingValues)
                 ) {
-                    // ═══════════════════════════════════════════════════
-                    // TOP BAR
-                    // ═══════════════════════════════════════════════════
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surface,
@@ -485,7 +486,6 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Botón del menú
                             IconButton(
                                 onClick = {
                                     scope.launch {
@@ -501,7 +501,6 @@ fun HomeScreen(
                                 )
                             }
 
-                            // Título y sucursal
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = dashboardLabel,
@@ -519,11 +518,7 @@ fun HomeScreen(
                                 }
                             }
 
-                            IconButton(
-                                onClick = {
-                                    // TODO: Navegar a pantalla de notificaciones
-                                }
-                            ) {
+                            IconButton(onClick = { }) {
                                 Icon(
                                     Icons.Default.Notifications,
                                     contentDescription = "Notificaciones",
@@ -534,16 +529,12 @@ fun HomeScreen(
                         }
                     }
 
-                    // ═══════════════════════════════════════════════════
-                    // CONTENIDO PRINCIPAL
-                    // ═══════════════════════════════════════════════════
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
                         when {
-                            // Dashboard con datos
                             dashboardViewModel != null && dashboardState != null -> {
                                 DashboardSection(
                                     viewModel = dashboardViewModel,
@@ -551,8 +542,6 @@ fun HomeScreen(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
-
-                            // Mensaje de bienvenida (sin sucursal)
                             else -> {
                                 WelcomeContent(welcomePosSystemLabel)
                             }
@@ -560,7 +549,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Overlay de carga cuando está cambiando de sucursal
                 if (state.isLoading && state.isAuthenticated) {
                     LoadingOverlay(changingBranchLabel, pleaseWaitLabel)
                 }
@@ -568,9 +556,6 @@ fun HomeScreen(
         }
     }
 
-    // ═══════════════════════════════════════════════════
-    // SELECTOR DE SUCURSAL (Dialog)
-    // ═══════════════════════════════════════════════════
     if (showBranchSelector) {
         BranchSelectorDialog(
             branches = branchState.branches,
@@ -582,13 +567,6 @@ fun HomeScreen(
     }
 }
 
-// ═══════════════════════════════════════════════════════════
-// COMPONENTES AUXILIARES
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Contenido de bienvenida cuando no hay sucursal seleccionada
- */
 @Composable
 private fun WelcomeContent(welcomeMessage: String) {
     Column(
@@ -633,9 +611,6 @@ private fun WelcomeContent(welcomeMessage: String) {
     }
 }
 
-/**
- * Overlay de carga cuando se está cambiando de sucursal
- */
 @Composable
 private fun LoadingOverlay(changingBranchMessage: String, pleaseWaitMessage: String) {
     Box(
@@ -668,9 +643,6 @@ private fun LoadingOverlay(changingBranchMessage: String, pleaseWaitMessage: Str
     }
 }
 
-/**
- * Sección del drawer (título de grupo)
- */
 @Composable
 private fun DrawerSection(title: String) {
     Text(
@@ -683,9 +655,6 @@ private fun DrawerSection(title: String) {
     )
 }
 
-/**
- * Item individual del drawer
- */
 @Composable
 private fun DrawerItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -696,7 +665,7 @@ private fun DrawerItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        color = Color.Transparent
+        color = androidx.compose.ui.graphics.Color.Transparent
     ) {
         Row(
             modifier = Modifier

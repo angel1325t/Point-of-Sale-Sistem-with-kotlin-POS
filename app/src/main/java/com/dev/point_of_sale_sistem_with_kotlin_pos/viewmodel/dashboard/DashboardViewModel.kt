@@ -81,7 +81,6 @@ class DashboardViewModel(
                             summary = calculateSummary(data),
                             topProducts = mapTopProducts(data.topProducts),
                             revenueData = mapRevenueData(data.revenueData),
-                            profitMargins = data.profitMargins,
                             isLoading = false,
                             lastUpdated = System.currentTimeMillis()
                         )
@@ -122,7 +121,6 @@ class DashboardViewModel(
                             summary = calculateSummary(data),
                             topProducts = mapTopProducts(data.topProducts),
                             revenueData = mapRevenueData(data.revenueData),
-                            profitMargins = data.profitMargins,
                             isRefreshing = false,
                             lastUpdated = System.currentTimeMillis()
                         )

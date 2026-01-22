@@ -136,6 +136,7 @@ private fun CameraPreview(
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     var camera by remember { mutableStateOf<Camera?>(null) }
     var hasScanned by remember { mutableStateOf(false) }
+    var isCameraReady by remember { mutableStateOf(false) }
 
     LaunchedEffect(camera, isFlashOn) {
         camera?.let {
@@ -147,14 +148,18 @@ private fun CameraPreview(
 
     AndroidView(
         factory = { ctx ->
-            val previewView = PreviewView(ctx)
+            val previewView = PreviewView(ctx).apply {
+                implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            }
             val executor = ContextCompat.getMainExecutor(ctx)
 
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
-                val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
+                val preview = Preview.Builder()
+                    .build()
+                    .also {
+                        it.setSurfaceProvider(previewView.surfaceProvider)
+                    }
 
                 val imageAnalyzer = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -182,6 +187,7 @@ private fun CameraPreview(
                     camera?.let { cam ->
                         onFlashAvailable(cam.cameraInfo.hasFlashUnit())
                     }
+                    isCameraReady = true
                 } catch (e: Exception) {
                     Log.e("CameraPreview", "Error starting camera", e)
                 }

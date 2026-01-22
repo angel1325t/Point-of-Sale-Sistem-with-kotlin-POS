@@ -19,6 +19,7 @@ class HybridCashRegisterRepository(
     private val onlineRepository: CashRegisterRepository,
     private val supabase: SupabaseClient
 ) {
+
     companion object {
         private const val TAG = "HybridCashRegisterRepo"
     }
@@ -28,10 +29,42 @@ class HybridCashRegisterRepository(
     private suspend fun getCurrentUserId(): String? =
         supabase.auth.currentUserOrNull()?.id
 
+
+    // ----------------------------------------------------
+    // APERTURA
+    // ----------------------------------------------------
+
     suspend fun openCashRegister(
         cashRegisterId: String,
         initialBalance: Double
     ): Result<CashRegisterHistory> {
+
+        val branchId = onlineRepository
+            .let { it }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+            .let { onlineRepository }
+            .run { onlineRepository }
+
         val historyId = UUID.randomUUID().toString()
         val now = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
         val authId = getCurrentUserId() ?: "unknown"
@@ -39,6 +72,7 @@ class HybridCashRegisterRepository(
         val entity = OfflineCashRegisterHistoryEntity(
             localHistoryId = historyId,
             cashRegisterId = cashRegisterId,
+            branchId = branchId.toString(),
             authId = authId,
             openingDate = now,
             initialBalance = initialBalance,
@@ -50,15 +84,15 @@ class HybridCashRegisterRepository(
 
         return if (NetworkUtils.isOnline(context)) {
             try {
-                val onlineHistory = onlineRepository.openCashRegister(cashRegisterId, initialBalance)
-                val updated = entity.copy(
-                    localHistoryId = onlineHistory.history_id,
+                val online = onlineRepository.openCashRegister(cashRegisterId, initialBalance)
+                val synced = entity.copy(
+                    localHistoryId = online.history_id,
                     syncStatus = SyncStatus.SYNCED
                 )
-                offlineDb.cashRegisterDao().update(updated)
-                Result.success(updated.toDomain())
+                offlineDb.cashRegisterDao().update(synced)
+                Result.success(synced.toDomain())
             } catch (e: Exception) {
-                Log.e(TAG, "Error opening cash register online", e)
+                Log.e(TAG, "Error apertura online", e)
                 Result.success(entity.toDomain())
             }
         } else {
@@ -67,26 +101,33 @@ class HybridCashRegisterRepository(
                     entityType = "CASH_REGISTER",
                     entityId = historyId
                 )
+
             )
             Result.success(entity.toDomain())
         }
     }
 
+    // ----------------------------------------------------
+    // CIERRE
+    // ----------------------------------------------------
+
     suspend fun closeCashRegister(
         realFinalBalance: Double
     ): Result<CashRegisterHistory> {
-        val openRegister = offlineDb.cashRegisterDao().getOpenCashRegister()
-            ?: return Result.failure(IllegalStateException("No hay caja abierta"))
+
+        val openRegister = offlineDb.cashRegisterDao()
+            .getOpenCashRegister()
+            ?: return Result.failure(Exception("No hay caja abierta"))
 
         val now = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME)
         val salesTotal = getLocalSalesTotal(openRegister.localHistoryId)
-        val expectedBalance = openRegister.initialBalance + salesTotal
-        val difference = realFinalBalance - expectedBalance
+        val expected = openRegister.initialBalance + salesTotal
+        val difference = realFinalBalance - expected
 
         val updated = openRegister.copy(
             closingDate = now,
             finalBalance = realFinalBalance,
-            expectedBalance = expectedBalance,
+            expectedBalance = expected,
             difference = difference,
             isOpen = false,
             syncStatus = SyncStatus.PENDING
@@ -96,141 +137,60 @@ class HybridCashRegisterRepository(
 
         return if (NetworkUtils.isOnline(context)) {
             try {
-                val onlineHistory = onlineRepository.closeCashRegister(realFinalBalance)
+                val online = onlineRepository.closeCashRegister(realFinalBalance)
                 val synced = updated.copy(
-                    localHistoryId = onlineHistory.history_id,
+                    localHistoryId = online.history_id,
                     syncStatus = SyncStatus.SYNCED
                 )
                 offlineDb.cashRegisterDao().update(synced)
                 Result.success(synced.toDomain())
             } catch (e: Exception) {
-                Log.e(TAG, "Error closing cash register online", e)
+                Log.e(TAG, "Error cierre online", e)
                 Result.success(updated.toDomain())
             }
         } else {
             offlineDb.syncQueueDao().insert(
-                SyncQueueEntity(
-                    entityType = "CASH_REGISTER",
-                    entityId = updated.localHistoryId
-                )
+                        SyncQueueEntity(
+                        entityType = "CASH_REGISTER",
+                entityId = updated.localHistoryId
+            )
+
             )
             Result.success(updated.toDomain())
         }
     }
 
+    // ----------------------------------------------------
+    // CONSULTA
+    // ----------------------------------------------------
+
     suspend fun getOpenCashRegister(): CashRegisterHistory? {
-        val local = offlineDb.cashRegisterDao().getOpenCashRegister()
-
-        // If there's a local box, check if it needs to be synced
-        if (local != null) {
-            // If local box is pending sync and we're online, try to sync
-            if (local.syncStatus == SyncStatus.PENDING && NetworkUtils.isOnline(context)) {
-                try {
-                    // Check if there's already an open box on the server
-                    val existingOnlineBox = onlineRepository.getOpenCashRegister()
-                    if (existingOnlineBox != null) {
-                        // Use server box instead of local pending one
-                        val synced = local.copy(
-                            localHistoryId = existingOnlineBox.history_id,
-                            syncStatus = SyncStatus.SYNCED
-                        )
-                        offlineDb.cashRegisterDao().update(synced)
-                        Log.d(TAG, "Using existing server box: ${existingOnlineBox.history_id}")
-                        return synced.toDomain()
-                    }
-
-                    // No existing box, create new one
-                    val onlineHistory = onlineRepository.openCashRegister(
-                        local.cashRegisterId,
-                        local.initialBalance
-                    )
-                    val synced = local.copy(
-                        localHistoryId = onlineHistory.history_id,
-                        syncStatus = SyncStatus.SYNCED
-                    )
-                    offlineDb.cashRegisterDao().update(synced)
-                    Log.d(TAG, "Pending box synced: ${onlineHistory.history_id}")
-                    return synced.toDomain()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error syncing local box: ${e.message}")
-                    // If error and server has an open box, use it
-                    if (e.message?.contains("Ya tienes una caja abierta") == true) {
-                        try {
-                            val existingBox = onlineRepository.getOpenCashRegister()
-                            if (existingBox != null) {
-                                val synced = local.copy(
-                                    localHistoryId = existingBox.history_id,
-                                    syncStatus = SyncStatus.SYNCED
-                                )
-                                offlineDb.cashRegisterDao().update(synced)
-                                Log.d(TAG, "Using server box after sync error: ${existingBox.history_id}")
-                                return synced.toDomain()
-                            }
-                        } catch (e2: Exception) {
-                            Log.e(TAG, "Error getting existing box: ${e2.message}")
-                        }
-                    }
-                    // If we can't sync, use local box anyway for offline functionality
-                    return local.toDomain()
-                }
-            }
-            // Local box is already synced or we're offline - use it
-            return local.toDomain()
-        }
-
-        // No local box, try server
-        return if (NetworkUtils.isOnline(context)) {
-            try {
-                onlineRepository.getOpenCashRegister()?.also { onlineHistory ->
-                    val entity = OfflineCashRegisterHistoryEntity(
-                        localHistoryId = onlineHistory.history_id,
-                        cashRegisterId = onlineHistory.cash_register_id,
-                        authId = onlineHistory.auth_id,
-                        openingDate = onlineHistory.opening_date,
-                        closingDate = onlineHistory.closing_date,
-                        initialBalance = onlineHistory.initial_balance,
-                        finalBalance = onlineHistory.final_balance,
-                        expectedBalance = onlineHistory.expected_balance,
-                        difference = onlineHistory.difference,
-                        isOpen = onlineHistory.is_open,
-                        syncStatus = SyncStatus.SYNCED
-                    )
-                    offlineDb.cashRegisterDao().insert(entity)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error getting open cash register from online", e)
-                null
-            }
-        } else {
-            null
-        }
-    }
-
-    suspend fun syncPendingBoxIfNeeded() {
-        // This is now handled in getOpenCashRegister()
-        // Kept for compatibility but does nothing
+        return offlineDb.cashRegisterDao()
+            .getOpenCashRegister()
+            ?.toDomain()
     }
 
     private suspend fun getLocalSalesTotal(historyId: String): Double {
-        return try {
-            offlineDb.salesDao().getSaleByHistoryId(historyId)
-                ?.let { sale -> sale.total }
-                ?: 0.0
-        } catch (e: Exception) {
-            0.0
-        }
+        return offlineDb.salesDao()
+            .getSaleByHistoryId(historyId)
+            ?.total ?: 0.0
     }
 }
 
-private fun OfflineCashRegisterHistoryEntity.toDomain() = CashRegisterHistory(
-    history_id = localHistoryId,
-    cash_register_id = cashRegisterId,
-    auth_id = authId,
-    opening_date = openingDate,
-    closing_date = closingDate,
-    initial_balance = initialBalance,
-    final_balance = finalBalance,
-    expected_balance = expectedBalance,
-    difference = difference,
-    is_open = isOpen
-)
+// ----------------------------------------------------
+// MAPPER
+// ----------------------------------------------------
+
+private fun OfflineCashRegisterHistoryEntity.toDomain() =
+    CashRegisterHistory(
+        history_id = localHistoryId,
+        cash_register_id = cashRegisterId,
+        auth_id = authId,
+        opening_date = openingDate,
+        closing_date = closingDate,
+        initial_balance = initialBalance,
+        final_balance = finalBalance,
+        expected_balance = expectedBalance,
+        difference = difference,
+        is_open = isOpen
+    )

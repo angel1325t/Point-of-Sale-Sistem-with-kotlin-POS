@@ -104,7 +104,6 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.Pa
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.sales_orders.SaleDetail
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.credit_notes.AppliedCreditNotesCard
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.credit_notes.CreditNoteUsageScreen
-import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.BarcodeScannerScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.CameraEvidenceScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.CashPaymentDialog
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.ReferenceNumberDialog
@@ -130,7 +129,8 @@ fun SalesScreen(
     viewModel: SalesViewModel?,
     onNavigateBack: () -> Unit,
     authViewModel: AuthSessionViewModel,
-    creditNoteUsageViewModel: CreditNoteUsageViewModel
+    creditNoteUsageViewModel: CreditNoteUsageViewModel,
+    navController: androidx.navigation.NavHostController
 ) {
     val state = viewModel?.state?.collectAsStateWithLifecycle()
     val authState by authViewModel.state.collectAsState()
@@ -149,7 +149,6 @@ fun SalesScreen(
     var searchQuery by remember { mutableStateOf("") }
     var isSearchFocused by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
-    var showBarcodeScanner by remember { mutableStateOf(false) }
     var showReferenceDialog by remember { mutableStateOf(false) }
     var pendingImageFile by remember { mutableStateOf<java.io.File?>(null) }
 
@@ -158,6 +157,15 @@ fun SalesScreen(
 
     // 📟 ESTADO PARA LECTOR DE CÓDIGOS
     val isBarcodeReaderActive = state?.value?.isBarcodeReaderActive ?: false
+
+    // Listen for barcode scanner result
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    LaunchedEffect(Unit) {
+        savedStateHandle?.get<String>("scanned_barcode")?.let { barcode ->
+            viewModel?.handleIntent(SalesIntent.SearchProductByBarcode(barcode))
+            savedStateHandle.remove<String>("scanned_barcode")
+        }
+    }
 
     // Obtener valores del ViewModel state
     val appliedCreditNotes = state?.value?.appliedCreditNotes ?: emptyList()
@@ -296,17 +304,6 @@ fun SalesScreen(
         ProcessingPaymentDialog()
     }
 
-    /* ---------------- BARCODE SCANNER (CÁMARA) ---------------- */
-    if (showBarcodeScanner) {
-        BarcodeScannerScreen(
-            onBarcodeScanned = {
-                viewModel?.handleIntent(SalesIntent.SearchProductByBarcode(it))
-                showBarcodeScanner = false
-            },
-            onNavigateBack = { showBarcodeScanner = false }
-        )
-    }
-
     /* ---------------- MAIN UI ---------------- */
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -413,9 +410,9 @@ fun SalesScreen(
                             placeholder = { Text("Buscar producto") },
                             trailingIcon = {
                                 IconButton(onClick = {
-                                    showBarcodeScanner = true
                                     keyboardController?.hide()
                                     focusManager.clearFocus()
+                                    navController.navigate("sales/barcode")
                                 }) {
                                     Icon(Icons.Default.QrCodeScanner, null)
                                 }

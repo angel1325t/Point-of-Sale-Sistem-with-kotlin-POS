@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import android.util.Log
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkMonitor
 import com.dev.point_of_sale_sistem_with_kotlin_pos.core.network.NetworkObserver
@@ -21,7 +22,8 @@ import kotlinx.coroutines.launch
 class MyApplication : Application() {
 
     companion object {
-        const val NOTIFICATION_CHANNEL_ID = "notification_fcm"
+        const val NOTIFICATION_CHANNEL_ID = "pos_notifications"
+        private const val TAG = "MyApplication"
     }
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -32,7 +34,7 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // 🔹 Supabase
+        // Supabase
         try {
             supabase = createSupabaseClient(applicationContext)
             SupabaseClientProvider.client = supabase
@@ -40,14 +42,14 @@ class MyApplication : Application() {
             e.printStackTrace()
         }
 
-        // 🔹 Session Preferences
+        // Session Preferences
         try {
             sessionPreferences = SessionPreferences(applicationContext)
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-        // 🔹 FCM Token
+        // FCM Token
         Firebase.messaging.token.addOnCompleteListener { task ->
             if (!task.isSuccessful) return@addOnCompleteListener
 
@@ -58,10 +60,10 @@ class MyApplication : Application() {
             }
         }
 
-        // 🔹 Notification Channel
+        // Unified Notification Channel
         createNotificationChannel()
 
-        // ✅ 🆕 NETWORK OBSERVER PARA SINCRONIZACIÓN AUTOMÁTICA
+        // Network Observer for automatic sync
         setupNetworkObserver()
     }
 
@@ -79,12 +81,18 @@ class MyApplication : Application() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
-                "Notificaciones de Incidencias",
+                "Notificaciones POS",
                 NotificationManager.IMPORTANCE_HIGH
-            )
-            channel.description = "Notificaciones de nuevas incidencias"
+            ).apply {
+                description = "Notificaciones de ventas, inventario y alertas"
+                enableVibration(true)
+                enableLights(true)
+            }
+
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
+
+            Log.d(TAG, "Canal de notificaciones creado: $NOTIFICATION_CHANNEL_ID")
         }
     }
 }

@@ -14,13 +14,10 @@ class DashboardRepository(
 
     companion object {
         private const val TAG = "DASHBOARD_REPO"
-        private const val SALES_TABLE = "sale"
-        private const val SALE_ITEMS_TABLE = "sale_items"
+        private const val SALES_TABLE = "sales"
+        private const val SALE_ITEMS_TABLE = "sale_details"
     }
 
-    /**
-     * Obtiene el resumen completo del dashboard
-     */
     suspend fun getDashboardData(
         startDate: String,
         endDate: String,
@@ -30,16 +27,14 @@ class DashboardRepository(
             Log.d(TAG, "📊 Obteniendo datos del dashboard - Rango: $startDate a $endDate, BranchId: $branchId")
 
             val sales = getSales(startDate, endDate, branchId)
-            val topProducts = getTopProducts(startDate, endDate, branchId)
-            val revenueData = getRevenueByDate(startDate, endDate, branchId)
-            val profitMargins = calculateProfitMargins(sales)
+            val topProducts = getTopProducts(startDate, endDate, sales)
+            val revenueData = getRevenueByDate(sales)
 
             Result.success(
                 DashboardData(
                     sales = sales,
                     topProducts = topProducts,
-                    revenueData = revenueData,
-                    profitMargins = profitMargins
+                    revenueData = revenueData
                 )
             )
 
@@ -49,30 +44,29 @@ class DashboardRepository(
         }
     }
 
-    /**
-     * Obtiene las ventas del período
-     */
     private suspend fun getSales(
         startDate: String,
         endDate: String,
         branchId: String?
     ): List<SaleDTO> {
         return try {
+            val endDateTime = "$endDate 23:59:59"
+
             val allSales = supabase
                 .from(SALES_TABLE)
-                .select()
+                .select(
+                    columns = Columns.list("sale_id", "total", "sale_date", "payment_method", "user_id", "status", "subtotal", "itbis", "invoice_number")
+                ) {
+                    filter {
+                        gte("sale_date", startDate)
+                        lte("sale_date", endDateTime)
+                        eq("status", "completed")
+                    }
+                }
                 .decodeList<SaleDTO>()
 
-            allSales.filter { sale ->
-                val inDateRange =
-                    sale.saleDate >= startDate &&
-                            sale.saleDate <= endDate
-
-                val sameBranch =
-                    branchId == null || sale.branchId.toString() == branchId
-
-                inDateRange && sameBranch
-            }
+            Log.d(TAG, "✅ Ventas cargadas: ${allSales.size} registros")
+            allSales
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error obteniendo ventas: ${e.message}", e)
@@ -80,41 +74,50 @@ class DashboardRepository(
         }
     }
 
-    /**
-     * Obtiene los productos más vendidos
-     */
     private suspend fun getTopProducts(
         startDate: String,
         endDate: String,
-        branchId: String?,
-        limit: Int = 5
+        sales: List<SaleDTO>
     ): List<TopProductDTO> {
         return try {
-            val items = supabase
-                .from(SALE_ITEMS_TABLE)
+            if (sales.isEmpty()) {
+                return emptyList()
+            }
+
+            val endDateTime = "$endDate 23:59:59"
+
+            val details = supabase
+                .from("sale_details")
                 .select(
-                    columns = Columns.list(
-                        "product_id",
-                        "product_name",
-                        "quantity",
-                        "subtotal",
-                        "sale_id"
+                    columns = Columns.raw(
+                        """
+                        product_id,
+                        quantity,
+                        final_price,
+                        products(name)
+                        """.trimIndent()
                     )
-                )
+                ) {
+                    filter {
+                        gte("sales.sale_date", startDate)
+                        lte("sales.sale_date", endDateTime)
+                        eq("sales.status", "completed")
+                    }
+                }
                 .decodeList<SaleItemDTO>()
 
-            items
+            details
                 .groupBy { it.productId }
                 .map { (_, productItems) ->
                     TopProductDTO(
                         productId = productItems.first().productId,
                         productName = productItems.first().productName,
                         totalQuantity = productItems.sumOf { it.quantity },
-                        totalRevenue = productItems.sumOf { it.subtotal }
+                        totalRevenue = productItems.sumOf { it.finalPrice }
                     )
                 }
                 .sortedByDescending { it.totalRevenue }
-                .take(limit)
+                .take(5)
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error obteniendo top productos: ${e.message}", e)
@@ -122,19 +125,12 @@ class DashboardRepository(
         }
     }
 
-    /**
-     * Obtiene los ingresos agrupados por fecha
-     */
-    private suspend fun getRevenueByDate(
-        startDate: String,
-        endDate: String,
-        branchId: String?
+    private fun getRevenueByDate(
+        sales: List<SaleDTO>
     ): List<RevenueDateDTO> {
         return try {
-            val sales = getSales(startDate, endDate, branchId)
-
             sales
-                .groupBy { it.saleDate.take(10) } // YYYY-MM-DD
+                .groupBy { it.saleDate.take(10) }
                 .map { (date, salesOfDay) ->
                     RevenueDateDTO(
                         saleDate = date,
@@ -149,39 +145,10 @@ class DashboardRepository(
             emptyList()
         }
     }
-
-    /**
-     * Calcula los márgenes de ganancia
-     * Nota: requiere costos reales de productos
-     */
-    private fun calculateProfitMargins(
-        sales: List<SaleDTO>
-    ): ProfitMargins {
-        val totalRevenue = sales.sumOf { it.totalAmount }
-
-        // Margen estimado del 30%
-        val estimatedCost = totalRevenue * 0.70
-        val grossProfit = totalRevenue - estimatedCost
-        val profitMargin =
-            if (totalRevenue > 0)
-                (grossProfit / totalRevenue) * 100
-            else 0.0
-
-        return ProfitMargins(
-            totalCost = estimatedCost,
-            totalRevenue = totalRevenue,
-            grossProfit = grossProfit,
-            profitMargin = profitMargin
-        )
-    }
 }
 
-/**
- * Contenedor de datos del dashboard
- */
 data class DashboardData(
     val sales: List<SaleDTO>,
     val topProducts: List<TopProductDTO>,
-    val revenueData: List<RevenueDateDTO>,
-    val profitMargins: ProfitMargins
+    val revenueData: List<RevenueDateDTO>
 )

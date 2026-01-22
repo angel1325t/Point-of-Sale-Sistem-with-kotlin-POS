@@ -12,9 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel para gestionar el estado de las categorías usando MVI
- */
 class CategoryViewModel(
     private val repository: CategoryRepository
 ) : ViewModel() {
@@ -26,28 +23,19 @@ class CategoryViewModel(
         handleIntent(CategoryIntent.LoadCategories)
     }
 
-    /**
-     * Maneja todos los intents del usuario
-     */
     fun handleIntent(intent: CategoryIntent) {
         when (intent) {
             is CategoryIntent.LoadCategories -> loadCategories()
             is CategoryIntent.LoadCategoryById -> loadCategoryById(intent.categoryId)
             is CategoryIntent.SearchCategories -> searchCategories(intent.query)
             is CategoryIntent.FilterByParent -> filterByParent(intent.parentId)
-            is CategoryIntent.CreateCategory -> createCategory(
-                intent.name,
-                intent.description,
-                intent.parentId
-            )
-            is CategoryIntent.UpdateCategory -> updateCategory(
-                intent.categoryId,
-                intent.name,
-                intent.description,
-                intent.parentId
-            )
+            is CategoryIntent.CreateCategory ->
+                createCategory(intent.name, intent.description, intent.parentId)
+            is CategoryIntent.UpdateCategory ->
+                updateCategory(intent.categoryId, intent.name, intent.description, intent.parentId)
             is CategoryIntent.DeleteCategory -> deleteCategory(intent.categoryId)
-            is CategoryIntent.DeleteMultipleCategories -> deleteMultipleCategories(intent.categoryIds)
+            is CategoryIntent.DeleteMultipleCategories ->
+                deleteMultipleCategories(intent.categoryIds)
             is CategoryIntent.SelectCategory -> selectCategory(intent.categoryId)
             is CategoryIntent.ClearSelection -> clearSelection()
             is CategoryIntent.ClearError -> clearError()
@@ -56,9 +44,6 @@ class CategoryViewModel(
         }
     }
 
-    /**
-     * Carga todas las categorías
-     */
     private fun loadCategories() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -69,175 +54,103 @@ class CategoryViewModel(
                         it.copy(
                             categories = categories,
                             filteredCategories = categories,
-                            isLoading = false,
-                            totalItems = categories.size
+                            totalItems = categories.size,
+                            isLoading = false
                         )
                     }
                 }
-                .onFailure { error ->
+                .onFailure {
                     _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error as? CategoryError ?: CategoryError.UnknownError(
-                                exception = error
-                            )
-                        )
+                        it.copy(isLoading = false, error = it as? CategoryError)
                     }
                 }
         }
     }
 
-    /**
-     * Carga una categoría específica por ID
-     */
     private fun loadCategoryById(categoryId: Int) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
             repository.getCategoryById(categoryId)
-                .onSuccess { category ->
-                    _state.update {
-                        it.copy(
-                            selectedCategory = category,
-                            isLoading = false
-                        )
+                .onSuccess {
+                    _state.update { state ->
+                        state.copy(selectedCategory = it, isLoading = false)
                     }
                 }
-                .onFailure { error ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error as? CategoryError ?: CategoryError.UnknownError(
-                                exception = error
-                            )
-                        )
+                .onFailure {
+                    _state.update { state ->
+                        state.copy(isLoading = false, error = it as? CategoryError)
                     }
                 }
         }
     }
 
-    /**
-     * Busca categorías por nombre
-     */
     private fun searchCategories(query: String) {
         viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    searchQuery = query,
-                    isLoading = true,
-                    error = null
-                )
-            }
+            _state.update { it.copy(searchQuery = query, isLoading = true) }
 
             if (query.isBlank()) {
                 _state.update {
-                    it.copy(
-                        filteredCategories = it.categories,
-                        isLoading = false
-                    )
+                    it.copy(filteredCategories = it.categories, isLoading = false)
                 }
                 return@launch
             }
 
             repository.searchCategories(query)
-                .onSuccess { categories ->
-                    _state.update {
-                        it.copy(
-                            filteredCategories = categories,
-                            isLoading = false
-                        )
+                .onSuccess {
+                    _state.update { state ->
+                        state.copy(filteredCategories = it, isLoading = false)
                     }
                 }
-                .onFailure { error ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error as? CategoryError ?: CategoryError.UnknownError(
-                                exception = error
-                            )
-                        )
+                .onFailure {
+                    _state.update { state ->
+                        state.copy(isLoading = false, error = it as? CategoryError)
                     }
                 }
         }
     }
 
-    /**
-     * Filtra categorías por ID de padre
-     */
     private fun filterByParent(parentId: Int?) {
         viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    filterParentId = parentId,
-                    isLoading = true,
-                    error = null
-                )
-            }
+            _state.update { it.copy(filterParentId = parentId, isLoading = true) }
 
             repository.getCategoriesByParentId(parentId)
-                .onSuccess { categories ->
-                    _state.update {
-                        it.copy(
-                            filteredCategories = categories,
-                            isLoading = false
-                        )
+                .onSuccess {
+                    _state.update { state ->
+                        state.copy(filteredCategories = it, isLoading = false)
                     }
                 }
-                .onFailure { error ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = error as? CategoryError ?: CategoryError.UnknownError(
-                                exception = error
-                            )
-                        )
+                .onFailure {
+                    _state.update { state ->
+                        state.copy(isLoading = false, error = it as? CategoryError)
                     }
                 }
         }
     }
 
-    /**
-     * Crea una nueva categoría
-     */
     private fun createCategory(name: String, description: String?, parentId: Int?) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
             repository.createCategory(name, description, parentId)
-                .onSuccess { category ->
-                    _state.update {
-                        it.copy(
-                            categories = it.categories + category,
-                            filteredCategories = it.filteredCategories + category,
+                .onSuccess {
+                    loadCategories()
+                    _state.update { state ->
+                        state.copy(
                             isLoading = false,
                             operationSuccess = true,
-                            successMessage = "Categoría creada exitosamente",
-                            selectedCategory = null,
-                            nameError = null,
-                            descriptionError = null
+                            successMessage = "Categoría creada exitosamente"
                         )
                     }
-                    // Recargar para obtener datos actualizados
-                    loadCategories()
                 }
-                .onFailure { error ->
-                    val categoryError = error as? CategoryError ?: CategoryError.UnknownError(
-                        exception = error
-                    )
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = categoryError,
-                            operationSuccess = false
-                        )
+                .onFailure {
+                    _state.update { state ->
+                        state.copy(isLoading = false, error = it as? CategoryError)
                     }
                 }
         }
     }
 
-    /**
-     * Actualiza una categoría existente
-     */
     private fun updateCategory(
         categoryId: Int,
         name: String,
@@ -248,172 +161,69 @@ class CategoryViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
 
             repository.updateCategory(categoryId, name, description, parentId)
-                .onSuccess { category ->
-                    _state.update {
-                        it.copy(
-                            categories = it.categories.map { cat ->
-                                if (cat.categoryId == categoryId) category else cat
-                            },
-                            filteredCategories = it.filteredCategories.map { cat ->
-                                if (cat.categoryId == categoryId) category else cat
-                            },
+                .onSuccess {
+                    loadCategories()
+                    _state.update { state ->
+                        state.copy(
                             isLoading = false,
                             operationSuccess = true,
-                            successMessage = "Categoría actualizada exitosamente",
-                            selectedCategory = null,
-                            nameError = null,
-                            descriptionError = null
+                            successMessage = "Categoría actualizada exitosamente"
                         )
                     }
-                    // Recargar para obtener datos actualizados
-                    loadCategories()
                 }
-                .onFailure { error ->
-                    val categoryError = error as? CategoryError ?: CategoryError.UnknownError(
-                        exception = error
-                    )
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = categoryError,
-                            operationSuccess = false
-                        )
+                .onFailure {
+                    _state.update { state ->
+                        state.copy(isLoading = false, error = it as? CategoryError)
                     }
                 }
         }
     }
 
-    /**
-     * Elimina una categoría
-     */
     private fun deleteCategory(categoryId: Int) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
             repository.deleteCategory(categoryId)
                 .onSuccess {
-                    _state.update {
-                        it.copy(
-                            categories = it.categories.filter { cat -> cat.categoryId != categoryId },
-                            filteredCategories = it.filteredCategories.filter { cat ->
-                                cat.categoryId != categoryId
-                            },
-                            isLoading = false,
-                            operationSuccess = true,
-                            successMessage = "Categoría eliminada exitosamente",
-                            selectedCategory = null
-                        )
-                    }
+                    loadCategories()
                 }
-                .onFailure { error ->
-                    val categoryError = error as? CategoryError ?: CategoryError.UnknownError(
-                        exception = error
-                    )
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = categoryError,
-                            operationSuccess = false
-                        )
+                .onFailure {
+                    _state.update { state ->
+                        state.copy(isLoading = false, error = it as? CategoryError)
                     }
                 }
         }
     }
 
-    /**
-     * Elimina múltiples categorías
-     */
     private fun deleteMultipleCategories(categoryIds: List<Int>) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
             repository.deleteMultipleCategories(categoryIds)
-                .onSuccess { deletedCount ->
-                    _state.update {
-                        it.copy(
-                            categories = it.categories.filter { cat ->
-                                cat.categoryId !in categoryIds
-                            },
-                            filteredCategories = it.filteredCategories.filter { cat ->
-                                cat.categoryId !in categoryIds
-                            },
-                            isLoading = false,
-                            operationSuccess = true,
-                            successMessage = "Se eliminaron $deletedCount categorías",
-                            selectedCategory = null
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    val categoryError = error as? CategoryError ?: CategoryError.UnknownError(
-                        exception = error
-                    )
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            error = categoryError,
-                            operationSuccess = false
-                        )
-                    }
-                }
+            loadCategories()
         }
     }
 
-    /**
-     * Selecciona una categoría
-     */
     private fun selectCategory(categoryId: Int?) {
-        if (categoryId == null) {
-            clearSelection()
-            return
-        }
-
         val category = _state.value.categories.find { it.categoryId == categoryId }
         _state.update { it.copy(selectedCategory = category) }
     }
 
-    /**
-     * Limpia la selección actual
-     */
     private fun clearSelection() {
-        _state.update {
-            it.copy(
-                selectedCategory = null,
-                nameError = null,
-                descriptionError = null
-            )
-        }
+        _state.update { it.copy(selectedCategory = null) }
     }
 
-    /**
-     * Limpia el error actual
-     */
     private fun clearError() {
-        _state.update {
-            it.copy(
-                error = null,
-                operationSuccess = false,
-                successMessage = null
-            )
-        }
+        _state.update { it.copy(error = null, successMessage = null) }
     }
 
-    /**
-     * Resetea el estado completo
-     */
     private fun resetState() {
         _state.update { CategoryState() }
         loadCategories()
     }
 
-    /**
-     * Valida el nombre de la categoría
-     */
     private fun validateCategoryName(name: String) {
         val error = when {
             name.isBlank() -> "El nombre no puede estar vacío"
-            name.length < 2 -> "El nombre debe tener al menos 2 caracteres"
-            name.length > 100 -> "El nombre no puede exceder 100 caracteres"
+            name.length < 2 -> "Debe tener al menos 2 caracteres"
             else -> null
         }
         _state.update { it.copy(nameError = error) }

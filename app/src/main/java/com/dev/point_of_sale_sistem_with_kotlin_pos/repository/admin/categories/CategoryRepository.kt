@@ -2,67 +2,41 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.categories
 
 import android.util.Log
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.Category
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.CategoryError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.CategoryDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.CategoryError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.CategoryInsertDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.categories.CategoryUpdateDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Objects.isNull
 
-class CategoryRepository(private val supabase: SupabaseClient) {
+class CategoryRepository(
+    private val supabase: SupabaseClient,
+    private val sessionPreferences: SessionPreferences
+) {
 
     companion object {
         private const val TABLE_NAME = "categories"
     }
 
-    /**
-     * Obtiene todas las categorías
-     */
+    private suspend fun getBranchId(): String =
+        sessionPreferences.getBranchId()
+            ?: throw IllegalStateException("BRANCH_ID_NOT_FOUND")
+
+    private suspend fun getCompanyId(): String =
+        sessionPreferences.getCompanyId()
+            ?: throw IllegalStateException("COMPANY_ID_NOT_FOUND")
+
     suspend fun getAllCategories(): Result<List<Category>> = withContext(Dispatchers.IO) {
         try {
-            val response = supabase.from(TABLE_NAME)
-                .select()
-                .decodeList<CategoryDTO>()
+            val branchId = getBranchId()
 
-            Result.success(response.map { it.toCategory() })
-        } catch (e: Exception) {
-            Result.failure(handleException(e))
-        }
-    }
-
-    /**
-     * Obtiene una categoría por su ID
-     */
-    suspend fun getCategoryById(categoryId: Int): Result<Category> = withContext(Dispatchers.IO) {
-        try {
             val response = supabase.from(TABLE_NAME)
                 .select {
-                    filter { eq("category_id", categoryId) }
-                }
-                .decodeSingleOrNull<CategoryDTO>()
-
-            response?.let {
-                Result.success(it.toCategory())
-            } ?: Result.failure(Exception(CategoryError.RecordNotFound().message))
-
-        } catch (e: Exception) {
-            Result.failure(handleException(e))
-        }
-    }
-
-    /**
-     * Busca categorías por nombre
-     */
-    suspend fun searchCategories(query: String): Result<List<Category>> = withContext(Dispatchers.IO) {
-        try {
-            val response = supabase.from(TABLE_NAME)
-                .select {
-                    filter {
-                        ilike("name", "%$query%")
-                    }
+                    filter { eq("branch_id", branchId) }
                 }
                 .decodeList<CategoryDTO>()
 
@@ -72,25 +46,41 @@ class CategoryRepository(private val supabase: SupabaseClient) {
         }
     }
 
-    /**
-     * Obtiene categorías por ID del padre
-     */
-    suspend fun getCategoriesByParentId(parentId: Int?): Result<List<Category>> =
+    suspend fun getCategoryById(categoryId: Int): Result<Category> =
         withContext(Dispatchers.IO) {
             try {
-                val response = if (parentId == null) {
-                    supabase.from(TABLE_NAME)
-                        .select {
-                            filter { isNull("parent_id") }
+                val branchId = getBranchId()
+
+                val response = supabase.from(TABLE_NAME)
+                    .select {
+                        filter {
+                            eq("category_id", categoryId)
+                            eq("branch_id", branchId)
                         }
-                        .decodeList<CategoryDTO>()
-                } else {
-                    supabase.from(TABLE_NAME)
-                        .select {
-                            filter { eq("parent_id", parentId) }
+                    }
+                    .decodeSingleOrNull<CategoryDTO>()
+
+                response?.let {
+                    Result.success(it.toCategory())
+                } ?: Result.failure(CategoryError.RecordNotFound())
+            } catch (e: Exception) {
+                Result.failure(handleException(e))
+            }
+        }
+
+    suspend fun searchCategories(query: String): Result<List<Category>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val branchId = getBranchId()
+
+                val response = supabase.from(TABLE_NAME)
+                    .select {
+                        filter {
+                            ilike("name", "%$query%")
+                            eq("branch_id", branchId)
                         }
-                        .decodeList<CategoryDTO>()
-                }
+                    }
+                    .decodeList<CategoryDTO>()
 
                 Result.success(response.map { it.toCategory() })
             } catch (e: Exception) {
@@ -98,58 +88,54 @@ class CategoryRepository(private val supabase: SupabaseClient) {
             }
         }
 
-    /**
-     * Crea una nueva categoría
-     */
+    suspend fun getCategoriesByParentId(parentId: Int?): Result<List<Category>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val branchId = getBranchId()
+
+                val response = supabase.from(TABLE_NAME)
+                    .select {
+                        filter {
+                            eq("branch_id", branchId)
+                            parentId?.let { eq("parent_id", it) } ?: isNull("parent_id")
+                        }
+                    }
+                    .decodeList<CategoryDTO>()
+
+                Result.success(response.map { it.toCategory() })
+            } catch (e: Exception) {
+                Result.failure(handleException(e))
+            }
+        }
+
     suspend fun createCategory(
         name: String,
         description: String?,
         parentId: Int?
     ): Result<Category> = withContext(Dispatchers.IO) {
         try {
-            if (name.isBlank()) {
-                return@withContext Result.failure(
-                    CategoryError.ValidationError(
-                        message = "El nombre de la categoría no puede estar vacío",
-                        field = "name"
-                    )
-                )
-            }
+            val branchId = getBranchId()
+            val companyId = getCompanyId()
 
-            // Validar duplicado
-            val existingCategory = supabase.from(TABLE_NAME)
-                .select {
-                    filter { eq("name", name.trim()) }
-                }
-                .decodeSingleOrNull<CategoryDTO>()
-
-            if (existingCategory != null) {
-                return@withContext Result.failure(CategoryError.DuplicateNameError())
-            }
-
-            val newCategory = CategoryInsertDTO(
+            val insert = CategoryInsertDTO(
                 name = name.trim(),
                 description = description?.trim(),
-                parentId = parentId
+                parentId = parentId,
+                companyId = companyId,
+                branchId = branchId
             )
 
             val response = supabase.from(TABLE_NAME)
-                .insert(newCategory) {
-                    select()
-                }
+                .insert(insert) { select() }
                 .decodeSingle<CategoryDTO>()
 
             Result.success(response.toCategory())
-
         } catch (e: Exception) {
-            Log.e("CREATE_CATEGORY", e.toString())
+            Log.e("CREATE_CATEGORY", e.message ?: "")
             Result.failure(handleException(e))
         }
     }
 
-    /**
-     * Actualiza una categoría existente
-     */
     suspend fun updateCategory(
         categoryId: Int,
         name: String,
@@ -157,40 +143,20 @@ class CategoryRepository(private val supabase: SupabaseClient) {
         parentId: Int?
     ): Result<Category> = withContext(Dispatchers.IO) {
         try {
-            if (name.isBlank()) {
-                return@withContext Result.failure(
-                    CategoryError.ValidationError(
-                        message = "El nombre de la categoría no puede estar vacío",
-                        field = "name"
-                    )
-                )
-            }
+            val branchId = getBranchId()
 
-            if (parentId == categoryId) {
-                return@withContext Result.failure(CategoryError.CircularReferenceError())
-            }
-
-            // Verificar duplicado (excluyendo la propia categoría)
-            val existingCategories = supabase.from(TABLE_NAME)
-                .select {
-                    filter { eq("name", name.trim()) }
-                }
-                .decodeList<CategoryDTO>()
-
-            val duplicate = existingCategories.firstOrNull { it.categoryId != categoryId }
-            if (duplicate != null) {
-                return@withContext Result.failure(CategoryError.DuplicateNameError())
-            }
-
-            val updatedData = CategoryUpdateDTO(
+            val update = CategoryUpdateDTO(
                 name = name.trim(),
                 description = description?.trim(),
                 parentId = parentId
             )
 
             val response = supabase.from(TABLE_NAME)
-                .update(updatedData) {
-                    filter { eq("category_id", categoryId) }
+                .update(update) {
+                    filter {
+                        eq("category_id", categoryId)
+                        eq("branch_id", branchId)
+                    }
                     select()
                 }
                 .decodeSingleOrNull<CategoryDTO>()
@@ -198,108 +164,49 @@ class CategoryRepository(private val supabase: SupabaseClient) {
             response?.let {
                 Result.success(it.toCategory())
             } ?: Result.failure(CategoryError.RecordNotFound())
-
         } catch (e: Exception) {
             Result.failure(handleException(e))
         }
     }
 
-    /**
-     * Elimina una categoría
-     */
-    suspend fun deleteCategory(categoryId: Int): Result<Boolean> = withContext(Dispatchers.IO) {
-        try {
-            val children = supabase.from(TABLE_NAME)
-                .select {
-                    filter { eq("parent_id", categoryId) }
-                }
-                .decodeList<CategoryDTO>()
+    suspend fun deleteCategory(categoryId: Int): Result<Boolean> =
+        withContext(Dispatchers.IO) {
+            try {
+                val branchId = getBranchId()
 
-            if (children.isNotEmpty()) {
-                return@withContext Result.failure(
-                    CategoryError.CannotDeleteParentCategory(
-                        childCount = children.size
-                    )
-                )
+                supabase.from(TABLE_NAME)
+                    .delete {
+                        filter {
+                            eq("category_id", categoryId)
+                            eq("branch_id", branchId)
+                        }
+                    }
+
+                Result.success(true)
+            } catch (e: Exception) {
+                Result.failure(handleException(e))
             }
-
-
-            supabase.from(TABLE_NAME)
-                .delete {
-                    filter { eq("category_id", categoryId) }
-                }
-
-            Result.success(true)
-
-        } catch (e: Exception) {
-            Result.failure(handleException(e))
         }
-    }
 
-    /**
-     * Elimina varias categorías a la vez
-     */
     suspend fun deleteMultipleCategories(categoryIds: List<Int>): Result<Int> =
         withContext(Dispatchers.IO) {
-            try {
-                var deletedCount = 0
-
-                categoryIds.forEach { id ->
-                    val result = deleteCategory(id)
-                    if (result.isSuccess) deletedCount++
-                }
-
-                Result.success(deletedCount)
-
-            } catch (e: Exception) {
-                Result.failure(handleException(e))
+            var count = 0
+            categoryIds.forEach {
+                if (deleteCategory(it).isSuccess) count++
             }
+            Result.success(count)
         }
 
-    /**
-     * Conteo de subcategorías
-     */
-    suspend fun getChildrenCount(categoryId: Int): Result<Int> =
-        withContext(Dispatchers.IO) {
-            try {
-                val children = supabase.from(TABLE_NAME)
-                    .select {
-                        filter { eq("parent_id", categoryId) }
-                    }
-                    .decodeList<CategoryDTO>()
+    private fun handleException(e: Exception): CategoryError =
+        CategoryError.UnknownError(exception = e)
 
-                Result.success(children.size)
-
-            } catch (e: Exception) {
-                Result.failure(handleException(e))
-            }
-        }
-
-    /**
-     * Manejo centralizado de excepciones
-     */
-    private fun handleException(e: Exception): CategoryError {
-        return when {
-            e.message?.contains("network", ignoreCase = true) == true ->
-                CategoryError.NetworkError()
-            e.message?.contains("timeout", ignoreCase = true) == true ->
-                CategoryError.TimeoutError()
-            e.message?.contains("unauthorized", ignoreCase = true) == true ->
-                CategoryError.UnauthorizedError()
-            e.message?.contains("not found", ignoreCase = true) == true ->
-                CategoryError.RecordNotFound()
-            else -> CategoryError.UnknownError(exception = e)
-        }
-    }
-
-    /**
-     * Convertir DTO a modelo interno
-     */
     private fun CategoryDTO.toCategory() = Category(
         categoryId = categoryId,
         name = name,
         description = description,
         parentId = parentId,
-        parentName = null
+        parentName = null,
+        companyId = companyId,
+        branchId = branchId
     )
 }

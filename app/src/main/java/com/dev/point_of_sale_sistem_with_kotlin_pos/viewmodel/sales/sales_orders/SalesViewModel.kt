@@ -302,6 +302,19 @@ class SalesViewModel(
                             isLoading = false,
                             searchResults = listOf(product)
                         )
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            addProductToSale(
+                                SalesIntent.AddSaleDetail(
+                                    productId = product.productId,
+                                    quantity = 1,
+                                    unitPrice = product.price,
+                                    discount = 0.0
+                                )
+                            )
+                        }
+
+                        _state.value = _state.value.copy(searchResults = emptyList())
                     } else {
                         Log.d(TAG, "searchByBarcode: No product found with code '$barcode'")
                         setError(SaleError.Server("Producto no encontrado: $barcode"))
@@ -725,10 +738,6 @@ class SalesViewModel(
         _state.value = _state.value.copy(isLoading = true)
 
         viewModelScope.launch {
-            // 🔄 Sync pending cash register box first if needed
-            if (!isOffline) {
-                hybridCashRegisterRepository.syncPendingBoxIfNeeded()
-            }
 
             val saleToCreate = sale.copy(status = "completed")
 

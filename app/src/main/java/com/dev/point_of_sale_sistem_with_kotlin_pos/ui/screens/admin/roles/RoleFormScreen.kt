@@ -122,18 +122,27 @@ fun RoleFormScreen(
                     }
 
                     if (nameError == null) {
-                        val role = RoleRepository.RoleModel(
-                            role_id = roleId,
-                            name = name.trim(),
-                            description = description.trim().takeIf { it.isNotEmpty() }
-                        )
+                        val cleanName = name.trim()
+                        val cleanDescription = description.trim().takeIf { it.isNotEmpty() }
 
                         if (isEditMode) {
-                            viewModel.handleIntent(RoleIntent.UpdateRole(role))
+                            viewModel.handleIntent(
+                                RoleIntent.UpdateRole(
+                                    roleId = roleId!!,
+                                    name = cleanName,
+                                    description = cleanDescription
+                                )
+                            )
                         } else {
-                            viewModel.handleIntent(RoleIntent.CreateRole(role))
+                            viewModel.handleIntent(
+                                RoleIntent.CreateRole(
+                                    name = cleanName,
+                                    description = cleanDescription
+                                )
+                            )
                         }
                     }
+
                 },
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             ) {

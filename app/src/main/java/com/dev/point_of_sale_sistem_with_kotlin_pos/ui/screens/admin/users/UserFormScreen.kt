@@ -1,25 +1,45 @@
     package com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.users
 
-    import android.widget.Toast
-    import androidx.compose.foundation.layout.*
-    import androidx.compose.foundation.rememberScrollState
-    import androidx.compose.foundation.verticalScroll
-    import androidx.compose.material.icons.Icons
-    import androidx.compose.material.icons.filled.ArrowBack
-    import androidx.compose.material3.*
-    import androidx.compose.runtime.*
-    import androidx.compose.runtime.saveable.rememberSaveable
-    import androidx.compose.ui.Alignment
-    import androidx.compose.ui.Modifier
-    import androidx.compose.ui.platform.LocalContext
-    import androidx.compose.ui.res.stringResource
-    import androidx.compose.ui.unit.dp
-    import com.dev.point_of_sale_sistem_with_kotlin_pos.R
-    import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
-    import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.UserError
-    import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
-    import kotlinx.coroutines.delay
-    import java.util.UUID
+    import android.annotation.SuppressLint
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.UserError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
+import java.util.UUID
+
+    @SuppressLint("LocalContextGetResourceValueCall")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun UserFormScreen(
@@ -34,6 +54,7 @@
 
         var email by remember { mutableStateOf("") }
         var selectedRoleId by remember { mutableStateOf<Int?>(null) }
+        var selectedRoleName by remember { mutableStateOf("") } // 🔥 NUEVO
         var selectedBranchId by remember { mutableStateOf<String?>(null) }
 
         // 🔥 Estados de error
@@ -46,16 +67,18 @@
         var loadedUserId by remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(userId) {
-            viewModel.clearSelectedUser()
-            loadedUserId = null
-            email = ""
-            selectedRoleId = null
-            selectedBranchId = null
-            emailError = null
-            roleError = null
-            branchError = null
+            if (userId == null) {
+                // Solo limpiar si NO estamos en modo editar
+                viewModel.clearSelectedUser()
+                loadedUserId = null
+                email = ""
+                selectedRoleId = null
+                selectedBranchId = null
+                emailError = null
+                roleError = null
+                branchError = null
+            }
         }
-
         LaunchedEffect(Unit) {
             viewModel.handleIntent(UserIntent.LoadRoles)
             viewModel.handleIntent(UserIntent.LoadBranches)
@@ -65,38 +88,42 @@
             }
         }
 
-        LaunchedEffect(state.selectedUser) {
-            state.selectedUser?.let { user ->
-                if (loadedUserId != user.auth_id.toString()) {
-                    email = user.email ?: ""
-                    selectedRoleId = user.role_id
-                    selectedBranchId = user.branch_id?.toString()
-                    loadedUserId = user.auth_id.toString()
-                }
+        LaunchedEffect(state.selectedUser, state.roles) {
+            val user = state.selectedUser ?: return@LaunchedEffect
+            if (state.roles.isEmpty()) return@LaunchedEffect
+
+            if (loadedUserId != user.auth_id.toString()) {
+                email = user.email ?: ""
+
+                val role = state.roles.find { it.role_id == user.role_id }
+                selectedRoleId = role?.role_id
+                selectedRoleName = role?.name ?: ""
+
+                selectedBranchId = user.branch_id?.toString()
+                loadedUserId = user.auth_id.toString()
             }
         }
+
 
 
         LaunchedEffect(state.successMessage) {
             state.successMessage?.let { msg ->
-                val messageText = context.getString(
-                    when (msg) {
-                        "SUCCESS_CREATE_USER" -> R.string.success_create_user
-                        "SUCCESS_UPDATE_USER" -> R.string.success_update_user
-                        else -> R.string.success_generic
-                    }
-                )
+                val messageText = when (msg) {
+                    "SUCCESS_CREATE_USER" ->
+                        context.getString(R.string.success_create_user)
+                    "SUCCESS_UPDATE_USER" ->
+                        context.getString(R.string.success_update_user)
+                    else ->
+                        context.getString(R.string.success_generic)
+                }
 
                 Toast.makeText(context, messageText, Toast.LENGTH_SHORT).show()
 
-
-                // Limpia mensaje para evitar duplicados
                 viewModel.clearMessages()
-
-                // Y volver atrás
                 onNavigateBack()
             }
         }
+
 
 
         DisposableEffect(Unit) {
@@ -109,15 +136,17 @@
         fun validateFields(): Boolean {
             var isValid = true
 
-            // Validación email
-            if (email.isBlank()) {
-                emailError = context.getString(R.string.email_required_validation)
-                isValid = false
-            } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                emailError = context.getString(R.string.invalid_format)
-                isValid = false
-            } else {
-                emailError = null
+            // Validación email (solo en modo creación)
+            if (!isEditMode) {
+                if (email.isBlank()) {
+                    emailError = context.getString(R.string.email_required_validation)
+                    isValid = false
+                } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                    emailError = context.getString(R.string.invalid_format)
+                    isValid = false
+                } else {
+                    emailError = null
+                }
             }
 
             // Validación rol
@@ -182,7 +211,7 @@
                     onExpandedChange = { expandedRole = !expandedRole }
                 ) {
                     OutlinedTextField(
-                        value = state.roles.find { it.role_id == selectedRoleId }?.name ?: "",
+                        value = selectedRoleName, // 🔥 YA NO usa find()
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.role)) },
@@ -192,7 +221,7 @@
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(),
+                            .menuAnchor()
                     )
 
                     ExposedDropdownMenu(
@@ -204,6 +233,7 @@
                                 text = { Text(role.name) },
                                 onClick = {
                                     selectedRoleId = role.role_id
+                                    selectedRoleName = role.name // 🔥 CLAVE
                                     roleError = null
                                     expandedRole = false
                                 }
@@ -211,6 +241,7 @@
                         }
                     }
                 }
+
 
                 if (roleError != null) {
                     Text(roleError!!, color = MaterialTheme.colorScheme.error)

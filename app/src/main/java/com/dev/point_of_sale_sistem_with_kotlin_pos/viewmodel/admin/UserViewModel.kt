@@ -1,7 +1,9 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin
 
 import android.util.Log
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
@@ -23,21 +25,32 @@ class UserViewModel(
             is UserIntent.LoadUsers -> loadUsers()
             is UserIntent.LoadUser -> loadUser(intent.authId)
             is UserIntent.CreateUser -> createUser(intent.email, intent.roleId, intent.branchId)
-            is UserIntent.UpdateUser -> updateUser(intent.authId, intent.email, intent.branchId, intent.roleId)
+            is UserIntent.UpdateUser -> updateUser(intent.authId, intent.branchId, intent.roleId)
             is UserIntent.DeleteUser -> deleteUser(intent.authId)
             is UserIntent.LoadRoles -> loadRoles()
             is UserIntent.LoadBranches -> loadBranches()
         }
     }
 
+    // 🔹 SOLO usuarios del branch actual
     private fun loadUsers() {
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
             try {
-                val users = repository.getAllActiveUsers()
+                val currentUser = repository.getCurrentUser()
+                    ?: throw IllegalStateException("ERROR_NO_CURRENT_USER")
+
+                val branchId = currentUser.branch_id
+                    ?: throw IllegalStateException("ERROR_NO_BRANCH_ID")
+                val authId = currentUser.auth_id
+                    ?: throw IllegalStateException("ERROR_NO_AUTH_ID")
+
+                val users = repository.getActiveUsersByBranch(branchId,authId)
+
                 state = state.copy(isLoading = false, users = users)
             } catch (e: Exception) {
-                state = state.copy(isLoading = false, error = UserError.ConnectionError)
+                Log.e("UserViewModel", "Load users error", e)
+                state = state.copy(isLoading = false, error = UserError.Other(e.message))
             }
         }
     }
@@ -47,11 +60,11 @@ class UserViewModel(
             state = state.copy(isLoading = true, error = null)
             try {
                 val user = repository.getUserById(authId)
-                if (user != null) {
-                    state = state.copy(isLoading = false, selectedUser = user)
-                } else {
-                    state = state.copy(isLoading = false, error = UserError.UserNotFound)
-                }
+                state = state.copy(
+                    isLoading = false,
+                    selectedUser = user,
+                    error = if (user == null) UserError.UserNotFound else null
+                )
             } catch (e: Exception) {
                 state = state.copy(isLoading = false, error = UserError.Other(e.message))
             }
@@ -77,15 +90,13 @@ class UserViewModel(
 
                 loadUsers()
             } catch (e: Exception) {
-                Log.e("UserViewModel", "Real error: ", e)
+                Log.e("UserViewModel", "Create user error", e)
 
                 val error = when {
-                    e.message?.contains("duplicate", ignoreCase = true) == true ->
+                    e.message?.contains("duplicate", true) == true ->
                         UserError.EmailAlreadyExists
-
-                    e.message?.contains("auth", ignoreCase = true) == true ->
+                    e.message?.contains("auth", true) == true ->
                         UserError.AuthError
-
                     else -> UserError.Other(e.message)
                 }
 
@@ -94,15 +105,17 @@ class UserViewModel(
         }
     }
 
-    private fun updateUser(authId: String, email: String?, branchId: UUID?, roleId: Int?) {
+    private fun updateUser(authId: String, branchId: UUID?, roleId: Int?) {
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
             try {
                 repository.updateUser(authId, branchId, roleId)
+
                 state = state.copy(
                     isLoading = false,
                     successMessage = "SUCCESS_UPDATE_USER"
                 )
+
                 loadUsers()
             } catch (e: Exception) {
                 state = state.copy(isLoading = false, error = UserError.Other(e.message))
@@ -115,10 +128,12 @@ class UserViewModel(
             state = state.copy(isLoading = true, error = null)
             try {
                 repository.deleteUser(authId)
+
                 state = state.copy(
                     isLoading = false,
                     successMessage = "SUCCESS_DELETE_USER"
                 )
+
                 loadUsers()
             } catch (e: Exception) {
                 state = state.copy(isLoading = false, error = UserError.Other(e.message))
@@ -130,13 +145,12 @@ class UserViewModel(
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
             try {
-                val roles = repository.getAllRoles()
-                state = state.copy(isLoading = false, roles = roles)
-            } catch (e: Exception) {
                 state = state.copy(
                     isLoading = false,
-                    error = UserError.Other("ERROR_LOAD_ROLES")
+                    roles = repository.getAllRoles()
                 )
+            } catch (e: Exception) {
+                state = state.copy(isLoading = false, error = UserError.Other("ERROR_LOAD_ROLES"))
             }
         }
     }
@@ -151,15 +165,12 @@ class UserViewModel(
                 val companyId = currentUser.company_id
                     ?: throw IllegalStateException("ERROR_NO_COMPANY_ID")
 
-                val branches = repository.getBranchesByCompany(companyId)
-
-                state = state.copy(isLoading = false, branches = branches)
-
-            } catch (e: Exception) {
                 state = state.copy(
                     isLoading = false,
-                    error = UserError.Other("ERROR_LOAD_BRANCHES")
+                    branches = repository.getBranchesByCompany(companyId)
                 )
+            } catch (e: Exception) {
+                state = state.copy(isLoading = false, error = UserError.Other("ERROR_LOAD_BRANCHES"))
             }
         }
     }

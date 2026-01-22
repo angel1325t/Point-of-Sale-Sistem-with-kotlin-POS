@@ -84,6 +84,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.reports.ReportsSc
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterHistoryScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.cash_register.CashRegisterManagementScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.SalesScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.sales.sales_orders.components.BarcodeScannerScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.theme.AppTheme
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.CategoryViewModel
@@ -150,9 +151,9 @@ class MainActivity : FragmentActivity() {
                     val roleRepository = remember { RoleRepository(supabase) }
                     val userRepository = remember { UserRepository(supabase) }
                     val branchRepository = remember { BranchRepository(supabase) }
-                    val categoryRepository = remember { CategoryRepository(supabase) }
+                    val categoryRepository = remember { CategoryRepository(supabase, sessionPreferences) }
                     val productsRepository = remember { ProductRepository(supabase, sessionPreferences) }
-                    val supplierRepository = remember { SupplierRepository(supabase) }
+                    val supplierRepository = remember { SupplierRepository(supabase, sessionPreferences) }
                     val purchaseOrderRepository = remember { PurchaseOrderRepository(supabase) }
                     val inventoryRepository = remember { InventoryRepository(supabase) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
@@ -570,7 +571,19 @@ fun AppNavigation(
                 viewModel = salesViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 authViewModel = authSessionViewModel,
-                creditNoteUsageViewModel = creditNoteUsageViewModel
+                creditNoteUsageViewModel = creditNoteUsageViewModel,
+                navController = navController
+            )
+        }
+
+        // BARCODE SCANNER
+        composable("sales/barcode") {
+            BarcodeScannerScreen(
+                onBarcodeScanned = { barcode ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("scanned_barcode", barcode)
+                    navController.popBackStack()
+                },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
