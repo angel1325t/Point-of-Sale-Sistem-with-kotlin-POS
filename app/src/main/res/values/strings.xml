@@ -34,7 +34,16 @@
     <string name="confirm_password_label">Confirmar contraseña</string>
     <string name="password_validation_6">Las contraseñas no coinciden</string>
     <string name="continue_text">Continuar</string>
-    <string name="forgot_password">¿Olvidaste tu contraseña?</string>
+<string name="forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="password_reset_title">Restablecer contraseña</string>
+    <string name="password_reset_subtitle">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</string>
+    <string name="password_reset_email_sent">Correo de restablecimiento enviado exitosamente</string>
+    <string name="password_reset_failed">Error al enviar correo de restablecimiento</string>
+    <string name="password_reset_email_hint">Correo electrónico</string>
+    <string name="password_reset_send_button">Enviar correo de restablecimiento</string>
+    <string name="password_reset_back_to_login">Volver al inicio de sesión</string>
+    <string name="password_reset_email_empty">El correo electrónico no puede estar vacío</string>
+    <string name="password_reset_email_invalid">Por favor ingresa un correo electrónico válido</string>
     <string name="create_account_text">Crear Cuenta</string>
     <string name="drawer_item_sales">Ventas</string>
     <string name="drawer_item_returns">Devoluciones</string>

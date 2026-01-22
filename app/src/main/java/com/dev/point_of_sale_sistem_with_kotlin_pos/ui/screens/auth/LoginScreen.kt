@@ -242,8 +242,8 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    TextButton(
-                        onClick = { /* TODO: Recuperar contraseña */ },
+TextButton(
+                        onClick = { navController.navigate("password_reset") },
                         enabled = !state.isLoading
                     ) {
                         Text(

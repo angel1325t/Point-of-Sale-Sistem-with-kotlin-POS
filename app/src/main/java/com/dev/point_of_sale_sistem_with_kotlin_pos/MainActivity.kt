@@ -1,5 +1,6 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +35,9 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_or
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.purchase_orders.PurchaseOrderFormScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.BiometricAuthScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.LoginScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.PasswordResetScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.EnhancedPasswordResetScreen
+import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.EmailChangeVerificationScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.RegisterScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.auth.components.UserDisabledScreen
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.home.HomeScreen
@@ -70,22 +74,32 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLifecycleObserver.start()
+
+        // Handle DeepLink if app is opened from a link
+        val deepLinkUri = intent?.data
         setContent {
             AppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surface
                 ) {
-                    val navController = rememberNavController()
+val navController = rememberNavController()
+
+                    // Handle DeepLink navigation
+                    LaunchedEffect(deepLinkUri) {
+                        deepLinkUri?.let { uri ->
+                            handlePasswordResetDeepLink(uri, navController)
+                        }
+                    }
 
                     // SESSION PREFS
                     val sessionPreferences = remember {
                         (application as MyApplication).sessionPreferences
                     }
 
-                    // AUTH
+// AUTH
                     val authSessionViewModel = remember {
-                        AuthSessionViewModel(supabase, sessionPreferences)
+                        AuthSessionViewModel(supabase, sessionPreferences, this@MainActivity)
                     }
 
                     val loginViewModel = remember {
@@ -131,6 +145,24 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+}
+
+    private fun handlePasswordResetDeepLink(uri: Uri, navController: NavHostController) {
+        if (uri.scheme == "posapp" && uri.host == "reset") {
+            val token = uri.getQueryParameter("token")
+            val email = uri.getQueryParameter("email")
+
+            // Navigate to password reset screen with parameters
+            val route = if (token != null && email != null) {
+                "password_reset?token=$token&email=$email"
+            } else {
+                "password_reset"
+            }
+            navController.navigate(route) {
+                launchSingleTop = true
+                popUpTo("login") { inclusive = false }
+            }
+        }
     }
 }
 
@@ -157,7 +189,7 @@ fun AppNavigation(
 
     // Obtener el estado de biométrico al inicio
     LaunchedEffect(Unit) {
-        hasBiometric = authSessionViewModel.getHasBiometric()
+        hasBiometric = authSessionViewModel.AgetHasBiometric()
     }
 
     // Solo activar el observer si tiene biométrico configurado
@@ -192,7 +224,40 @@ fun AppNavigation(
             BiometricAuthScreen(navController, targetRoute)
         }
 
-        composable("login") { LoginScreen(navController, loginViewModel, authSessionViewModel) }
+composable("login") { LoginScreen(navController, loginViewModel, authSessionViewModel) }
+composable(
+            route = "password_reset?token={token}&email={email}",
+            arguments = listOf(
+                navArgument("token") { type = NavType.StringType; nullable = true },
+                navArgument("email") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            val token = backStackEntry.arguments?.getString("token")
+            val email = backStackEntry.arguments?.getString("email")
+            PasswordResetScreen(navController, authSessionViewModel, token, email)
+        }
+        
+        composable(
+            route = "enhanced_password_reset?token={token}&email={email}",
+            arguments = listOf(
+                navArgument("token") { type = NavType.StringType; nullable = true },
+                navArgument("email") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            val token = backStackEntry.arguments?.getString("token")
+            val email = backStackEntry.arguments?.getString("email")
+            EnhancedPasswordResetScreen(navController, authSessionViewModel, token, email)
+        }
+        
+        composable(
+            route = "email_change_verification?token={token}",
+            arguments = listOf(
+                navArgument("token") { type = NavType.StringType; nullable = true }
+            )
+        ) { backStackEntry ->
+            val token = backStackEntry.arguments?.getString("token")
+            EmailChangeVerificationScreen(navController, authSessionViewModel, token)
+        }
         composable("user_disabled") { UserDisabledScreen(navController, authSessionViewModel) }
         composable("register") {
             val registerViewModel: RegisterViewModel = viewModel(

@@ -60,7 +60,7 @@ class LoginViewModel(
 
             if (isDisabled) {
                 _state.value = _state.value.copy(isLoading = false)
-                authSessionViewModel.sendIntent(AuthIntent.UserDisabled)
+                authSessionViewModel.handleIntent(AuthIntent.UserDisabled())
                 return@onSuccess
             }
 
@@ -68,7 +68,7 @@ class LoginViewModel(
                 isLoading = false,
                 successMessage = "SIGN_IN_SUCCESS"
             )
-            authSessionViewModel.sendIntent(AuthIntent.CheckSession)
+            authSessionViewModel.handleIntent(AuthIntent.CheckSession)
 
         }.onFailure { e ->
             _state.value = _state.value.copy(
