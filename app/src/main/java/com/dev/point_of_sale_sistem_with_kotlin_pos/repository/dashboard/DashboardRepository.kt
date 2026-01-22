@@ -1,7 +1,11 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.dashboard
 
 import android.util.Log
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.*
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.DashboardError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.RevenueDateDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.SaleDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.SaleItemDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.dashboard.TopProductDTO
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -27,7 +31,7 @@ class DashboardRepository(
             Log.d(TAG, "📊 Obteniendo datos del dashboard - Rango: $startDate a $endDate, BranchId: $branchId")
 
             val sales = getSales(startDate, endDate, branchId)
-            val topProducts = getTopProducts(startDate, endDate, sales)
+            val topProducts = getTopProducts(startDate, endDate, sales, branchId)
             val revenueData = getRevenueByDate(sales)
 
             Result.success(
@@ -55,12 +59,26 @@ class DashboardRepository(
             val allSales = supabase
                 .from(SALES_TABLE)
                 .select(
-                    columns = Columns.list("sale_id", "total", "sale_date", "payment_method", "user_id", "status", "subtotal", "itbis", "invoice_number")
+                    columns = Columns.list(
+                        "sale_id",
+                        "total",
+                        "sale_date",
+                        "payment_method",
+                        "user_id",
+                        "status",
+                        "subtotal",
+                        "itbis",
+                        "invoice_number",
+                        "branch_id"
+                    )
                 ) {
                     filter {
                         gte("sale_date", startDate)
                         lte("sale_date", endDateTime)
                         eq("status", "completed")
+                        if (branchId != null) {
+                            eq("branch_id", branchId)
+                        }
                     }
                 }
                 .decodeList<SaleDTO>()
@@ -77,24 +95,24 @@ class DashboardRepository(
     private suspend fun getTopProducts(
         startDate: String,
         endDate: String,
-        sales: List<SaleDTO>
+        sales: List<SaleDTO>,
+        branchId: String? = null
     ): List<TopProductDTO> {
         return try {
-            if (sales.isEmpty()) {
-                return emptyList()
-            }
+            if (sales.isEmpty()) return emptyList()
 
             val endDateTime = "$endDate 23:59:59"
 
             val details = supabase
-                .from("sale_details")
+                .from(SALE_ITEMS_TABLE)
                 .select(
                     columns = Columns.raw(
                         """
                         product_id,
                         quantity,
                         final_price,
-                        products(name)
+                        products(name),
+                        sales(branch_id, sale_date, status)
                         """.trimIndent()
                     )
                 ) {
@@ -102,6 +120,9 @@ class DashboardRepository(
                         gte("sales.sale_date", startDate)
                         lte("sales.sale_date", endDateTime)
                         eq("sales.status", "completed")
+                        if (branchId != null) {
+                            eq("sales.branch_id", branchId)
+                        }
                     }
                 }
                 .decodeList<SaleItemDTO>()

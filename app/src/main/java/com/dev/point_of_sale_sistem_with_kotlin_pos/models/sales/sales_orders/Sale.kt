@@ -13,9 +13,9 @@ data class Sale(
     val saleId: UUID,
     val userId: UUID,
     val saleDate: LocalDateTime,
-    val subtotal: Double,  // Subtotal sin impuestos
-    val itbis: Double,      // ITBIS (18%)
-    val total: Double,      // Total con impuestos
+    val subtotal: Double,
+    val itbis: Double,
+    val total: Double,
     val paymentMethod: String,
     val status: String,
     val createdAt: LocalDateTime,
@@ -25,6 +25,7 @@ data class Sale(
     val originalSaleId: UUID? = null,
     val creditRemaining: Double? = null,
     val cashRegisterHistoryId: String = "",
+    val branchId: String? = null,
 
     val saleDetails: List<SaleDetail> = emptyList()
 )
@@ -74,7 +75,9 @@ data class SaleInsertDTO(
     @SerialName("cash_register_history_id")
     val cashRegisterHistoryId: String,
 
-    // ✅ OPCIONAL: Solo se usa en modo offline para tracking
+    @SerialName("branch_id")
+    val branchId: String? = null,
+
     @SerialName("local_id")
     val localId: String? = null
 )

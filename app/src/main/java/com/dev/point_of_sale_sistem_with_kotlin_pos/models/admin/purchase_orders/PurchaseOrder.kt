@@ -21,6 +21,7 @@ enum class OrderStatus {
  */
 data class PurchaseOrder(
     val orderId: Int = 0,
+    val branchId: String, // UUID como String
     val supplierId: Int,
     val supplierName: String = "",
     val productId: Int,
@@ -38,6 +39,7 @@ data class PurchaseOrder(
         get() = status == OrderStatus.PENDING
 }
 
+
 /**
  * DTO para leer desde Supabase
  */
@@ -45,6 +47,9 @@ data class PurchaseOrder(
 data class PurchaseOrderDTO(
     @SerialName("order_id")
     val orderId: Int = 0,
+
+    @SerialName("branch_id")
+    val branchId: String, // UUID como String
 
     @SerialName("supplier_id")
     val supplierId: Int,
@@ -70,6 +75,7 @@ data class PurchaseOrderDTO(
     @SerialName("created_at")
     val createdAt: String? = null
 )
+
 
 /**
  * DTO extendido con información de proveedor y producto

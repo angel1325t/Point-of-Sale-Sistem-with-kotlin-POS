@@ -154,15 +154,15 @@ class MainActivity : FragmentActivity() {
                     val categoryRepository = remember { CategoryRepository(supabase, sessionPreferences) }
                     val productsRepository = remember { ProductRepository(supabase, sessionPreferences) }
                     val supplierRepository = remember { SupplierRepository(supabase, sessionPreferences) }
-                    val purchaseOrderRepository = remember { PurchaseOrderRepository(supabase) }
-                    val inventoryRepository = remember { InventoryRepository(supabase) }
+                    val purchaseOrderRepository = remember { PurchaseOrderRepository(supabase,sessionPreferences) }
+                    val inventoryRepository = remember { InventoryRepository(supabase,sessionPreferences) }
                     val cashRegisterRepository = remember { CashRegisterRepository(supabase) }
-                    val salesRepository = remember { SalesRepository(supabase) }
+                    val salesRepository = remember { SalesRepository(supabase, sessionPreferences) }
                     val salesProductRepository = remember { SalesProductRepository(context, supabase, sessionPreferences) }
                     val paymentProofRepository = remember { PaymentProofRepository(supabase) }
                     val refundRepository = remember { RefundRepository(supabase) }
                     val creditNoteRepository = remember { CreditNoteRepository(supabase) }
-                    val salesReportRepository = remember { SalesReportRepository(supabase) }
+                    val salesReportRepository = remember { SalesReportRepository(supabase,sessionPreferences) }
 
                     // ✅ STRIPE PAYMENT REPOSITORY
                     val stripePaymentRepository = remember {
