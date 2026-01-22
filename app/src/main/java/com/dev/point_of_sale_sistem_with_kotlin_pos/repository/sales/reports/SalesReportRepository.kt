@@ -15,6 +15,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.reports.Product
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.reports.ProductSalesReport
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.reports.ReportSummary
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.reports.SaleTotalDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -24,7 +25,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class SalesReportRepository(
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val sessionPreferences: SessionPreferences
 ) {
 
     companion object {
@@ -42,11 +44,12 @@ class SalesReportRepository(
         try {
             val startDate = dateRange.startDate.format(dateFormatter)
             val endDate = dateRange.endDate.format(dateFormatter)
+            val branchId = sessionPreferences.getBranchId()
 
             val sales = supabase.postgrest
                 .from("sales")
                 .select(
-                    columns = Columns.raw("""
+                    Columns.raw("""
                         cash_register_history_id,
                         total,
                         cash_registers_history!inner(
@@ -59,14 +62,13 @@ class SalesReportRepository(
                         gte("sale_date", startDate)
                         lte("sale_date", "$endDate 23:59:59")
                         eq("status", "completed")
+                        branchId?.let { eq("branch_id", it) }
                     }
                 }
                 .decodeList<CashRegisterSaleDTO>()
 
             val report = sales
-                .groupBy {
-                    it.cashRegisterHistory.cashRegisterId to it.cashRegisterHistory.cashRegister.name
-                }
+                .groupBy { it.cashRegisterHistory.cashRegisterId to it.cashRegisterHistory.cashRegister.name }
                 .map { (idAndName, items) ->
                     val totalSales = items.sumOf { it.total }
                     val salesCount = items.size
@@ -96,11 +98,12 @@ class SalesReportRepository(
         try {
             val startDate = dateRange.startDate.format(dateFormatter)
             val endDate = dateRange.endDate.format(dateFormatter)
+            val branchId = sessionPreferences.getBranchId()
 
             val sales = supabase.postgrest
                 .from("sales")
                 .select(
-                    columns = Columns.raw("""
+                    Columns.raw("""
                         user_id,
                         total,
                         users!inner(username)
@@ -110,6 +113,7 @@ class SalesReportRepository(
                         gte("sale_date", startDate)
                         lte("sale_date", "$endDate 23:59:59")
                         eq("status", "completed")
+                        branchId?.let { eq("branch_id", it) }
                     }
                 }
                 .decodeList<CashierSaleDTO>()
@@ -145,22 +149,24 @@ class SalesReportRepository(
         try {
             val startDate = dateRange.startDate.format(dateFormatter)
             val endDate = dateRange.endDate.format(dateFormatter)
+            val branchId = sessionPreferences.getBranchId()
 
             val details = supabase.postgrest
                 .from("sale_details")
                 .select(
-                    columns = Columns.raw("""
+                    Columns.raw("""
                         product_id,
                         quantity,
                         final_price,
                         products!inner(name, category_id, categories(name)),
-                        sales!inner(sale_date, status)
+                        sales!inner(sale_date, status, branch_id)
                     """.trimIndent())
                 ) {
                     filter {
                         gte("sales.sale_date", startDate)
                         lte("sales.sale_date", "$endDate 23:59:59")
                         eq("sales.status", "completed")
+                        branchId?.let { eq("sales.branch_id", it) }
                     }
                 }
                 .decodeList<ProductSaleDetailDTO>()
@@ -198,22 +204,24 @@ class SalesReportRepository(
         try {
             val startDate = dateRange.startDate.format(dateFormatter)
             val endDate = dateRange.endDate.format(dateFormatter)
+            val branchId = sessionPreferences.getBranchId()
 
             val details = supabase.postgrest
                 .from("sale_details")
                 .select(
-                    columns = Columns.raw("""
+                    Columns.raw("""
                         product_id,
                         quantity,
                         final_price,
                         products!inner(category_id, categories(name)),
-                        sales!inner(sale_date, status)
+                        sales!inner(sale_date, status, branch_id)
                     """.trimIndent())
                 ) {
                     filter {
                         gte("sales.sale_date", startDate)
                         lte("sales.sale_date", "$endDate 23:59:59")
                         eq("sales.status", "completed")
+                        branchId?.let { eq("sales.branch_id", it) }
                     }
                 }
                 .decodeList<CategorySaleDetailDTO>()
@@ -250,14 +258,16 @@ class SalesReportRepository(
         try {
             val startDate = dateRange.startDate.format(dateFormatter)
             val endDate = dateRange.endDate.format(dateFormatter)
+            val branchId = sessionPreferences.getBranchId()
 
             val sales = supabase.postgrest
                 .from("sales")
-                .select(columns = Columns.list("total")) {
+                .select(columns = Columns.list("total", "branch_id")) {
                     filter {
                         gte("sale_date", startDate)
                         lte("sale_date", "$endDate 23:59:59")
                         eq("status", "completed")
+                        branchId?.let { eq("branch_id", it) }
                     }
                 }
                 .decodeList<SaleTotalDTO>()

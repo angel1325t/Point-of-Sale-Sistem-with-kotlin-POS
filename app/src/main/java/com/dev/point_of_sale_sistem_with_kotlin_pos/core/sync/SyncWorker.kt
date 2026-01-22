@@ -27,7 +27,7 @@ class SyncWorker(
             val supabase = SupabaseClientProvider.client
             val sessionPreferences = SessionPreferences(applicationContext)
 
-            val salesRepo = SalesRepository(supabase)
+            val salesRepo = SalesRepository(supabase,sessionPreferences)
             val cashRepo = CashRegisterRepository(supabase)
             val productRepo = ProductRepository(supabase, sessionPreferences)
 

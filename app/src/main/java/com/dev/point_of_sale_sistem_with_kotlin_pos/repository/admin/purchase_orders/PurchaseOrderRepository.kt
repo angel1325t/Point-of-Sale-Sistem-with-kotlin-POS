@@ -1,374 +1,293 @@
 package com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.purchase_orders
 
 import android.util.Log
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.*
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
-import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductUpdateDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.OrderStatus
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.PurchaseOrder
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.PurchaseOrderDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.PurchaseOrderError
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.PurchaseOrderInsertDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.purchase_orders.PurchaseOrderUpdateDTO
+import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.branches.SessionPreferences
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
 
-class PurchaseOrderRepository(private val supabase: SupabaseClient) {
+class PurchaseOrderRepository(
+    private val supabase: SupabaseClient,
+    private val sessionPreferences: SessionPreferences
+) {
 
     companion object {
         private const val TABLE_NAME = "purchase_orders"
         private const val PRODUCTS_TABLE = "products"
+        private const val SUPPLIERS_TABLE = "suppliers"
         private const val TAG = "PurchaseOrderRepository"
     }
 
-    /**
-     * Obtiene todos los pedidos con información de proveedor y producto
-     */
-    suspend fun getAllOrders(): Result<List<PurchaseOrder>> = withContext(Dispatchers.IO) {
-        try {
-            val ordersDTO = supabase.from(TABLE_NAME)
-                .select()
-                .decodeList<PurchaseOrderDTO>()
+    private suspend fun getBranchId(): String =
+        sessionPreferences.getBranchId()
+            ?: throw IllegalStateException("BRANCH_ID_NOT_FOUND")
 
-            val orders = ordersDTO.map { dto ->
-                // Obtener información del proveedor
-                val supplier = supabase.from("suppliers")
-                    .select { filter { eq("supplier_id", dto.supplierId) } }
-                    .decodeSingleOrNull<kotlinx.serialization.json.JsonObject>()
+    // ───────────────────────────────────────────────
+    // OBTENER PEDIDOS
+    // ───────────────────────────────────────────────
 
-                // Obtener información del producto
-                val product = supabase.from(PRODUCTS_TABLE)
-                    .select { filter { eq("product_id", dto.productId) } }
-                    .decodeSingleOrNull<kotlinx.serialization.json.JsonObject>()
+    suspend fun getAllOrders(): Result<List<PurchaseOrder>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val branchId = getBranchId()
+                val ordersDTO = supabase.from(TABLE_NAME)
+                    .select { filter { eq("branch_id", branchId) } }
+                    .decodeList<PurchaseOrderDTO>()
 
-                dto.toPurchaseOrder(
-                    supplierName = supplier?.get("name")?.toString()?.removeSurrounding("\"") ?: "Desconocido",
-                    productName = product?.get("name")?.toString()?.removeSurrounding("\"") ?: "Desconocido"
-                )
-            }
-
-            Result.success(orders)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading orders", e)
-            Result.failure(handleException(e))
-        }
-    }
-
-    /**
-     * Obtiene un pedido por ID
-     */
-    suspend fun getOrderById(orderId: Int): Result<PurchaseOrder> = withContext(Dispatchers.IO) {
-        try {
-            val dto = supabase.from(TABLE_NAME)
-                .select { filter { eq("order_id", orderId) } }
-                .decodeSingleOrNull<PurchaseOrderDTO>()
-
-            dto?.let {
-                // Obtener detalles adicionales
-                val supplier = supabase.from("suppliers")
-                    .select { filter { eq("supplier_id", it.supplierId) } }
-                    .decodeSingleOrNull<kotlinx.serialization.json.JsonObject>()
-
-                val product = supabase.from(PRODUCTS_TABLE)
-                    .select { filter { eq("product_id", it.productId) } }
-                    .decodeSingleOrNull<kotlinx.serialization.json.JsonObject>()
-
-                Result.success(
-                    it.toPurchaseOrder(
-                        supplierName = supplier?.get("name")?.toString()?.removeSurrounding("\"") ?: "Desconocido",
-                        productName = product?.get("name")?.toString()?.removeSurrounding("\"") ?: "Desconocido"
+                val orders = ordersDTO.map { dto ->
+                    dto.toPurchaseOrder(
+                        supplierName = getSupplierName(dto.supplierId),
+                        productName = getProductName(dto.productId)
                     )
-                )
-            } ?: Result.failure(PurchaseOrderError.RecordNotFound())
+                }
 
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading order by ID", e)
-            Result.failure(handleException(e))
+                Result.success(orders)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading orders", e)
+                Result.failure(handleException(e))
+            }
         }
-    }
 
-    /**
-     * Crea un nuevo pedido
-     */
+    suspend fun getOrderById(orderId: Int): Result<PurchaseOrder> =
+        withContext(Dispatchers.IO) {
+            try {
+                val branchId = getBranchId()
+                val dto = supabase.from(TABLE_NAME)
+                    .select {
+                        filter {
+                            eq("order_id", orderId)
+                            eq("branch_id", branchId)
+                        }
+                    }
+                    .decodeSingleOrNull<PurchaseOrderDTO>()
+
+                dto?.let {
+                    Result.success(
+                        it.toPurchaseOrder(
+                            supplierName = getSupplierName(it.supplierId),
+                            productName = getProductName(it.productId)
+                        )
+                    )
+                } ?: Result.failure(PurchaseOrderError.RecordNotFound())
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading order by ID", e)
+                Result.failure(handleException(e))
+            }
+        }
+
+    suspend fun searchOrders(query: String): Result<List<PurchaseOrder>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val branchId = getBranchId()
+                val ordersDTO = supabase.from(TABLE_NAME)
+                    .select {
+                        filter {
+                            eq("branch_id", branchId)
+                            like("product_name", "%$query%")
+                        }
+                    }
+                    .decodeList<PurchaseOrderDTO>()
+
+                val orders = ordersDTO.map { dto ->
+                    dto.toPurchaseOrder(
+                        supplierName = getSupplierName(dto.supplierId),
+                        productName = getProductName(dto.productId)
+                    )
+                }
+
+                Result.success(orders)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error searching orders", e)
+                Result.failure(handleException(e))
+            }
+        }
+
+    suspend fun filterByStatus(status: OrderStatus): Result<List<PurchaseOrder>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val branchId = getBranchId()
+                val ordersDTO = supabase.from(TABLE_NAME)
+                    .select {
+                        filter {
+                            eq("branch_id", branchId)
+                            eq("status", status.name)
+                        }
+                    }
+                    .decodeList<PurchaseOrderDTO>()
+
+                val orders = ordersDTO.map { dto ->
+                    dto.toPurchaseOrder(
+                        supplierName = getSupplierName(dto.supplierId),
+                        productName = getProductName(dto.productId)
+                    )
+                }
+
+                Result.success(orders)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error filtering orders by status", e)
+                Result.failure(handleException(e))
+            }
+        }
+
+    // ───────────────────────────────────────────────
+    // CREAR, ACTUALIZAR, ELIMINAR
+    // ───────────────────────────────────────────────
+
     suspend fun createOrder(
         supplierId: Int,
         productId: Int,
         quantity: Int,
         orderDate: String,
-        notes: String? = null
+        notes: String?
     ): Result<PurchaseOrder> = withContext(Dispatchers.IO) {
         try {
-            // Validaciones
-            if (quantity <= 0) {
-                return@withContext Result.failure(PurchaseOrderError.InvalidQuantityError())
-            }
-
-            // Verificar que el proveedor existe
-            val supplierExists = supabase.from("suppliers")
-                .select { filter { eq("supplier_id", supplierId) } }
-                .decodeSingleOrNull<kotlinx.serialization.json.JsonObject>() != null
-
-            if (!supplierExists) {
-                return@withContext Result.failure(
-                    PurchaseOrderError.ValidationError("El proveedor no existe", "supplier")
-                )
-            }
-
-            // Verificar que el producto existe
-            val productExists = supabase.from(PRODUCTS_TABLE)
-                .select { filter { eq("product_id", productId) } }
-                .decodeSingleOrNull<kotlinx.serialization.json.JsonObject>() != null
-
-            if (!productExists) {
-                return@withContext Result.failure(
-                    PurchaseOrderError.ValidationError("El producto no existe", "product")
-                )
-            }
-
-            val newOrder = PurchaseOrderInsertDTO(
+            val branchId = getBranchId()
+            val dto = PurchaseOrderInsertDTO(
                 supplierId = supplierId,
                 productId = productId,
                 quantity = quantity,
                 orderDate = orderDate,
-                status = "PENDING",
+                status = OrderStatus.PENDING.name,
                 notes = notes
             )
 
-            val response = supabase.from(TABLE_NAME)
-                .insert(newOrder) {
-                    select()
-                }
-                .decodeSingle<PurchaseOrderDTO>()
+            supabase.from(TABLE_NAME).insert(dto)
+            val createdOrder = PurchaseOrder(
+                orderId = 0, // Supabase generará ID al insertar
+                branchId = branchId,
+                supplierId = supplierId,
+                supplierName = getSupplierName(supplierId),
+                productId = productId,
+                productName = getProductName(productId),
+                quantity = quantity,
+                orderDate = orderDate,
+                status = OrderStatus.PENDING,
+                notes = notes
+            )
 
-            // Obtener detalles para retornar
-            val order = getOrderById(response.orderId)
-            order
-
+            Result.success(createdOrder)
         } catch (e: Exception) {
             Log.e(TAG, "Error creating order", e)
             Result.failure(handleException(e))
         }
     }
 
-    /**
-     * Marca un pedido como recibido y actualiza el stock del producto
-     */
     suspend fun markAsReceived(
         orderId: Int,
         receivedDate: String
     ): Result<PurchaseOrder> = withContext(Dispatchers.IO) {
         try {
-            // Obtener el pedido actual
-            val orderResult = getOrderById(orderId)
-            if (orderResult.isFailure) {
-                return@withContext orderResult
-            }
-
-            val order = orderResult.getOrNull()!!
-
-            // Verificar que no esté ya recibido
-            if (order.isReceived) {
-                return@withContext Result.failure(
-                    PurchaseOrderError.CannotModifyReceivedOrder()
-                )
-            }
-
-            // Actualizar el estado del pedido
-            val updateOrderDTO = PurchaseOrderUpdateDTO(
-                status = "RECEIVED",
+            val branchId = getBranchId()
+            val updateDTO = PurchaseOrderUpdateDTO(
+                status = OrderStatus.RECEIVED.name,
                 receivedDate = receivedDate
             )
 
             supabase.from(TABLE_NAME)
-                .update(updateOrderDTO) {
-                    filter { eq("order_id", orderId) }
-                }
-
-            // Actualizar el stock del producto
-            val updateStockResult = updateProductStock(order.productId, order.quantity)
-            if (updateStockResult.isFailure) {
-                return@withContext Result.failure(
-                    PurchaseOrderError.StockUpdateError()
-                )
-            }
-
-            // Retornar el pedido actualizado
-            getOrderById(orderId)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error marking as received", e)
-            Result.failure(handleException(e))
-        }
-    }
-
-    /**
-     * Actualiza el stock de un producto incrementándolo
-     */
-    private suspend fun updateProductStock(
-        productId: Int,
-        quantityToAdd: Int
-    ): Result<Boolean> = withContext(Dispatchers.IO) {
-        try {
-            // Obtener el producto actual
-            val product = supabase.from(PRODUCTS_TABLE)
-                .select { filter { eq("product_id", productId) } }
-                .decodeSingleOrNull<ProductDTO>()
-
-            product ?: return@withContext Result.failure(
-                PurchaseOrderError.ValidationError("Producto no encontrado")
-            )
-
-            // Calcular el nuevo stock
-            val newStock = product.currentStock + quantityToAdd
-
-            // Actualizar el producto
-            val updateDTO = ProductUpdateDTO(
-                name = product.name,
-                description = product.description,
-                price = product.price,
-                barcode = product.barcode,
-                categoryId = product.categoryId,
-                image = product.image,
-                currentStock = newStock,
-                minimumStock = product.minimumStock
-            )
-
-            supabase.from(PRODUCTS_TABLE)
                 .update(updateDTO) {
-                    filter { eq("product_id", productId) }
+                    filter {
+                        eq("order_id", orderId)
+                        eq("branch_id", branchId)
+                    }
                 }
 
-            Result.success(true)
-
+            // Obtener el pedido actualizado
+            getOrderById(orderId)
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating product stock", e)
+            Log.e(TAG, "Error marking order as received", e)
             Result.failure(handleException(e))
         }
     }
 
-    /**
-     * Actualiza las notas de un pedido
-     */
     suspend fun updateNotes(
         orderId: Int,
         notes: String
     ): Result<PurchaseOrder> = withContext(Dispatchers.IO) {
         try {
+            val branchId = getBranchId()
             val updateDTO = PurchaseOrderUpdateDTO(notes = notes)
 
             supabase.from(TABLE_NAME)
                 .update(updateDTO) {
-                    filter { eq("order_id", orderId) }
+                    filter {
+                        eq("order_id", orderId)
+                        eq("branch_id", branchId)
+                    }
                 }
 
             getOrderById(orderId)
-
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating notes", e)
+            Log.e(TAG, "Error updating order notes", e)
             Result.failure(handleException(e))
         }
     }
 
-    /**
-     * Elimina un pedido
-     */
     suspend fun deleteOrder(orderId: Int): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
-            // Verificar que el pedido no esté recibido
-            val orderResult = getOrderById(orderId)
-            if (orderResult.isSuccess) {
-                val order = orderResult.getOrNull()!!
-                if (order.isReceived) {
-                    return@withContext Result.failure(
-                        PurchaseOrderError.CannotModifyReceivedOrder(
-                            "No se puede eliminar un pedido ya recibido"
-                        )
-                    )
-                }
-            }
+            val branchId = getBranchId()
 
             supabase.from(TABLE_NAME)
-                .delete { filter { eq("order_id", orderId) } }
+                .delete {
+                    filter {
+                        eq("order_id", orderId)
+                        eq("branch_id", branchId)
+                    }
+                }
 
             Result.success(true)
-
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting order", e)
             Result.failure(handleException(e))
         }
     }
 
-    /**
-     * Busca pedidos por nombre de proveedor o producto
-     */
-    suspend fun searchOrders(query: String): Result<List<PurchaseOrder>> = withContext(Dispatchers.IO) {
-        try {
-            val allOrdersResult = getAllOrders()
-            if (allOrdersResult.isFailure) {
-                return@withContext allOrdersResult
-            }
 
-            val orders = allOrdersResult.getOrNull()!!
-            val filtered = orders.filter {
-                it.supplierName.contains(query, ignoreCase = true) ||
-                        it.productName.contains(query, ignoreCase = true)
-            }
+    // ───────────────────────────────────────────────
+    // HELPER METHODS
+    // ───────────────────────────────────────────────
 
-            Result.success(filtered)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error searching orders", e)
-            Result.failure(handleException(e))
-        }
+    private suspend fun getSupplierName(supplierId: Int): String {
+        val supplier = supabase.from(SUPPLIERS_TABLE)
+            .select { filter { eq("supplier_id", supplierId) } }
+            .decodeSingleOrNull<JsonObject>()
+        return supplier?.get("name")?.toString()?.removeSurrounding("\"") ?: "Desconocido"
     }
 
-    /**
-     * Filtra pedidos por estado
-     */
-    suspend fun filterByStatus(status: OrderStatus): Result<List<PurchaseOrder>> = withContext(Dispatchers.IO) {
-        try {
-            val allOrdersResult = getAllOrders()
-            if (allOrdersResult.isFailure) {
-                return@withContext allOrdersResult
-            }
-
-            val orders = allOrdersResult.getOrNull()!!
-            val filtered = orders.filter { it.status == status }
-
-            Result.success(filtered)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error filtering by status", e)
-            Result.failure(handleException(e))
-        }
+    private suspend fun getProductName(productId: Int): String {
+        val product = supabase.from(PRODUCTS_TABLE)
+            .select { filter { eq("product_id", productId) } }
+            .decodeSingleOrNull<JsonObject>()
+        return product?.get("name")?.toString()?.removeSurrounding("\"") ?: "Desconocido"
     }
 
-    /**
-     * Manejo centralizado de errores
-     */
     private fun handleException(e: Exception): PurchaseOrderError {
         return when {
-            e.message?.contains("network", ignoreCase = true) == true ->
+            e.message?.contains("network", true) == true ->
                 PurchaseOrderError.NetworkError(cause = e)
-
-            e.message?.contains("timeout", ignoreCase = true) == true ->
+            e.message?.contains("timeout", true) == true ->
                 PurchaseOrderError.TimeoutError(cause = e)
-
-            e.message?.contains("unauthorized", ignoreCase = true) == true ->
+            e.message?.contains("unauthorized", true) == true ->
                 PurchaseOrderError.UnauthorizedError(cause = e)
-
-            e.message?.contains("not found", ignoreCase = true) == true ->
+            e.message?.contains("not found", true) == true ->
                 PurchaseOrderError.RecordNotFound(cause = e)
-
             else -> PurchaseOrderError.UnknownError(cause = e)
         }
     }
 
-    /**
-     * Mapper: DTO → Modelo interno
-     */
     private fun PurchaseOrderDTO.toPurchaseOrder(
         supplierName: String,
         productName: String
     ) = PurchaseOrder(
         orderId = orderId,
+        branchId = branchId,
         supplierId = supplierId,
         supplierName = supplierName,
         productId = productId,

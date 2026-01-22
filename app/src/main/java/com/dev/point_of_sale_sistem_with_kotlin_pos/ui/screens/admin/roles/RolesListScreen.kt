@@ -23,6 +23,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.roles.RoleInte
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.roles.RoleError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,10 +39,20 @@ fun RolesListScreen(
 
     val context = LocalContext.current
 
+    // PERMISSIONS
+    val canViewRoles = PermissionChecker.canViewRoles()
+    val canCreateRoles = PermissionChecker.canCreateRoles()
+    val canUpdateRoles = PermissionChecker.canUpdateRoles()
+    val canDeleteRoles = PermissionChecker.canDeleteRoles()
 
-    // Cargar roles al iniciar
+    // Bloquear acceso si no puede ver roles
     LaunchedEffect(Unit) {
-        viewModel.handleIntent(RoleIntent.LoadRoles)
+        if (!canViewRoles) {
+            snackbarHostState.showSnackbar(context.getString(R.string.permission_denied))
+            navController.navigateUp()
+        } else {
+            viewModel.handleIntent(RoleIntent.LoadRoles)
+        }
     }
 
     // Mostrar errores
@@ -90,15 +101,17 @@ fun RolesListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate("roles/create") },
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = stringResource(R.string.create_role),
-                    tint = MaterialTheme.colorScheme.surface
-                )
+            if (canCreateRoles) {
+                FloatingActionButton(
+                    onClick = { navController.navigate("roles/create") },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(R.string.create_role),
+                        tint = MaterialTheme.colorScheme.surface
+                    )
+                }
             }
         }
     ) { padding ->
@@ -134,12 +147,14 @@ fun RolesListScreen(
                             fontSize = 16.sp,
                             color = Color.Gray
                         )
-                        Button(
-                            onClick = { navController.navigate("roles/create") }
-                        ) {
-                            Icon(Icons.Default.Add, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.create_first_role))
+                        if (canCreateRoles) {
+                            Button(
+                                onClick = { navController.navigate("roles/create") }
+                            ) {
+                                Icon(Icons.Default.Add, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.create_first_role))
+                            }
                         }
                     }
                 }
@@ -155,6 +170,9 @@ fun RolesListScreen(
                         ) { role ->
                             RoleCard(
                                 role = role,
+                                canEdit = canUpdateRoles,
+                                canDelete = canDeleteRoles,
+                                canAssignPermissions = canUpdateRoles,
                                 onEdit = {
                                     navController.navigate("roles/edit/${role.role_id}")
                                 },
@@ -200,7 +218,8 @@ fun RolesListScreen(
                         showDeleteDialog = null
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.onError, contentColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.onError,
+                        contentColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
                     Text(stringResource(R.string.delete))
@@ -214,9 +233,13 @@ fun RolesListScreen(
         )
     }
 }
+
 @Composable
 fun RoleCard(
     role: RoleRepository.RoleModel,
+    canEdit: Boolean,
+    canDelete: Boolean,
+    canAssignPermissions: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onAssignPermissions: () -> Unit
@@ -250,26 +273,32 @@ fun RoleCard(
             }
 
             Row {
-                IconButton(onClick = onAssignPermissions) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = stringResource(R.string.manage_permissions_description),
-                        tint = MaterialTheme.colorScheme.primaryContainer
-                    )
+                if (canAssignPermissions) {
+                    IconButton(onClick = onAssignPermissions) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = stringResource(R.string.manage_permissions_description),
+                            tint = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    }
                 }
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = stringResource(R.string.edit),
-                        tint = Color(0xFF4CAF50)
-                    )
+                if (canEdit) {
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.edit),
+                            tint = Color(0xFF4CAF50)
+                        )
+                    }
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.delete),
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                if (canDelete) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }

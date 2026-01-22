@@ -22,8 +22,8 @@ import androidx.navigation.NavHostController
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.roles.RoleIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.roles.RoleError
-import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.roles.RoleRepository
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +43,18 @@ fun RoleFormScreen(
     var dataLoaded by rememberSaveable { mutableStateOf(false) }
 
     val isEditMode = roleId != null
+
+    // PERMISSIONS
+    val canCreateRole = PermissionChecker.canCreateRoles()
+    val canUpdateRole = PermissionChecker.canUpdateRoles()
+
+    // Bloquear acceso si no tiene permiso
+    LaunchedEffect(Unit) {
+        if ((isEditMode && !canUpdateRole) || (!isEditMode && !canCreateRole)) {
+            snackbarHostState.showSnackbar(context.getString(R.string.permission_denied))
+            navController.navigateUp()
+        }
+    }
 
     // Cargar rol si estamos editando
     LaunchedEffect(roleId) {
@@ -111,37 +123,48 @@ fun RoleFormScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    // Validación
-                    nameError = when {
-                        name.isBlank() -> context.getString(R.string.user_crud_validation_name)
-                        name.length < 3 -> context.getString(R.string.user_crud_validation_min_len)
-                        name.length > 50 -> context.getString(R.string.user_crud_validation_max_len)
-                        else -> null
-                    }
-
-                    if (nameError == null) {
-                        val role = RoleRepository.RoleModel(
-                            role_id = roleId,
-                            name = name.trim(),
-                            description = description.trim().takeIf { it.isNotEmpty() }
-                        )
-
-                        if (isEditMode) {
-                            viewModel.handleIntent(RoleIntent.UpdateRole(role))
-                        } else {
-                            viewModel.handleIntent(RoleIntent.CreateRole(role))
+            if ((isEditMode && canUpdateRole) || (!isEditMode && canCreateRole)) {
+                FloatingActionButton(
+                    onClick = {
+                        // Validación
+                        nameError = when {
+                            name.isBlank() -> context.getString(R.string.user_crud_validation_name)
+                            name.length < 3 -> context.getString(R.string.user_crud_validation_min_len)
+                            name.length > 50 -> context.getString(R.string.user_crud_validation_max_len)
+                            else -> null
                         }
-                    }
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Icon(
-                    Icons.Default.Save,
-                    contentDescription = stringResource(R.string.save),
-                    tint = MaterialTheme.colorScheme.surface
-                )
+
+                        if (nameError == null) {
+                            val cleanName = name.trim()
+                            val cleanDescription = description.trim().takeIf { it.isNotEmpty() }
+
+                            if (isEditMode) {
+                                viewModel.handleIntent(
+                                    RoleIntent.UpdateRole(
+                                        roleId = roleId!!,
+                                        name = cleanName,
+                                        description = cleanDescription
+                                    )
+                                )
+                            } else {
+                                viewModel.handleIntent(
+                                    RoleIntent.CreateRole(
+                                        name = cleanName,
+                                        description = cleanDescription
+                                    )
+                                )
+                            }
+                        }
+
+                    },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(
+                        Icons.Default.Save,
+                        contentDescription = stringResource(R.string.save),
+                        tint = MaterialTheme.colorScheme.surface
+                    )
+                }
             }
         }
     ) { padding ->
@@ -197,7 +220,7 @@ fun RoleFormScreen(
                                     )
                                 }
                             },
-                            enabled = !state.isLoading,
+                            enabled = !state.isLoading && ((isEditMode && canUpdateRole) || (!isEditMode && canCreateRole)),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = Color.Gray,
@@ -214,7 +237,7 @@ fun RoleFormScreen(
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
                             maxLines = 5,
-                            enabled = !state.isLoading,
+                            enabled = !state.isLoading && ((isEditMode && canUpdateRole) || (!isEditMode && canCreateRole)),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = Color.Gray

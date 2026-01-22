@@ -5,23 +5,24 @@ package com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.suppliers
  * Este es el modelo que usas en tu UI y lógica de negocio
  */
 data class Supplier(
-    val supplierId: Int,
+    val supplierId: Int = 0,
     val name: String,
     val contact: String? = null,
     val phone: String? = null,
     val email: String? = null,
-    val address: String? = null
+    val address: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 ) {
-    /**
-     * Valida si el proveedor tiene información de contacto completa
-     */
-    val hasCompleteContactInfo: Boolean
-        get() = !contact.isNullOrBlank() &&
-                (!phone.isNullOrBlank() || !email.isNullOrBlank())
-
     /**
      * Obtiene un resumen de la información del proveedor
      */
+
+    fun hasCompleteContact(): Boolean {
+        return !contact.isNullOrBlank() &&
+                !phone.isNullOrBlank() &&
+                !email.isNullOrBlank()
+    }
     fun getContactSummary(): String {
         val parts = mutableListOf<String>()
 
@@ -30,5 +31,13 @@ data class Supplier(
         email?.let { parts.add(it) }
 
         return parts.joinToString(" • ")
+    }
+
+    fun matchesSearch(query: String): Boolean {
+        val lowerQuery = query.lowercase()
+        return name.lowercase().contains(lowerQuery) ||
+                contact?.lowercase()?.contains(lowerQuery) == true ||
+                phone?.contains(query) == true ||
+                email?.lowercase()?.contains(lowerQuery) == true
     }
 }

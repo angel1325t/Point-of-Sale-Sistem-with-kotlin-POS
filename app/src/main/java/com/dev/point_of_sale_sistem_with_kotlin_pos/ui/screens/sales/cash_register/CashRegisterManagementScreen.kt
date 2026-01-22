@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.sales.cash_register.CashRegisterIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegister
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.sales.cash_register.CashRegisterError
@@ -117,7 +118,7 @@ fun CashRegisterManagementScreen(
                     }
                 },
                 actions = {
-                    if (state.currentCashRegister == null) {
+                    if (state.currentCashRegister == null && PermissionChecker.canOpenCashRegister()) {
                         IconButton(
                             onClick = {
                                 if (availableCashRegisters.isNotEmpty()) {
@@ -136,7 +137,8 @@ fun CashRegisterManagementScreen(
             )
         },
         floatingActionButton = {
-            if (state.currentCashRegister == null) {
+            if (state.currentCashRegister == null &&
+                PermissionChecker.canCreateCashRegister()) {
                 FloatingActionButton(onClick = { showCreateDialog = true }) {
                     Icon(Icons.Default.Add, contentDescription = "Crear caja")
                 }
@@ -168,8 +170,17 @@ fun CashRegisterManagementScreen(
                                 CashRegisterCard(
                                     cashRegister = register,
                                     onEdit = { editingCashRegister = register },
-                                    onDelete = { deletingCashRegister = register }
+                                    onDelete = {
+                                        if (PermissionChecker.canDeleteCashRegister()) {
+                                            deletingCashRegister = register
+                                        } else {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("No tienes permiso para eliminar cajas")
+                                            }
+                                        }
+                                    }
                                 )
+
                             }
                         }
                     }
@@ -221,7 +232,7 @@ fun CashRegisterManagementScreen(
                     )
                 }
 
-                if (showOpenDialog) {
+                if (    showOpenDialog) {
                     OpenCashRegisterDialog(
                         cashRegisters = availableCashRegisters,
                         onDismiss = { showOpenDialog = false },

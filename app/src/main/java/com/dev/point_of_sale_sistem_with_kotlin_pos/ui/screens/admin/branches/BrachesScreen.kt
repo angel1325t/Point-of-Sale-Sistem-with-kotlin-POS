@@ -20,6 +20,8 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.Branch
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.branches.BranchError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.ui.screens.admin.branches.components.*
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.BranchViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
+import android.widget.Toast
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.auth.AuthSessionViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +41,11 @@ fun BranchesScreen(
     var showChangeBranchDialog by remember { mutableStateOf(false) }
     var selectedBranch by remember { mutableStateOf<Branch?>(null) }
     val context = LocalContext.current
+
+    val canViewBranches = PermissionChecker.canViewBranches()
+    val canCreateBranches = PermissionChecker.canCreateBranches()
+    val canUpdateBranches = PermissionChecker.canUpdateBranches()
+    val canDeleteBranches = PermissionChecker.canDeleteBranches()
 
     LaunchedEffect(Unit) {
         viewModel.handleIntent(BranchIntent.LoadBranches)
@@ -95,11 +102,13 @@ fun BranchesScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showCreateDialog = true },
-                icon = { Icon(Icons.Default.Add, null) },
-                text = { Text(stringResource(R.string.new_branch_text)) }
-            )
+            if (canCreateBranches) {
+                ExtendedFloatingActionButton(
+                    onClick = { showCreateDialog = true },
+                    icon = { Icon(Icons.Default.Add, null) },
+                    text = { Text(stringResource(R.string.new_branch_text)) }
+                )
+            }
         },
         bottomBar = {
             NavigationBar(
@@ -141,6 +150,15 @@ fun BranchesScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            if (!canViewBranches) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(stringResource(R.string.permission_denied), color = MaterialTheme.colorScheme.error)
+                }
+                return@Scaffold
+            }
 
             Column(modifier = Modifier.fillMaxSize()) {
 
@@ -179,20 +197,32 @@ fun BranchesScreen(
                                     branch = branch,
                                     isCurrentBranch = branch.branchId == sessionState.branchId,
                                     onEdit = {
-                                        selectedBranch = branch
-                                        showEditDialog = true
+                                        if (canUpdateBranches) {
+                                            selectedBranch = branch
+                                            showEditDialog = true
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.permission_denied), Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                     onDelete = {
-                                        selectedBranch = branch
-                                        showDeleteDialog = true
+                                        if (canDeleteBranches) {
+                                            selectedBranch = branch
+                                            showDeleteDialog = true
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.permission_denied), Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                     onToggleStatus = {
-                                        viewModel.handleIntent(
-                                            BranchIntent.ToggleBranchStatus(
-                                                branch.branchId,
-                                                !branch.active
+                                        if (canUpdateBranches) {
+                                            viewModel.handleIntent(
+                                                BranchIntent.ToggleBranchStatus(
+                                                    branch.branchId,
+                                                    !branch.active
+                                                )
                                             )
-                                        )
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.permission_denied), Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 )
                             }

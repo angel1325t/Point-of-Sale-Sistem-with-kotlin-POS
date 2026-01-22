@@ -24,6 +24,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.roles.RoleIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.roles.RoleError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.RoleViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,12 +38,22 @@ fun RolePermissionsScreen(
 
     val context = LocalContext.current
 
+    // PERMISSION
+    val canUpdateRoles = PermissionChecker.canUpdateRoles()
 
     var selectedPermissions by rememberSaveable {
         mutableStateOf(state.assignedPermissionIds)
     }
     var hasChanges by rememberSaveable { mutableStateOf(false) }
     var initialLoadDone by rememberSaveable { mutableStateOf(false) }
+
+    // Bloquear acceso si no tiene permiso
+    LaunchedEffect(Unit) {
+        if (!canUpdateRoles) {
+            snackbarHostState.showSnackbar(context.getString(R.string.permission_denied))
+            navController.navigateUp()
+        }
+    }
 
     // Cargar datos iniciales
     LaunchedEffect(roleId) {
@@ -120,7 +131,7 @@ fun RolePermissionsScreen(
             )
         },
         floatingActionButton = {
-            AnimatedVisibility(visible = hasChanges) {
+            AnimatedVisibility(visible = hasChanges && canUpdateRoles) {
                 FloatingActionButton(
                     onClick = {
                         viewModel.handleIntent(
@@ -224,12 +235,14 @@ fun RolePermissionsScreen(
                                 permission = permission,
                                 isSelected = selectedPermissions.contains(permission.permission_id),
                                 onToggle = { selected ->
-                                    selectedPermissions = if (selected) {
-                                        selectedPermissions + permission.permission_id
-                                    } else {
-                                        selectedPermissions - permission.permission_id
+                                    if (canUpdateRoles) {
+                                        selectedPermissions = if (selected) {
+                                            selectedPermissions + permission.permission_id
+                                        } else {
+                                            selectedPermissions - permission.permission_id
+                                        }
+                                        hasChanges = true
                                     }
-                                    hasChanges = true
                                 }
                             )
                         }
