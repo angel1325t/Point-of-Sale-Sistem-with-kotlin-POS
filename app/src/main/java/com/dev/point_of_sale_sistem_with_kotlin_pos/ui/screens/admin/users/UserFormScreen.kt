@@ -37,6 +37,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.UserError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import java.util.UUID
 
     @SuppressLint("LocalContextGetResourceValueCall")
@@ -168,6 +169,9 @@ import java.util.UUID
             return isValid
         }
 
+        val canCreateUser = PermissionChecker.canCreateUsers()
+        val canUpdateUser = PermissionChecker.canUpdateUsers()
+
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -293,6 +297,10 @@ import java.util.UUID
                         if (!validateFields()) return@Button
 
                         if (isEditMode) {
+                            if (!canUpdateUser) {
+                                Toast.makeText(context, context.getString(R.string.permission_denied), Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
                             viewModel.handleIntent(
                                 UserIntent.UpdateUser(
                                     authId = loadedUserId!!,
@@ -302,6 +310,10 @@ import java.util.UUID
                                 )
                             )
                         } else {
+                            if (!canCreateUser) {
+                                Toast.makeText(context, context.getString(R.string.permission_denied), Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
                             viewModel.handleIntent(
                                 UserIntent.CreateUser(
                                     email = email,

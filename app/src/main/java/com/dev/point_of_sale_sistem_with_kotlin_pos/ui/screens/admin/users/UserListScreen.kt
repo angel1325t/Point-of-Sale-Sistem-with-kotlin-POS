@@ -20,6 +20,7 @@ import com.dev.point_of_sale_sistem_with_kotlin_pos.R
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.users.UserIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.users.UserError
 import com.dev.point_of_sale_sistem_with_kotlin_pos.repository.admin.users.UserRepository
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.viewmodel.admin.UserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +34,21 @@ fun UsersListScreen(
     val state = viewModel.state
     var showDeleteDialog by remember { mutableStateOf<UserRepository.UserModel?>(null) }
     val context = LocalContext.current
+
+    val canViewUsers = PermissionChecker.canViewUsers()
+    val canCreateUsers = PermissionChecker.canCreateUsers()
+    val canUpdateUsers = PermissionChecker.canUpdateUsers()
+    val canDeleteUsers = PermissionChecker.canDeleteUsers()
+
+    if (!canViewUsers) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(stringResource(R.string.permission_denied), color = MaterialTheme.colorScheme.error)
+        }
+        return
+    }
 
     LaunchedEffect(Unit) {
         viewModel.handleIntent(UserIntent.LoadUsers)
@@ -86,8 +102,10 @@ fun UsersListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onNavigateToCreate) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_user_description))
+            if (canCreateUsers) {
+                FloatingActionButton(onClick = onNavigateToCreate) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_user_description))
+                }
             }
         }
     ) { padding ->
@@ -154,8 +172,20 @@ fun UsersListScreen(
                         items(state.users) { user ->
                             UserCard(
                                 user = user,
-                                onEdit = { onNavigateToEdit(user.auth_id.toString()) },
-                                onDelete = { showDeleteDialog = user }
+                                onEdit = {
+                                    if (canUpdateUsers) {
+                                        onNavigateToEdit(user.auth_id.toString())
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.permission_denied), Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onDelete = {
+                                    if (canDeleteUsers) {
+                                        showDeleteDialog = user
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.permission_denied), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             )
                         }
                     }
