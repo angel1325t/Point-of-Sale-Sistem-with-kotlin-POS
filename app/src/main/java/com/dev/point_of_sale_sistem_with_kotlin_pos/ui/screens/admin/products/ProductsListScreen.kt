@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dev.point_of_sale_sistem_with_kotlin_pos.R
+import com.dev.point_of_sale_sistem_with_kotlin_pos.core.permissions.PermissionChecker
 import com.dev.point_of_sale_sistem_with_kotlin_pos.intents.admin.products.ProductsIntent
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductDTO
 import com.dev.point_of_sale_sistem_with_kotlin_pos.models.admin.products.ProductsError
@@ -32,7 +33,19 @@ fun ProductsListScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
-    // ✅ SOLUCIÓN: Crear un mapa de strings al inicio del Composable
+    // Verificar permisos
+    val canView = PermissionChecker.canViewProducts()
+    val canCreate = PermissionChecker.canCreateProducts()
+    val canUpdate = PermissionChecker.canUpdateProducts()
+    val canDelete = PermissionChecker.canDeleteProducts()
+
+    // Si no puede ver productos, navegar atrás
+    LaunchedEffect(canView) {
+        if (!canView) {
+            onNavigateBack()
+        }
+    }
+
     val errorMessages = remember {
         mutableMapOf<String, String>()
     }
@@ -41,7 +54,6 @@ fun ProductsListScreen(
         mutableMapOf<String, String>()
     }
 
-    // ✅ Cargar todos los strings necesarios
     errorMessages["network"] = stringResource(R.string.error_network)
     errorMessages["timeout"] = stringResource(R.string.error_timeout)
     errorMessages["no_internet"] = stringResource(R.string.error_no_internet)
@@ -85,7 +97,6 @@ fun ProductsListScreen(
     var searchQuery by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // ✅ Función helper que usa el mapa de strings
     fun getErrorMessage(error: ProductsError): String {
         return when (error) {
             is ProductsError.NetworkError -> errorMessages["network"]!!
@@ -137,12 +148,12 @@ fun ProductsListScreen(
         }
     }
 
-    // Cargar productos al iniciar
     LaunchedEffect(Unit) {
-        viewModel.handleIntent(ProductsIntent.LoadProducts)
+        if (canView) {
+            viewModel.handleIntent(ProductsIntent.LoadProducts)
+        }
     }
 
-    // Mostrar mensajes de éxito/error
     LaunchedEffect(state.successMessage, state.error) {
         state.successMessage?.let { messageKey ->
             snackbarHostState.showSnackbar(getSuccessMessage(messageKey))
@@ -152,8 +163,7 @@ fun ProductsListScreen(
         }
     }
 
-    // Diálogo de eliminar
-    if (showDeleteDialog && productToDelete != null) {
+    if (showDeleteDialog && productToDelete != null && canDelete) {
         DeleteProductDialog(
             product = productToDelete!!,
             onConfirm = {
@@ -168,7 +178,6 @@ fun ProductsListScreen(
         )
     }
 
-    // Strings del UI
     val titleText = stringResource(R.string.products_title)
     val backText = stringResource(R.string.action_back)
     val refreshText = stringResource(R.string.action_refresh)
@@ -176,6 +185,11 @@ fun ProductsListScreen(
     val searchPlaceholder = stringResource(R.string.product_search_placeholder)
     val loadingText = stringResource(R.string.product_loading)
     val processingText = stringResource(R.string.processing)
+
+    // Si no tiene permiso de ver, no renderizar nada
+    if (!canView) {
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -208,11 +222,13 @@ fun ProductsListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreate,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, createText)
+            if (canCreate) {
+                FloatingActionButton(
+                    onClick = onNavigateToCreate,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, createText)
+                }
             }
         },
         snackbarHost = {
@@ -227,14 +243,12 @@ fun ProductsListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Buscador (filtrado local)
             SearchBar(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
                 placeholder = searchPlaceholder
             )
 
-            // Contenido principal
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -259,7 +273,6 @@ fun ProductsListScreen(
                     }
 
                     else -> {
-                        // Filtrar productos localmente por búsqueda
                         val filteredProducts = if (searchQuery.isBlank()) {
                             state.products
                         } else {
@@ -286,10 +299,16 @@ fun ProductsListScreen(
                                         product = product,
                                         isLowStock = product.currentStock <= product.minimumStock && product.currentStock > 0,
                                         isOutOfStock = product.currentStock == 0,
-                                        onClick = { onNavigateToEdit(product.productId) },
+                                        onClick = {
+                                            if (canUpdate) {
+                                                onNavigateToEdit(product.productId)
+                                            }
+                                        },
                                         onDelete = {
-                                            productToDelete = product
-                                            showDeleteDialog = true
+                                            if (canDelete) {
+                                                productToDelete = product
+                                                showDeleteDialog = true
+                                            }
                                         }
                                     )
                                 }
@@ -298,7 +317,6 @@ fun ProductsListScreen(
                     }
                 }
 
-                // Indicador de carga superpuesto (para acciones sin bloquear UI)
                 if (state.isLoading && state.products.isNotEmpty()) {
                     Box(
                         modifier = Modifier
